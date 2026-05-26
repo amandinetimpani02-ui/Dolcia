@@ -854,18 +854,22 @@ html, body { height: 100%; overflow: hidden; background: #000; color: #fff; font
 <script>
 // ── Async load React + Babel ──
 (function(){
-  function load(src, cb){
-    var s = document.createElement('script');
-    s.src = src; s.onload = cb;
+  function load(src,cb){
+    var s=document.createElement('script');
+    s.src=src;
+    s.crossOrigin='anonymous';
+    s.onload=cb;
+    s.onerror=function(){console.error('Failed:',src);cb();};
     document.head.appendChild(s);
   }
-  load('https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js', function(){
-    load('https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js', function(){
-      load('https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js', function(){
-        var src = document.getElementById('dolcia-src').textContent;
-        var compiled = Babel.transform(src, {presets:['react']}).code;
-        var s = document.createElement('script');
-        s.textContent = compiled;
+  // Load React + ReactDOM + Babel in sequence
+  load('https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',function(){
+    load('https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',function(){
+      load('https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js',function(){
+        var src=document.getElementById('dolcia-src').textContent;
+        var compiled=Babel.transform(src,{presets:['react']}).code;
+        var s=document.createElement('script');
+        s.textContent=compiled;
         document.body.appendChild(s);
       });
     });
@@ -1423,6 +1427,11 @@ function App(){
   },[]);
 
   // ── Load weather ──
+  // Hide splash as soon as React is ready
+  useEffect(()=>{
+    if(typeof showApp==='function') showApp();
+  },[]);
+
   useEffect(()=>{
     if(screen!=='app')return;
     apiWeather(city.lat,city.lng).then(setWeather);
