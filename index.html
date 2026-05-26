@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -61,6 +62,7 @@ html, body { height: 100%; overflow: hidden; background: #000; color: #fff; font
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 40px 32px; overflow: hidden;
   transition: opacity .7s var(--ease);
+  pointer-events: none;
 }
 #splash.hidden { opacity: 0; pointer-events: none; }
 .sp-bg {
@@ -848,6 +850,16 @@ html, body { height: 100%; overflow: hidden; background: #000; color: #fff; font
 
 <!-- APP SHELL -->
 <div id="app">
+<!-- Native fallback - works before React loads -->
+<div id="native-gate" style="position:fixed;inset:0;z-index:100;background:linear-gradient(to bottom,#0A0820,#1A1040 30%,#2D1808 65%,#0A0408);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px">
+  <div style="text-align:center;margin-bottom:40px">
+    <div style="font-family:Georgia,serif;font-size:clamp(38px,10vw,58px);color:#fff;line-height:1.1;margin-bottom:12px">Découvrez.<br/><em style="font-style:italic;color:#C4973A">Ressentez.</em> Vivez.</div>
+    <div style="font-size:14px;color:rgba(196,151,58,.8);font-style:italic;letter-spacing:.05em">Vos prochaines émotions commencent ici.</div>
+  </div>
+  <button onclick="document.getElementById('native-gate').style.display='none';if(window.__dolciaStart)window.__dolciaStart();" style="background:linear-gradient(105deg,#6B4A10,#C4973A 30%,#F0D060 55%,#C4973A 75%,#6B4A10);background-size:200%;color:#000;border:none;border-radius:99px;padding:18px 48px;font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(196,151,58,.3)">
+    COMMENCER L'AVENTURE ›
+  </button>
+</div>
   <div id="root"></div>
 </div>
 
@@ -875,6 +887,12 @@ html, body { height: 100%; overflow: hidden; background: #000; color: #fff; font
     });
   });
 })();
+
+// Auto-hide splash after 2.5s
+setTimeout(function(){
+  var sp=document.getElementById('splash');
+  if(sp&&sp.style.opacity!=='0'){sp.style.opacity='0';sp.style.pointerEvents='none';setTimeout(function(){sp.style.display='none';},700);}
+},2500);
 
 function showApp(){
   var splash = document.getElementById('splash');
@@ -1427,9 +1445,12 @@ function App(){
   },[]);
 
   // ── Load weather ──
-  // Hide splash as soon as React is ready
+  // Hide splash + native gate as soon as React is ready
   useEffect(()=>{
     if(typeof showApp==='function') showApp();
+    var ng=document.getElementById('native-gate');
+    if(ng) ng.style.display='none';
+    window.__dolciaStart=enterUser;
   },[]);
 
   useEffect(()=>{
@@ -1556,7 +1577,11 @@ function App(){
   function onbSkip(){setScreen('app');setTimeout(showApp,100);}
 
   // ── Gate ──
-  function enterUser(){setScreen('onb');}
+  function enterUser(){
+    document.getElementById('native-gate').style.display='none';
+    setScreen('onb');
+  }
+  window.__dolciaStart = enterUser;
   function enterPro(code){
     const p=PARTNERS[code.trim().toLowerCase()];
     if(p){setPartner(p);setScreen('pro');setTimeout(showApp,100);}
