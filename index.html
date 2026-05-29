@@ -184,7 +184,7 @@ body{
   border:1px solid rgba(255,255,255,.16);border-radius:99px;
   padding:7px 18px;cursor:pointer;
 }
-.onb-top{position:absolute;top:0;left:0;right:0;z-index:10;padding:56px 22px 0}
+.onb-top{position:absolute;top:0;left:0;right:0;z-index:10;padding:52px 22px 0}
 .onb-sn{font-size:9px;letter-spacing:.44em;color:rgba(255,255,255,.32);text-transform:uppercase;font-weight:400;margin-bottom:12px;display:block}
 .onb-q{
   font-family:var(--cormo);font-size:clamp(36px,10.5vw,52px);
@@ -192,7 +192,7 @@ body{
   text-shadow:0 2px 40px rgba(0,0,0,.7);
 }
 .onb-q em{font-style:italic;color:var(--gold2)}
-.onb-bottom{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 13px 36px}
+.onb-bottom{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 13px 30px}
 .onb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .onb-card{
   border-radius:20px;overflow:hidden;cursor:pointer;position:relative;height:158px;
@@ -864,14 +864,36 @@ function renderOnb(){
   var step=ONB[S.step];if(!step)return;
   var bgs=_ONB_BG||[];
   var bgEl=document.getElementById('onb-bg');
-  if(bgEl){bgEl.src=bgs[S.step]||bgs[0]||'';if(step.bg){var img2=new Image();img2.onload=function(){if(bgEl)bgEl.src=step.bg;};img2.src=step.bg;}}
-  var bars=document.getElementById('onb-bars');if(bars)bars.innerHTML=ONB.map(function(_,i){return '<div class="onb-bar'+(i<=S.step?' done':'')+'"></div>';}).join('');
+  if(bgEl){
+    bgEl.src=bgs[S.step]||bgs[0]||'';
+    if(step.bg){var img2=new Image();img2.onload=function(){if(bgEl)bgEl.src=step.bg;};img2.src=step.bg;}
+  }
+  var bars=document.getElementById('onb-bars');
+  if(bars)bars.innerHTML=ONB.map(function(_,i){
+    return '<div class="onb-bar'+(i<=S.step?' done':'')+'"></div>';
+  }).join('');
   var sn=document.getElementById('onb-sn');if(sn)sn.textContent=step.sn;
-  var q=document.getElementById('onb-q');if(q)q.innerHTML=step.q.replace(/\n/g,'<br>');
+  var q=document.getElementById('onb-q');
+  if(q)q.innerHTML=step.q.split('\n').join('<br>');
   var grid=document.getElementById('onb-grid');
-  if(grid)grid.innerHTML=step.opts.map(function(o){var sel=S.ans[step.key]===o.id;return '<div class="onb-card'+(sel?' sel':'')+'" data-action="onb-pick" data-key="'+step.key+'" data-val="'+o.id+'"><img class="onb-card-img" src="'+o.img+'" alt="" loading="lazy"><div class="onb-card-shade"></div><div class="onb-card-body"><div class="onb-card-l">'+o.l+'</div><div class="onb-card-s">'+o.s+'</div></div><div class="onb-chk">&#10003;</div></div>';}).join('');
-  var btn=document.getElementById('onb-next');if(btn)btn.style.display=S.ans[step.key]?'block':'none';
+  if(grid){
+    grid.innerHTML=step.opts.map(function(o){
+      var sel=S.ans[step.key]===o.id;
+      return '<div class="onb-card'+(sel?' sel':'')+'" data-action="onb-pick" data-key="'+step.key+'" data-val="'+o.id+'">'
+        +'<img class="onb-card-img" src="'+o.img+'" alt="" loading="lazy">'
+        +'<div class="onb-card-shade"></div>'
+        +'<div class="onb-card-label">'
+        +'<div class="onb-card-l">'+o.l+'</div>'
+        +'<div class="onb-card-s">'+o.s+'</div>'
+        +'</div>'
+        +'<div class="onb-chk">&#10003;</div>'
+        +'</div>';
+    }).join('');
+  }
+  var btn=document.getElementById('onb-next');
+  if(btn)btn.style.display=S.ans[step.key]?'block':'none';
 }
+
 function nextStep(){if(S.step<ONB.length-1){S.step++;renderOnb();}else{goHome();}}
 var GK='AIzaSyC3wNqEGoGPEFlHMTlF2U_pkVpetjASl3U';
 var AK='ac14a63c81534dada3c30a092daeec1c';
@@ -1461,6 +1483,27 @@ document.addEventListener('click',function(e){
   else if(a==='close-det'){var det=document.getElementById('det');if(det)det.style.display='none';}
   else if(a==='tab'){switchTab(id,el);}
   else if(a==='hplan'){S.ans.moment=id;document.querySelectorAll('.hpill').forEach(function(p){p.classList.toggle('on',p.dataset.p===id);});renderCards(getFiltered());}
+  // ONB cards
+  else if(a==='onb-pick'){
+    var key=el.dataset.key,val=el.dataset.val;
+    if(key&&val){
+      S.ans[key]=val;
+      // Marquer sel
+      document.querySelectorAll('.onb-card').forEach(function(c){
+        c.classList.toggle('sel',c.dataset.key===key&&c.dataset.val===val);
+      });
+      // Afficher le bouton suivant
+      var btn=document.getElementById('onb-next');if(btn)btn.style.display='block';
+      // Auto-avance après 400ms
+      setTimeout(function(){nextStep();},400);
+    }
+  }
+  // Cards home
+  else if(a==='open'&&id){openDetail(id);}
+  // Flash deal
+  else if(a==='flash-deal'){snack('Offre flash — contactez le partenaire');}
+  // Go agenda
+  else if(a==='go-agenda'){var tb=document.querySelector('.ntab[data-t="agenda"]');if(tb)switchTab('agenda',tb);}
 });
 
 document.querySelectorAll('.ntab').forEach(function(b){
