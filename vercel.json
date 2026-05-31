@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/places.js": {},
-    "api/events.js": {},
-    "api/weather.js": {}
-  }
-}
