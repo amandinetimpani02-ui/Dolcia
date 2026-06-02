@@ -815,13 +815,15 @@ function toggleSave(id){
 }
 
 function loadActs(){
+  // Charger fallback immédiatement pour ne jamais rester bloqué
+  loadFallback();
   var lat=S.city.lat,lng=S.city.lng,radius=(S.radius||5)*1000;
-  var types=['restaurant','spa','casino','night_club','museum','bar','cafe','amusement_park','swimming_pool','golf_course','bowling_alley','gym','movie_theater','park','tourist_attraction','natural_feature','beach','art_gallery','beauty_salon','hair_care','physiotherapist','bicycle_store','book_store','lodging','yoga','stadium','aquarium','zoo','library'];
+  var types=['restaurant','spa','casino','night_club','museum','bar','cafe','amusement_park','swimming_pool','golf_course','bowling_alley','gym','movie_theater','park','tourist_attraction','natural_feature','beach','art_gallery','beauty_salon','physiotherapist','bicycle_store','lodging','stadium','aquarium','zoo','library'];
   var allResults=[],done=0;
   types.forEach(function(t){
     fetch(PROXY+'/places?lat='+lat+'&lng='+lng+'&radius='+radius+'&type='+t)
       .then(function(r){return r.json();}).then(function(d){if(d.results&&d.results.length)allResults=allResults.concat(d.results);}).catch(function(){})
-      .finally(function(){done++;if(done===types.length){if(allResults.length>0)processActs(allResults);else showEmpty();}});
+      .finally(function(){done++;if(done===types.length&&allResults.length>0)processActs(allResults);});
   });
   loadWeather();loadEvents();loadSupaFiches();loadSupaEvents();
 }
