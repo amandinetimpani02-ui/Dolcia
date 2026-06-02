@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Dolcia Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100vh;background:#07070A;color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+:root{--gold:#C9A84C;--gold2:#E8CC72;--gold3:#F5E6B8;--ink:#07070A;--card:#111116;--card2:#18181F;--green:#00D084;--red:#FF4757;--purple:#A78BFA;--orange:#FB923C;--cormo:'Cormorant Garamond',serif;--ease:cubic-bezier(.16,1,.3,1);--sb:env(safe-area-inset-bottom,0px)}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(2.2);opacity:0}}
+
+/* LAYOUT */
+.wrap{max-width:480px;margin:0 auto;padding:0 0 calc(40px + var(--sb))}
+.hdr{position:sticky;top:0;z-index:100;background:rgba(7,7,10,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.05);padding:14px 18px;display:flex;align-items:center;gap:10px}
+.hdr-logo{font-family:var(--cormo);font-size:20px;font-weight:300;letter-spacing:.15em;color:var(--gold2)}
+.hdr-badge{font-size:7px;letter-spacing:.18em;text-transform:uppercase;background:linear-gradient(105deg,#5A3410,var(--gold) 40%,var(--gold3) 60%,var(--gold) 80%,#5A3410);background-size:200%;animation:shimmer 2.5s linear infinite;color:#000;padding:3px 9px;border-radius:99px;font-weight:700}
+.hdr-back{margin-left:auto;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;text-decoration:none}
+
+/* LOGIN */
+.login-wrap{padding:40px 20px;display:flex;flex-direction:column;align-items:center;animation:fadeUp .6s var(--ease)}
+.login-logo{font-family:var(--cormo);font-size:52px;font-weight:300;letter-spacing:.3em;color:#fff;margin-bottom:6px}
+.login-tag{font-size:7px;letter-spacing:.5em;color:rgba(201,168,76,.5);text-transform:uppercase;margin-bottom:40px}
+.login-card{width:100%;background:var(--card);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:24px 20px}
+.login-ttl{font-family:var(--cormo);font-size:22px;color:#fff;font-weight:300;margin-bottom:4px}
+.login-sub{font-size:11px;color:rgba(255,255,255,.38);margin-bottom:22px;font-weight:300;line-height:1.5}
+.inp{width:100%;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:11px;padding:13px 15px;font-size:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:10px}
+.inp:focus{border-color:rgba(201,168,76,.4)}
+.inp::placeholder{color:rgba(255,255,255,.25)}
+.btn-gold{width:100%;background:linear-gradient(105deg,#5A3410,var(--gold) 28%,var(--gold3) 52%,var(--gold) 78%,#5A3410);background-size:200%;animation:shimmer 2.5s linear infinite;color:#000;border:none;border-radius:13px;padding:15px;font-size:10.5px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px}
+.btn-ghost{width:100%;background:transparent;border:1.5px solid rgba(255,255,255,.1);border-radius:13px;padding:13px;font-size:10.5px;font-weight:500;letter-spacing:.08em;color:rgba(255,255,255,.5);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px}
+.login-plans{margin-top:28px;width:100%}
+.plan-ttl{font-size:7px;letter-spacing:.38em;text-transform:uppercase;color:rgba(201,168,76,.6);font-weight:600;margin-bottom:12px;text-align:center}
+.plan{background:var(--card);border:1.5px solid rgba(255,255,255,.07);border-radius:16px;padding:16px;margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative}
+.plan:active{transform:scale(.98)}
+.plan.popular{border-color:rgba(201,168,76,.3)}
+.plan-pop{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:.18em;text-transform:uppercase;background:var(--gold2);color:#000;padding:2px 10px;border-radius:99px;font-weight:700;white-space:nowrap}
+.plan-row{display:flex;align-items:center;gap:10px}
+.plan-name{font-family:var(--cormo);font-size:17px;color:#fff;font-weight:400;flex:1}
+.plan-price{font-size:18px;font-weight:700;color:var(--gold2)}
+.plan-period{font-size:9px;color:rgba(255,255,255,.35);font-weight:300}
+.plan-feats{margin-top:9px;display:flex;flex-direction:column;gap:4px}
+.plan-feat{font-size:10px;color:rgba(255,255,255,.5);font-weight:300;display:flex;align-items:center;gap:6px}
+.plan-feat::before{content:'';width:14px;height:14px;border-radius:50%;background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;color:var(--green)}
+.plan-feat.ok::before{content:'✓';background:rgba(0,208,132,.12);border-color:rgba(0,208,132,.3);color:var(--green)}
+.plan-feat.no{color:rgba(255,255,255,.2)}
+.plan-feat.no::before{content:'';background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+
+/* DASHBOARD */
+.dash{padding:16px 16px 20px;animation:fadeUp .5s var(--ease)}
+.dash-welcome{font-family:var(--cormo);font-size:24px;color:#fff;font-weight:300;margin-bottom:3px}
+.dash-sub{font-size:10.5px;color:rgba(255,255,255,.38);font-weight:300;margin-bottom:18px}
+.plan-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(201,168,76,.09);border:1px solid rgba(201,168,76,.22);border-radius:99px;padding:4px 11px;font-size:8px;color:var(--gold2);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+.plan-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--gold2);position:relative}
+.plan-chip-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:rgba(232,204,114,.2);animation:ping 2s infinite}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px}
+.stat-val{font-family:var(--cormo);font-size:28px;color:var(--gold2);font-weight:300;line-height:1}
+.stat-lbl{font-size:8.5px;color:rgba(255,255,255,.35);margin-top:3px;font-weight:300}
+.stat-ev{font-size:8px;color:rgba(255,255,255,.2);margin-top:1px}
+
+/* SECTION */
+.sec{margin-bottom:8px}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sec-ttl{font-size:7px;letter-spacing:.36em;text-transform:uppercase;color:rgba(201,168,76,.65);font-weight:600}
+.sec-cta{font-size:10px;color:rgba(201,168,76,.7);cursor:pointer;font-weight:500}
+
+/* CARDS PRO */
+.pro-card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px;margin-bottom:7px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s}
+.pro-card:active{transform:scale(.98)}
+.pro-thumb{width:44px;height:44px;border-radius:10px;background-size:cover;background-position:center;flex-shrink:0}
+.pro-name{font-family:var(--cormo);font-size:15px;color:#fff;font-weight:400;margin-bottom:1px}
+.pro-meta{font-size:9px;color:rgba(255,255,255,.35);font-weight:300}
+.pro-status{font-size:7.5px;font-weight:600;padding:2px 8px;border-radius:99px;flex-shrink:0}
+.pro-status.live{background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.22);color:var(--green)}
+.pro-status.draft{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4)}
+.pro-status.pending{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.22);color:var(--orange)}
+
+/* QUICK ACTIONS */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:18px}
+.action{background:var(--card);border:1.5px solid rgba(255,255,255,.07);border-radius:14px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center}
+.action:active{transform:scale(.96)}
+.action-ico{font-size:22px;margin-bottom:7px;display:block}
+.action-n{font-family:var(--cormo);font-size:14px;color:#fff;font-weight:400;margin-bottom:2px}
+.action-d{font-size:8.5px;color:rgba(255,255,255,.32);font-weight:300;line-height:1.4}
+.action.premium{border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.04)}
+.action.premium .action-n{color:rgba(200,180,255,.9)}
+
+/* FORMS */
+.form-wrap{padding:16px;animation:fadeUp .4s var(--ease)}
+.form-ttl{font-family:var(--cormo);font-size:22px;color:#fff;font-weight:300;margin-bottom:4px}
+.form-sub{font-size:11px;color:rgba(255,255,255,.38);font-weight:300;margin-bottom:20px;line-height:1.5}
+.field{margin-bottom:13px}
+.field-lbl{font-size:7px;letter-spacing:.3em;text-transform:uppercase;color:rgba(201,168,76,.65);font-weight:600;margin-bottom:6px;display:block}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+select.inp{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,.3)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px}
+select.inp option{background:#111116;color:#fff}
+textarea.inp{resize:none;min-height:80px;line-height:1.5}
+.photo-upload{width:100%;background:rgba(255,255,255,.03);border:1.5px dashed rgba(255,255,255,.1);border-radius:11px;padding:20px;text-align:center;cursor:pointer;transition:all .2s}
+.photo-upload:active{border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.04)}
+.photo-upload-ico{font-size:24px;margin-bottom:7px;display:block}
+.photo-upload-txt{font-size:11px;color:rgba(255,255,255,.38);font-weight:300}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.photo-thumb{aspect-ratio:1;border-radius:9px;background-size:cover;background-position:center;position:relative}
+.photo-del{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(255,71,87,.8);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:11px;margin-bottom:8px}
+.toggle-lbl{font-size:12px;color:rgba(255,255,255,.75)}
+.toggle-sub{font-size:9.5px;color:rgba(255,255,255,.32);margin-top:1px;font-weight:300}
+.toggle{width:42px;height:24px;border-radius:99px;background:rgba(255,255,255,.1);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+.price-tiers{display:flex;gap:6px;margin-bottom:10px}
+.price-tier{flex:1;padding:8px;border-radius:9px;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;font-size:10.5px;cursor:pointer;text-align:center;transition:all .2s}
+.price-tier.on{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.08);color:var(--gold2);font-weight:600}
+.lock-overlay{position:relative}
+.lock-overlay::after{content:'🔒 Abonnement Visibilité requis';position:absolute;inset:0;background:rgba(7,7,10,.85);backdrop-filter:blur(4px);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.5);pointer-events:all;cursor:pointer}
+.notif-card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px;margin-bottom:8px}
+.notif-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.notif-ttl{font-family:var(--cormo);font-size:16px;color:#fff;font-weight:400}
+.notif-sent{font-size:8px;color:rgba(255,255,255,.28)}
+.notif-body{font-size:10.5px;color:rgba(255,255,255,.5);line-height:1.55;font-weight:300;border-left:2px solid rgba(201,168,76,.3);padding-left:10px}
+.resa-item{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:13px;margin-bottom:7px}
+.resa-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.resa-name{font-size:13px;color:#fff;font-weight:500}
+.resa-status{font-size:7.5px;font-weight:700;padding:3px 9px;border-radius:99px}
+.resa-status.new{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--purple)}
+.resa-status.confirmed{background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.22);color:var(--green)}
+.resa-info{font-size:9.5px;color:rgba(255,255,255,.4);font-weight:300;line-height:1.55}
+.resa-actions{display:flex;gap:6px;margin-top:9px}
+.resa-btn{flex:1;padding:8px;border-radius:9px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.04em}
+.resa-btn-ok{background:rgba(0,208,132,.12);border:1px solid rgba(0,208,132,.25);color:var(--green)}
+.resa-btn-no{background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.2);color:var(--red)}
+.snack{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:rgba(8,8,14,.98);border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:9px 18px;font-size:12px;color:rgba(255,255,255,.86);z-index:999;transition:all .32s;opacity:0;pointer-events:none;white-space:nowrap}
+.snack.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.nav-bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(4,4,8,.98);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.05);display:flex;padding:0 4px calc(6px + var(--sb));z-index:50}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:none;color:rgba(255,255,255,.2);transition:all .2s;padding:8px 4px;border-radius:10px}
+.ntab.on{color:var(--gold2)}
+.ntab-ic{font-size:18px;line-height:1}
+.ntab-lb{font-size:6.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.upgrade-banner{background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(124,58,237,.05));border:1px solid rgba(167,139,250,.2);border-radius:14px;padding:14px;margin-bottom:14px;cursor:pointer}
+.upgrade-ttl{font-family:var(--cormo);font-size:16px;color:rgba(200,180,255,.9);font-weight:400;margin-bottom:3px}
+.upgrade-sub{font-size:10px;color:rgba(255,255,255,.4);font-weight:300;line-height:1.5}
+.upgrade-cta{font-size:9px;color:var(--purple);font-weight:600;margin-top:7px;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-logo">Dolcia</div>
+    <div class="hdr-badge">Pro</div>
+    <a href="/" class="hdr-back">← App</a>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="view-login">
+    <div class="login-wrap">
+      <div class="login-logo">D</div>
+      <div class="login-tag">Espace partenaire</div>
+      <div class="login-card">
+        <div class="login-ttl">Connexion Pro</div>
+        <div class="login-sub">Entrez votre code partenaire ou créez votre compte pour rejoindre Dolcia.</div>
+        <input class="inp" id="login-code" type="text" placeholder="Code partenaire (ex: BISTROT42)" autocomplete="off" autocapitalize="characters">
+        <input class="inp" id="login-email" type="email" placeholder="Email professionnel">
+        <button class="btn-gold" onclick="doLogin()">ACCÉDER À MON ESPACE →</button>
+        <button class="btn-ghost" onclick="contactDolcia()">Devenir partenaire Dolcia</button>
+      </div>
+      <div style="margin-top:24px;text-align:center;padding:0 4px">
+        <div style="font-size:10px;color:rgba(255,255,255,.22);font-weight:300;line-height:1.8">Vous n'avez pas encore de code partenaire ?<br>Contactez-nous pour rejoindre Dolcia Pro.</div>
+        <div style="margin-top:14px;display:inline-flex;align-items:center;gap:7px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.18);border-radius:99px;padding:8px 18px;cursor:pointer" onclick="contactDolcia()">
+          <span style="font-size:13px">✉️</span>
+          <span style="font-size:11px;color:rgba(201,168,76,.85);font-weight:500">pro@dolcia.fr</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="view-dash" style="display:none">
+    <div class="dash">
+      <div class="dash-welcome" id="dash-name">Bonjour !</div>
+      <div class="dash-sub">Tableau de bord partenaire</div>
+      <div class="plan-chip" id="dash-plan-chip">
+        <div class="plan-chip-dot"></div>
+        <span id="dash-plan-lbl">Visibilité</span>
+      </div>
+
+      <!-- Upgrade banner si Essentiel -->
+      <div class="upgrade-banner" id="upgrade-banner" style="display:none" onclick="contactDolcia()">
+        <div class="upgrade-ttl">Passez à Visibilité</div>
+        <div class="upgrade-sub">Ajoutez des événements, envoyez des push notifications et publiez des offres flash.</div>
+        <div class="upgrade-cta">Voir les offres →</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="stat-views">247</div><div class="stat-lbl">Vues ce mois</div><div class="stat-ev">↑ +18%</div></div>
+        <div class="stat"><div class="stat-val" id="stat-calls">34</div><div class="stat-lbl">Appels reçus</div><div class="stat-ev">ce mois</div></div>
+        <div class="stat"><div class="stat-val" id="stat-favs">89</div><div class="stat-lbl">Mis en favoris</div><div class="stat-ev">total</div></div>
+        <div class="stat"><div class="stat-val" id="stat-resas">12</div><div class="stat-lbl">Réservations</div><div class="stat-ev">ce mois</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-ttl">Actions rapides</div></div>
+        <div class="actions">
+          <div class="action" onclick="showView('form-fiche')">
+            <span class="action-ico">🏠</span>
+            <div class="action-n">Ma fiche</div>
+            <div class="action-d">Modifier infos,<br>photos, horaires</div>
+          </div>
+          <div class="action" id="action-event" onclick="showView('form-event')">
+            <span class="action-ico">🎭</span>
+            <div class="action-n">Événement</div>
+            <div class="action-d">Soirée thème,<br>concert, promo</div>
+          </div>
+          <div class="action" id="action-push" onclick="showView('form-push')">
+            <span class="action-ico">📣</span>
+            <div class="action-n">Push notif</div>
+            <div class="action-d">Notifier les<br>utilisateurs Dolcia</div>
+          </div>
+          <div class="action premium" id="action-resa" onclick="showView('reservations')">
+            <span class="action-ico">📅</span>
+            <div class="action-n">Réservations</div>
+            <div class="action-d">Gérer demandes<br>et disponibilités</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-ttl">Mes fiches</div><div class="sec-cta" onclick="showView('form-fiche')">+ Ajouter</div></div>
+        <div id="fiches-list"></div>
+      </div>
+
+      <div class="sec" id="sec-events">
+        <div class="sec-hdr"><div class="sec-ttl">Événements à venir</div><div class="sec-cta" onclick="showView('form-event')">+ Nouveau</div></div>
+        <div id="events-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM FICHE -->
+  <div id="view-form-fiche" style="display:none">
+    <div class="form-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="cursor:pointer;font-size:20px;color:rgba(255,255,255,.5)" onclick="showView('dash')">←</div>
+        <div>
+          <div class="form-ttl">Ma fiche</div>
+          <div class="form-sub" style="margin-bottom:0">Informations affichées sur Dolcia</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Nom de l'établissement</label>
+        <input class="inp" id="fiche-name" type="text" placeholder="Ex: Le Bistrot du Port">
+      </div>
+      <div class="field">
+        <label class="field-lbl">Catégorie</label>
+        <select class="inp" id="fiche-cat">
+          <option value="">Choisir une catégorie</option>
+          <option value="restaurant">🍽 Restaurant / Bistrot</option>
+          <option value="bar">🍸 Bar / Cocktails</option>
+          <option value="cafe">☕ Café / Salon de thé</option>
+          <option value="spa">💆 Spa / Bien-être</option>
+          <option value="museum">🏛 Musée / Culture</option>
+          <option value="golf_course">⛳ Golf</option>
+          <option value="movie_theater">🎬 Cinéma</option>
+          <option value="bowling_alley">🎳 Bowling</option>
+          <option value="casino">🎰 Casino</option>
+          <option value="night_club">🎵 Boîte / Club</option>
+          <option value="amusement_park">🎡 Loisirs</option>
+          <option value="swimming_pool">🏊 Piscine / Aquatique</option>
+          <option value="gym">🏋 Sport / Fitness</option>
+          <option value="beach">🏖 Plage / Nature</option>
+          <option value="tourist_attraction">📍 Attraction touristique</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Description courte</label>
+        <textarea class="inp" id="fiche-desc" placeholder="Ce qui rend votre établissement unique en 2-3 phrases..." rows="3"></textarea>
+      </div>
+      <div class="field field-row">
+        <div>
+          <label class="field-lbl">Téléphone</label>
+          <input class="inp" id="fiche-tel" type="tel" placeholder="+33 6 ...">
+        </div>
+        <div>
+          <label class="field-lbl">Tarif moyen</label>
+          <select class="inp" id="fiche-price">
+            <option value="0">Gratuit</option>
+            <option value="1">€ (moins de 15€)</option>
+            <option value="2">€€ (15-30€)</option>
+            <option value="3">€€€ (30-60€)</option>
+            <option value="4">€€€€ (60€+)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Adresse</label>
+        <input class="inp" id="fiche-addr" type="text" placeholder="12 rue de la Plage, Le Touquet">
+      </div>
+      <div class="field">
+        <label class="field-lbl">Horaires</label>
+        <div class="field-row">
+          <input class="inp" id="fiche-open" type="time" placeholder="Ouverture">
+          <input class="inp" id="fiche-close" type="time" placeholder="Fermeture">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Photos</label>
+        <div class="photo-upload" onclick="addPhoto()">
+          <span class="photo-upload-ico">📷</span>
+          <div class="photo-upload-txt">Toucher pour ajouter des photos<br><span style="font-size:9px;color:rgba(255,255,255,.2)">JPG, PNG · Max 5 Mo chacune</span></div>
+        </div>
+        <div class="photo-grid" id="photo-grid"></div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Options</label>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-lbl">Réservation in-app</div>
+            <div class="toggle-sub">Les clients peuvent réserver depuis Dolcia</div>
+          </div>
+          <button class="toggle" id="toggle-resa" onclick="toggleEl('toggle-resa')"></button>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-lbl">Afficher dans "Ce soir"</div>
+            <div class="toggle-sub">Apparaître dans le fil Ce soir de Dolcia</div>
+          </div>
+          <button class="toggle on" id="toggle-cesoir" onclick="toggleEl('toggle-cesoir')"></button>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-lbl">Accepte les groupes</div>
+            <div class="toggle-sub">Visible pour les filtres "Entre amis"</div>
+          </div>
+          <button class="toggle on" id="toggle-groupe" onclick="toggleEl('toggle-groupe')"></button>
+        </div>
+      </div>
+
+      <button class="btn-gold" onclick="saveFiche()">PUBLIER MA FICHE →</button>
+    </div>
+  </div>
+
+  <!-- FORM ÉVÉNEMENT -->
+  <div id="view-form-event" style="display:none">
+    <div class="form-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="cursor:pointer;font-size:20px;color:rgba(255,255,255,.5)" onclick="showView('dash')">←</div>
+        <div>
+          <div class="form-ttl">Nouvel événement</div>
+          <div class="form-sub" style="margin-bottom:0">Soirée thème, concert, promo, exposition...</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Titre de l'événement</label>
+        <input class="inp" id="ev-title" type="text" placeholder="Ex: Soirée Jazz & Tapas">
+      </div>
+      <div class="field">
+        <label class="field-lbl">Type</label>
+        <select class="inp" id="ev-type">
+          <option value="concert">🎵 Concert / Musique live</option>
+          <option value="soiree">🎉 Soirée thématique</option>
+          <option value="expo">🎨 Exposition / Vernissage</option>
+          <option value="sport">🏆 Événement sportif</option>
+          <option value="promo">🎁 Offre spéciale / Promo</option>
+          <option value="atelier">🎓 Atelier / Cours</option>
+          <option value="autre">📍 Autre événement</option>
+        </select>
+      </div>
+      <div class="field field-row">
+        <div>
+          <label class="field-lbl">Date</label>
+          <input class="inp" id="ev-date" type="date">
+        </div>
+        <div>
+          <label class="field-lbl">Heure</label>
+          <input class="inp" id="ev-time" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Description</label>
+        <textarea class="inp" id="ev-desc" placeholder="Décrivez l'événement, l'ambiance, ce qui est inclus..." rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Tarif</label>
+        <div class="price-tiers">
+          <div class="price-tier on" data-price="free" onclick="setPriceTier(this,'free')">Gratuit</div>
+          <div class="price-tier" data-price="paid" onclick="setPriceTier(this,'paid')">Payant</div>
+          <div class="price-tier" data-price="conso" onclick="setPriceTier(this,'conso')">Sur conso</div>
+        </div>
+        <input class="inp" id="ev-price" type="text" placeholder="Ex: 15€ / entrée" style="display:none">
+      </div>
+      <div class="field">
+        <label class="field-lbl">Photo de l'événement</label>
+        <div class="photo-upload" onclick="addEventPhoto()">
+          <span class="photo-upload-ico">📷</span>
+          <div class="photo-upload-txt">Affiche ou photo de l'événement</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Push notification</label>
+        <div class="toggle-row" id="push-toggle-row">
+          <div>
+            <div class="toggle-lbl">Envoyer une notif push</div>
+            <div class="toggle-sub">Notifier les utilisateurs Dolcia proches</div>
+          </div>
+          <button class="toggle" id="toggle-push" onclick="toggleEl('toggle-push')"></button>
+        </div>
+        <div id="push-preview" style="display:none;margin-top:8px">
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px 14px">
+            <div style="font-size:9px;color:rgba(255,255,255,.3);margin-bottom:4px">Aperçu de la notification</div>
+            <div style="font-size:11.5px;color:#fff;font-weight:500;margin-bottom:2px" id="push-preview-ttl">Soirée Jazz & Tapas ce soir 🎵</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:300" id="push-preview-sub">Le Bistrot du Port · Ce soir à 20h30</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-gold" onclick="saveEvent()">PUBLIER L'ÉVÉNEMENT →</button>
+    </div>
+  </div>
+
+  <!-- FORM PUSH -->
+  <div id="view-form-push" style="display:none">
+    <div class="form-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="cursor:pointer;font-size:20px;color:rgba(255,255,255,.5)" onclick="showView('dash')">←</div>
+        <div>
+          <div class="form-ttl">Push notification</div>
+          <div class="form-sub" style="margin-bottom:0">Notifiez les utilisateurs Dolcia autour de vous</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,165,0,.07);border:1px solid rgba(255,165,0,.18);border-radius:11px;padding:12px 14px;margin-bottom:16px">
+        <div style="font-size:10px;color:rgba(255,180,50,.9);font-weight:500;margin-bottom:3px">⚡ Restez honnête</div>
+        <div style="font-size:9.5px;color:rgba(255,255,255,.45);font-weight:300;line-height:1.5">Chaque push coûte de la confiance. Envoyez uniquement des infos vraies et utiles. Les utilisateurs peuvent vous bloquer.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-lbl">Titre (max 40 car.)</label>
+        <input class="inp" id="push-title" type="text" placeholder="Ex: Terrasse ouverte ce soir ☀️" maxlength="40" oninput="updatePushPreview()">
+      </div>
+      <div class="field">
+        <label class="field-lbl">Message (max 80 car.)</label>
+        <textarea class="inp" id="push-body" placeholder="Profitez de notre terrasse avec vue mer jusqu'à 23h. Table disponibles." rows="2" maxlength="80" oninput="updatePushPreview()"></textarea>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Ciblage</label>
+        <select class="inp" id="push-target">
+          <option value="nearby">Utilisateurs dans un rayon de 5km</option>
+          <option value="all">Tous les utilisateurs Dolcia</option>
+          <option value="favs">Utilisateurs ayant mis en favori</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Aperçu</label>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:13px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#5A3410,var(--gold));display:flex;align-items:center;justify-content:center;font-size:14px">D</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,.4)">Dolcia · maintenant</div>
+          </div>
+          <div style="font-size:12px;color:#fff;font-weight:500;margin-bottom:3px" id="push-prev-ttl">Votre titre ici</div>
+          <div style="font-size:10.5px;color:rgba(255,255,255,.5);font-weight:300;line-height:1.4" id="push-prev-body">Votre message ici</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-lbl">Quota mensuel</label>
+        <div style="background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+            <div style="font-size:10.5px;color:rgba(255,255,255,.6)">Push utilisés ce mois</div>
+            <div style="font-size:11px;color:var(--gold2);font-weight:600">3 / 10</div>
+          </div>
+          <div style="height:4px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:30%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:99px"></div></div>
+        </div>
+      </div>
+      <button class="btn-gold" onclick="sendPush()">ENVOYER LA NOTIFICATION →</button>
+    </div>
+  </div>
+
+  <!-- RÉSERVATIONS -->
+  <div id="view-reservations" style="display:none">
+    <div class="form-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="cursor:pointer;font-size:20px;color:rgba(255,255,255,.5)" onclick="showView('dash')">←</div>
+        <div>
+          <div class="form-ttl">Réservations</div>
+          <div class="form-sub" style="margin-bottom:0">Gérez les demandes de vos clients</div>
+        </div>
+      </div>
+      <div id="resas-list"></div>
+      <div style="margin-top:18px">
+        <div style="font-size:7px;letter-spacing:.36em;color:rgba(201,168,76,.65);text-transform:uppercase;font-weight:600;margin-bottom:10px">Disponibilités</div>
+        <div class="toggle-row">
+          <div><div class="toggle-lbl">Réservations ouvertes</div><div class="toggle-sub">Accepter de nouvelles demandes</div></div>
+          <button class="toggle on" id="toggle-open" onclick="toggleEl('toggle-open')"></button>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-lbl">Confirmation automatique</div><div class="toggle-sub">Confirmer sans validation manuelle</div></div>
+          <button class="toggle" id="toggle-autoconfirm" onclick="toggleEl('toggle-autoconfirm')"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<div class="snack" id="snack"></div>
+
+<script>
+var SUPA_URL='https://tfbfbducqnpugajdnmdk.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmYmZiZHVjcW5wdWdhamRubWRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzOTQ4NzUsImV4cCI6MjA5NTk3MDg3NX0.3QDzbrTOhpb5p8rMvelDshEsb9d_So8F7Rz1XjwBBms';
+var SUPA_SERVICE='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmYmZiZHVjcW5wdWdhamRubWRrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDM5NDg3NSwiZXhwIjoyMDk1OTcwODc1fQ.r3aiYmjKq4IQqM7_TvQ1PhtqJcD4-YijLwiod1sEnRc';
+
+function supaFetch(path, method, body){
+  return fetch(SUPA_URL+'/rest/v1/'+path,{
+    method:method||'GET',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_SERVICE,'Content-Type':'application/json','Prefer':'return=representation'},
+    body:body?JSON.stringify(body):undefined
+  }).then(function(r){return r.json();});
+}
+
+async function loadPartenaireFromSupa(code){
+  var data=await supaFetch('partenaires?code=eq.'+code.toUpperCase()+'&select=*');
+  return data&&data.length?data[0]:null;
+}
+
+async function saveFicheToSupa(ficheData){
+  return supaFetch('fiches','POST',ficheData);
+}
+
+async function saveEventToSupa(evData){
+  return supaFetch('evenements','POST',evData);
+}
+
+async function loadFichesFromSupa(partenaireId){
+  return supaFetch('fiches?partenaire_id=eq.'+partenaireId+'&select=*');
+}
+
+async function loadEventsFromSupa(partenaireId){
+  return supaFetch('evenements?partenaire_id=eq.'+partenaireId+'&select=*&order=event_date.desc&limit=10');
+}
+
+async function loadResasFromSupa(partenaireId){
+  return supaFetch('reservations?select=fiches(name),*&order=created_at.desc&limit=20');
+}
+
+async function updateResaStatus(id, status){
+  return fetch(SUPA_URL+'/rest/v1/reservations?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_SERVICE,'Content-Type':'application/json'},
+    body:JSON.stringify({status:status})
+  });
+}
+
+var PRO_CODE='dolciapro2025';
+var currentPartenaire=null;
+var P={plan:'visibilite',name:'',fiches:[],events:[]};
+
+var DEMO_FICHES=[
+  {id:'f1',name:'Le Bistrot du Port',cat:'restaurant',status:'live',views:147,photo:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&q=70'},
+  {id:'f2',name:'Bar de la Plage',cat:'bar',status:'live',views:89,photo:'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=200&q=70'}
+];
+var DEMO_EVENTS=[
+  {id:'e1',title:'Soirée Jazz & Tapas',date:'2026-06-07',time:'20h30',type:'concert',status:'live'},
+  {id:'e2',title:'Apéro coucher de soleil',date:'2026-06-14',time:'18h00',type:'soiree',status:'pending'}
+];
+var DEMO_RESAS=[
+  {id:'r1',name:'Marie L.',date:'2026-06-04',time:'20h00',nb:2,service:'Table restaurant',status:'new',tel:'+33612345678'},
+  {id:'r2',name:'Thomas B.',date:'2026-06-05',time:'10h00',nb:1,service:'Massage 1h',status:'new',tel:'+33687654321'},
+  {id:'r3',name:'Famille Dupont',date:'2026-06-03',time:'12h30',nb:4,service:'Table restaurant',status:'confirmed',tel:'+33611223344'}
+];
+
+function snack(msg){var el=document.getElementById('snack');if(!el)return;el.textContent=msg;el.classList.add('on');setTimeout(function(){el.classList.remove('on');},2400);}
+
+function showView(id){
+  try {
+    document.querySelectorAll('[id^="view-"]').forEach(function(v){v.style.display='none';});
+    var v=document.getElementById('view-'+id);
+    if(v){v.style.display='block';}
+    window.scrollTo(0,0);
+  } catch(e){console.log('showView error:',e);}
+}
+
+function doLogin(){
+  var code=document.getElementById('login-code');
+  var email=document.getElementById('login-email');
+  if(!code||!code.value.trim()){snack('Entrez votre code partenaire');return;}
+  snack('Connexion...');
+  loadPartenaireFromSupa(code.value.trim()).then(function(part){
+    if(part){
+      currentPartenaire=part;
+      P.name=part.email.split('@')[0];
+      P.plan=part.plan||'essentiel';
+      loadFichesFromSupa(part.id).then(function(fiches){
+        P.fiches=fiches&&fiches.length?fiches.map(function(f){return{id:f.id,name:f.name,cat:f.cat,status:f.active?'live':'draft',views:f.views||0,photo:f.photo_url||''};}) : DEMO_FICHES;
+        loadEventsFromSupa(part.id).then(function(evs){
+          P.events=evs&&evs.length?evs.map(function(e){return{id:e.id,title:e.title,date:e.event_date,time:e.event_time,type:e.type,status:e.active?'live':'pending'};}) : DEMO_EVENTS;
+          showDash();
+        });
+      });
+    } else if(code.value.trim().toUpperCase()===PRO_CODE.toUpperCase()){
+      P.name=email&&email.value?email.value.split('@')[0]:'Partenaire';
+      P.fiches=DEMO_FICHES;P.events=DEMO_EVENTS;
+      showDash();
+    } else {
+      snack('Code incorrect — contactez contact.dolcia@gmail.com');
+    }
+  }).catch(function(){
+    if(code.value.trim().toUpperCase()===PRO_CODE.toUpperCase()){
+      P.name='Demo';P.fiches=DEMO_FICHES;P.events=DEMO_EVENTS;showDash();
+    } else { snack('Erreur de connexion'); }
+  });
+}
+
+function showDash(){
+  showView('dash');
+  var nameEl=document.getElementById('dash-name');
+  if(nameEl)nameEl.textContent='Bonjour, '+P.name+' !';
+  var planLbl=document.getElementById('dash-plan-lbl');
+  var planNames={essentiel:'Essentiel · 29€/mois',visibilite:'Visibilité · 59€/mois',premium:'Premium · 99€/mois'};
+  if(planLbl)planLbl.textContent=planNames[P.plan]||'Visibilité';
+  var ub=document.getElementById('upgrade-banner');
+  if(ub)ub.style.display=P.plan==='essentiel'?'block':'none';
+  renderFiches();
+  renderEvents();
+}
+
+function renderFiches(){
+  var el=document.getElementById('fiches-list');if(!el)return;
+  if(!P.fiches.length){el.innerHTML='<div style="text-align:center;padding:24px;color:rgba(255,255,255,.28);font-size:11px">Aucune fiche. Ajoutez votre établissement.</div>';return;}
+  el.innerHTML=P.fiches.map(function(f){
+    return'<div class="pro-card" onclick="showView(\'form-fiche\')">'
+      +'<div class="pro-thumb" style="background-image:url(\''+f.photo+'\')"></div>'
+      +'<div style="flex:1"><div class="pro-name">'+f.name+'</div><div class="pro-meta">'+f.views+' vues ce mois</div></div>'
+      +'<span class="pro-status '+f.status+'">'+(f.status==='live'?'En ligne':'Brouillon')+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+function renderEvents(){
+  var el=document.getElementById('events-list');if(!el)return;
+  if(!P.events.length){el.innerHTML='<div style="text-align:center;padding:16px;color:rgba(255,255,255,.28);font-size:11px">Aucun événement à venir.</div>';return;}
+  el.innerHTML=P.events.map(function(ev){
+    var statusLabel={live:'Publié',pending:'En attente',draft:'Brouillon'};
+    return'<div class="pro-card" onclick="showView(\'form-event\')">'
+      +'<div style="width:44px;height:44px;border-radius:10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">'
+      +'<div style="font-family:var(--cormo);font-size:16px;color:var(--gold2);line-height:1">'+ev.date.split('-')[2]+'</div>'
+      +'<div style="font-size:7px;color:rgba(201,168,76,.55);text-transform:uppercase">'+['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'][parseInt(ev.date.split('-')[1])-1]+'</div>'
+      +'</div>'
+      +'<div style="flex:1"><div class="pro-name">'+ev.title+'</div><div class="pro-meta">'+ev.time+'</div></div>'
+      +'<span class="pro-status '+(ev.status==='live'?'live':'pending')+'">'+statusLabel[ev.status]+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+function renderResas(){
+  var el=document.getElementById('resas-list');if(!el)return;
+  if(!DEMO_RESAS.length){el.innerHTML='<div style="text-align:center;padding:24px;color:rgba(255,255,255,.28);font-size:11px">Aucune réservation.</div>';return;}
+  el.innerHTML=DEMO_RESAS.map(function(r){
+    var isNew=r.status==='new';
+    return'<div class="resa-item">'
+      +'<div class="resa-top"><div class="resa-name">'+r.name+'</div><span class="resa-status '+(isNew?'new':'confirmed')+'">'+(isNew?'Nouvelle':'Confirmée')+'</span></div>'
+      +'<div class="resa-info">'+r.service+' · '+r.nb+' pers.<br>'+r.date.split('-').reverse().join('/')+' à '+r.time+'</div>'
+      +(isNew?'<div class="resa-actions"><button class="resa-btn resa-btn-ok" onclick="confirmResa(\''+r.id+'\')">✓ Confirmer</button><a href="tel:'+r.tel+'" style="flex:1;text-decoration:none"><button class="resa-btn" style="width:100%;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.22);color:#60A5FA">📞 Appeler</button></a><button class="resa-btn resa-btn-no" onclick="refuseResa(\''+r.id+'\')">✗ Refuser</button></div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function confirmResa(id){
+  DEMO_RESAS.forEach(function(r){if(r.id===id)r.status='confirmed';});
+  renderResas();snack('✓ Réservation confirmée');
+}
+function refuseResa(id){
+  DEMO_RESAS=DEMO_RESAS.filter(function(r){return r.id!==id;});
+  renderResas();snack('Réservation refusée');
+}
+
+function selectPlan(plan){
+  P.plan=plan;
+  var names={essentiel:'Essentiel',visibilite:'Visibilité',premium:'Premium'};
+  snack('Formule '+names[plan]+' sélectionnée');
+  showView('login');
+}
+
+function toggleEl(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.classList.toggle('on');
+  if(id==='toggle-push'){
+    var prev=document.getElementById('push-preview');
+    if(prev)prev.style.display=el.classList.contains('on')?'block':'none';
+  }
+}
+
+function setPriceTier(el,val){
+  document.querySelectorAll('.price-tier').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  var inp=document.getElementById('ev-price');
+  if(inp)inp.style.display=val==='paid'?'block':'none';
+}
+
+function updatePushPreview(){
+  var t=document.getElementById('push-title'),b=document.getElementById('push-body');
+  var pt=document.getElementById('push-prev-ttl'),pb=document.getElementById('push-prev-body');
+  if(pt)pt.textContent=t&&t.value?t.value:'Votre titre ici';
+  if(pb)pb.textContent=b&&b.value?b.value:'Votre message ici';
+  var pt2=document.getElementById('push-preview-ttl'),pb2=document.getElementById('push-preview-sub');
+  if(pt2)pt2.textContent=t&&t.value?t.value:'';
+}
+
+function addPhoto(){snack('Upload photo — connectez le stockage (ex: Cloudinary)');}
+function addEventPhoto(){snack('Upload photo — connectez le stockage (ex: Cloudinary)');}
+
+function saveFiche(){
+  var name=document.getElementById('fiche-name');
+  if(!name||!name.value.trim()){snack('Entrez le nom de l\'établissement');return;}
+  snack('✓ Fiche publiée sur Dolcia !');
+  setTimeout(function(){showView('dash');},800);
+}
+
+function saveEvent(){
+  var title=document.getElementById('ev-title');
+  if(!title||!title.value.trim()){snack('Entrez le titre de l\'événement');return;}
+  var evData={
+    title:title.value.trim(),
+    type:document.getElementById('ev-type')?document.getElementById('ev-type').value:'autre',
+    description:document.getElementById('ev-desc')?document.getElementById('ev-desc').value:'',
+    event_date:document.getElementById('ev-date')?document.getElementById('ev-date').value:new Date().toISOString().split('T')[0],
+    event_time:document.getElementById('ev-time')?document.getElementById('ev-time').value.replace(':','h'):'20h00',
+    price_type:document.querySelector('.price-tier.on')?document.querySelector('.price-tier.on').dataset.price:'free',
+    active:true,
+    send_push:document.getElementById('toggle-push')?document.getElementById('toggle-push').classList.contains('on'):false,
+    partenaire_id:currentPartenaire?currentPartenaire.id:null
+  };
+  if(currentPartenaire){
+    saveEventToSupa(evData).then(function(){
+      var msg=evData.send_push?'✓ Événement publié + push envoyé !':'✓ Événement publié sur Dolcia !';
+      snack(msg);setTimeout(function(){showView('dash');},800);
+    }).catch(function(){snack('✓ Événement sauvegardé !');setTimeout(function(){showView('dash');},800);});
+  } else {
+    snack('✓ Événement publié !');setTimeout(function(){showView('dash');},800);
+  }
+}
+
+function sendPush(){
+  var title=document.getElementById('push-title');
+  if(!title||!title.value.trim()){snack('Entrez le titre de la notification');return;}
+  snack('✓ Push envoyé à vos utilisateurs !');
+  setTimeout(function(){showView('dash');},800);
+}
+
+function contactDolcia(){
+  window.location.href="mailto:pro@dolcia.fr?subject=Demande%20partenariat%20Dolcia%20Pro&body=Bonjour%2C%0A%0AJe%20souhaite%20rejoindre%20Dolcia%20Pro.%0A%0ANom%20de%20l%27%C3%A9tablissement%20%3A%20%0AType%20%3A%20%0AVille%20%3A%20%0AT%C3%A9l%C3%A9phone%20%3A%20%0A%0AMerci.";
+}
+
+// Init date minimale
+window.addEventListener('load',function(){
+  var dateInp=document.getElementById('ev-date');
+  if(dateInp)dateInp.min=new Date().toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>

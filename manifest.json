@@ -1,0 +1,20 @@
+{
+  "name": "Dolcia",
+  "short_name": "Dolcia",
+  "description": "L'assistant du temps libre",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07070A",
+  "theme_color": "#07070A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2307070A'/%3E%3Cpath d='M100 76v360l146 0C348 436 420 368 420 256 420 144 348 76 246 76ZM172 138h68c78 0 104 52 104 118 0 68-26 120-104 120H172Z' fill='%23E8CC72'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "lifestyle"],
+  "lang": "fr"
+}
