@@ -582,14 +582,18 @@ function getFiltered(){
   var CG={restaurant:['restaurant','meal_takeaway','bakery'],beach:['beach'],spa:['spa','beauty_salon'],park:['park'],museum:['museum','art_gallery'],bar:['bar'],night_club:['night_club'],gym:['gym'],amusement_park:['amusement_park','zoo','aquarium'],swimming_pool:['swimming_pool'],casino:['casino'],movie_theater:['movie_theater'],cafe:['cafe','bakery'],golf_course:['golf_course'],natural_feature:['natural_feature'],bowling_alley:['bowling_alley']};
 
   if(S.cat==='all'){
+    // Essai avec scoring complet
     var scored=S.acts.map(function(a){return Object.assign({},a,{score:score(a)});})
       .filter(function(a){return a.score>0;})
       .sort(function(a,b){return b.score-a.score;});
-    // Si rien ne score > 0 (ex: 22h tout fermé), afficher quand même les mieux notés
-    if(!scored.length){
+    // Toujours afficher quelque chose - jamais vide
+    if(scored.length<3&&S.acts.length){
       scored=S.acts.map(function(a){
-        return Object.assign({},a,{score:Math.max(1,Math.round((a.rating||3)*10+(a.reviews||0>50?10:0)))});
-      }).sort(function(a,b){return b.score-a.score;}).slice(0,10);
+        var s=Math.round((a.rating||3.5)*15);
+        if(a.isOpen===true)s+=20;
+        if(a.priceN===0)s+=10;
+        return Object.assign({},a,{score:Math.max(1,Math.min(99,s))});
+      }).sort(function(a,b){return b.score-a.score;});
     }
     return scored;
   }
