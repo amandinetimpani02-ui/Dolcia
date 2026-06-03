@@ -412,7 +412,7 @@ var CI={beach:'Plage & Nature',park:'Parc & Nature',spa:'Spa & Bien-\u00eatre',r
 
 var CATS=[{id:'all',l:'Pour vous'},{id:'restaurant',l:'Gastronomie'},{id:'beach',l:'Plage'},{id:'spa',l:'Spa'},{id:'museum',l:'Culture'},{id:'bar',l:'Bar'},{id:'night_club',l:'Soir\u00e9e'},{id:'casino',l:'Casino'},{id:'movie_theater',l:'Cin\u00e9ma'},{id:'park',l:'Nature'},{id:'gym',l:'Sport'},{id:'swimming_pool',l:'Piscine'},{id:'golf_course',l:'Golf'},{id:'cafe',l:'Caf\u00e9'},{id:'bowling_alley',l:'Bowling'},{id:'amusement_park',l:'Loisirs'}];
 
-// Hooks contextuels — phrases qui donnent vraiment envie
+// Hooks contextuels - phrases qui donnent vraiment envie
 var HOOKS={
   beach:{
     clear_warm:'Le soleil vous attend. La mer aussi.',
@@ -435,7 +435,7 @@ var HOOKS={
   },
   casino:{
     evening:'La nuit commence. <em>Tentez votre chance.</em>',
-    default:'L\u2019adrénaline d\u2019une soir\u00e9e casino. Rien de tel.'
+    default:'L\u2019adr\u00e9naline d\u2019une soir\u00e9e casino. Rien de tel.'
   },
   natural_feature:{
     sunset:'Dans <em>{min} minutes</em>, le coucher de soleil sera exceptionnel.',
@@ -496,7 +496,13 @@ function cbg(c){var m={beach:'linear-gradient(135deg,#1a5276,#2980b9)',spa:'line
 function snack(msg){var el=document.getElementById('snack');if(!el)return;el.textContent=msg;el.classList.add('on');setTimeout(function(){el.classList.remove('on');},2400);}
 function show(id){['splash','onb','home'].forEach(function(s){var e=document.getElementById(s);if(!e)return;e.style.display=s===id?'flex':'none';e.classList.toggle('active',s===id);});}
 function goOnb(){S.step=0;S.ans={};show('onb');setTimeout(renderOnb,50);}
-function goHome(){show('home');setTimeout(loadActs,100);}
+function goHome(){
+  show('home');
+  // Charger imm\u00e9diatement les donn\u00e9es fallback - jamais d'\u00e9cran noir
+  loadFallback();
+  // Puis charger les vraies donn\u00e9es Google Places en parall\u00e8le
+  setTimeout(loadActs,200);
+}
 
 function doGeo(){
   var sub=document.getElementById('sp-sub');if(sub)sub.textContent='Localisation en cours\u2026';
@@ -533,7 +539,7 @@ function renderOnb(){
 }
 function nextStep(){if(S.step<ONB.length-1){S.step++;renderOnb();}else{goHome();}}
 
-// ══ SCORING ══
+// == SCORING ==
 var CAT_HOURS={beach:[8,21],park:[7,21],natural_feature:[17,21],golf_course:[7,19],amusement_park:[9,18],museum:[9,18],art_gallery:[10,19],gym:[6,23],swimming_pool:[8,21],spa:[9,21],restaurant:[11,23],cafe:[6,21],bar:[14,3],night_club:[21,5],casino:[10,5],movie_theater:[12,24],tourist_attraction:[9,20],bowling_alley:[10,1]};
 var MOMENT_BAD={tonight:['amusement_park','golf_course','museum','art_gallery'],morning:['bar','night_club','casino','bowling_alley'],now:[],tomorrow:[],weekend:[],halfday:[]};
 var MOMENT_OK={now:['restaurant','cafe','spa','museum','tourist_attraction','gym','swimming_pool','golf_course','amusement_park','natural_feature','park','beach','art_gallery','movie_theater','bowling_alley'],tonight:['restaurant','bar','casino','night_club','movie_theater','swimming_pool','bowling_alley'],morning:['cafe','beach','park','gym','golf_course','swimming_pool'],tomorrow:['beach','park','museum','tourist_attraction','restaurant','spa','golf_course','amusement_park','gym','natural_feature'],weekend:['beach','park','golf_course','amusement_park','museum','spa','restaurant','tourist_attraction','natural_feature','casino','bar','night_club','movie_theater','bowling_alley'],halfday:['beach','park','museum','spa','tourist_attraction','swimming_pool','golf_course','natural_feature','cafe','restaurant']};
@@ -653,7 +659,7 @@ function addToCalendar(a){
   window.open(url,'_blank');snack('Agenda ouvert...');
 }
 
-// ══ RENDU STORIES ══
+// == RENDU STORIES ==
 function renderStories(){
   var f=getFiltered();
   var container=document.getElementById('stories-container');
@@ -717,7 +723,7 @@ function renderStories(){
       +'</div></div></div>';
   }).join('');
 
-  // Masquer hint après premier scroll
+  // Masquer hint apr\u00e8s premier scroll
   var hint=document.getElementById('scroll-hint');
   if(hint)hint.style.display=f.length>1?'flex':'none';
   container.addEventListener('scroll',function(){
@@ -815,7 +821,7 @@ function toggleSave(id){
 }
 
 function loadActs(){
-  // Charger fallback immédiatement pour ne jamais rester bloqué
+  // Charger fallback imm\u00e9diatement pour ne jamais rester bloqu\u00e9
   loadFallback();
   var lat=S.city.lat,lng=S.city.lng,radius=(S.radius||5)*1000;
   var types=['restaurant','spa','casino','night_club','museum','bar','cafe','amusement_park','swimming_pool','golf_course','bowling_alley','gym','movie_theater','park','tourist_attraction','natural_feature','beach','art_gallery','beauty_salon','physiotherapist','bicycle_store','lodging','stadium','aquarium','zoo','library'];
@@ -986,7 +992,15 @@ document.addEventListener('click',function(e){
   if(rad){S.radius=parseInt(rad.dataset.rad);document.querySelectorAll('.rad-b').forEach(function(b){b.classList.toggle('on',parseInt(b.dataset.rad)===S.radius);});var rh_el=document.getElementById('rad-hint');if(rh_el)rh_el.textContent=rh();loadActs();}
 });
 
-window.addEventListener('load',function(){show('splash');});
+window.addEventListener('load',function(){
+  show('splash');
+  // S\u00e9curit\u00e9: si on reste bloqu\u00e9 sur home sans donn\u00e9es apr\u00e8s 2s
+  setTimeout(function(){
+    if(document.getElementById('home').classList.contains('active') && !S.acts.length){
+      loadFallback();
+    }
+  },2000);
+});
 </script>
 </body>
 </html>
