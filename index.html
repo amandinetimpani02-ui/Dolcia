@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -123,19 +124,19 @@ body{color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialia
 .wb-reco{font-size:7.5px;color:var(--gold2);font-weight:600;background:rgba(201,168,76,.09);border:1px solid rgba(201,168,76,.18);border-radius:99px;padding:3px 9px;white-space:nowrap;flex-shrink:0}
 
 /* QA PILLS HORIZONTAL */
-.qa-wrap{padding:8px 13px 0;overflow-x:auto;scrollbar-width:none;display:flex}
+.qa-wrap{padding:6px 13px 0;overflow-x:auto;scrollbar-width:none;display:flex}
 .qa-wrap::-webkit-scrollbar{display:none}
-.qa-row{display:flex;gap:7px;padding-bottom:1px}
-.qa-pill{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);cursor:pointer;transition:all .2s;white-space:nowrap}
+.qa-row{display:flex;gap:5px;padding-bottom:1px}
+.qa-pill{flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;white-space:nowrap}
 .qa-pill:active{transform:scale(.96)}
-.qa-pill span{font-size:11px;font-weight:500}
-.qa-surprise{border-color:rgba(167,139,250,.2)}.qa-surprise span{color:rgba(190,170,255,.9)}
-.qa-program{border-color:rgba(201,168,76,.2)}.qa-program span{color:rgba(232,204,114,.9)}
-.qa-events{border-color:rgba(96,165,250,.2)}.qa-events span{color:rgba(140,195,255,.9)}
-.qa-services{border-color:rgba(251,146,60,.2)}.qa-services span{color:rgba(255,180,100,.9)}
+.qa-pill span{font-size:10px;font-weight:500}
+.qa-surprise{border-color:rgba(167,139,250,.15)}.qa-surprise span{color:rgba(190,170,255,.8)}
+.qa-program{border-color:rgba(201,168,76,.15)}.qa-program span{color:rgba(232,204,114,.8)}
+.qa-events{border-color:rgba(96,165,250,.15)}.qa-events span{color:rgba(140,195,255,.8)}
+.qa-services{border-color:rgba(251,146,60,.15)}.qa-services span{color:rgba(255,180,100,.8)}
 
 /* FILTRES CATEGORIES */
-.cats-wrap{padding:10px 0 0}
+.cats-wrap{padding:6px 0 0}
 .cats-row{display:flex;overflow-x:auto;padding:0 11px 2px;scrollbar-width:none;gap:5px}
 .cats-row::-webkit-scrollbar{display:none}
 .cbtn{flex-shrink:0;padding:6px 14px;border-radius:99px;font-size:10.5px;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);cursor:pointer;transition:all .2s;white-space:nowrap;background:rgba(255,255,255,.03)}
@@ -357,10 +358,10 @@ body{color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialia
     </div>
     <div class="qa-wrap">
       <div class="qa-row">
-        <div class="qa-pill qa-surprise" onclick="doSurprise()"><span>&#10024; Surprends-moi</span></div>
-        <div class="qa-pill qa-program" onclick="doProgram()"><span>&#128197; Programme</span></div>
-        <div class="qa-pill qa-events" data-action="tab" data-id="agenda"><span>&#127917; Ce soir</span></div>
-        <div class="qa-pill qa-services" data-action="tab" data-id="services"><span>&#9889; Services</span></div>
+        <div class="qa-pill qa-surprise" onclick="doSurprise()"><span>Surprends-moi</span></div>
+        <div class="qa-pill qa-program" onclick="doProgram()"><span>Mon programme</span></div>
+        <div class="qa-pill qa-events" data-action="tab" data-id="agenda"><span>Agenda ce soir</span></div>
+        <div class="qa-pill qa-services" data-action="tab" data-id="services"><span>Services</span></div>
       </div>
     </div>
     <div id="events-strip"></div>
@@ -462,28 +463,81 @@ var WHO_BAD={famille:['bar','night_club','casino'],couple:['amusement_park'],ami
 function isOpen(cat,h){var hrs=CAT_HOURS[cat];if(!hrs)return true;var o=hrs[0],c=hrs[1];return c>o?(h>=o&&h<c):(h>=o||h<c);}
 function hFor(m){var h=H();if(m==='tonight')return 20;if(m==='tomorrow')return 10;if(m==='weekend')return 11;if(m==='halfday')return 14;return h;}
 
+// Catégories STRICTEMENT associées à chaque vibe
+var VIBE_CATS={
+  outdoor:['beach','park','natural_feature','golf_course','gym','tourist_attraction'],
+  chill:['spa','cafe','museum','art_gallery','movie_theater','swimming_pool','library'],
+  food:['restaurant','cafe','bar'],
+  party:['bar','night_club','casino','bowling_alley','movie_theater']
+};
+
+// Catégories EXCLUES pour chaque vibe (incompatibles)
+var VIBE_EXCL={
+  outdoor:['spa','casino','night_club','movie_theater','bowling_alley','museum'],
+  chill:['beach','park','natural_feature','golf_course','gym','night_club','casino'],
+  food:['beach','park','natural_feature','golf_course','gym','spa','museum','night_club','casino','bowling_alley','movie_theater','swimming_pool'],
+  party:['beach','park','natural_feature','golf_course','gym','spa','museum','swimming_pool']
+};
+
+// Catégories EXCLUES pour chaque profil
+var WHO_EXCL={
+  famille:['bar','night_club','casino'],
+  couple:[],
+  amis:[],
+  solo:[],
+  all:[]
+};
+
 function score(a){
   var h=H(),hc=hFor(S.moment),w=S.weather,main=w?w.weather[0].main:null,temp=w?w.main.temp:15;
   var rain=['Rain','Drizzle','Thunderstorm'].indexOf(main)>=0;
   var moment=S.moment,who=S.ans.who||'all',vibe=S.ans.vibe||'';
+
+  // EXCLUSIONS ABSOLUES
   if(a.isOpen===false)return 0;
   if(!isOpen(a.cat,hc))return 0;
   if((MOMENT_BAD[moment]||[]).indexOf(a.cat)>=0)return 0;
+
+  // EXCLUSION PAR VIBE — si vibe choisi et catégorie incompatible → 0
+  if(vibe&&VIBE_EXCL[vibe]&&VIBE_EXCL[vibe].indexOf(a.cat)>=0)return 0;
+
+  // EXCLUSION PAR PROFIL
+  if(who&&WHO_EXCL[who]&&WHO_EXCL[who].indexOf(a.cat)>=0)return 0;
+
+  // EXCLUSION MÉTÉO stricte
+  if(rain&&['beach','park','natural_feature','golf_course'].indexOf(a.cat)>=0&&vibe==='outdoor')return 0;
+
   var s=50;
-  if((MOMENT_OK[moment]||[]).indexOf(a.cat)>=0)s+=25;
-  if(a.isOpen===true)s+=10;
-  if((WHO_BEST[who]||[]).indexOf(a.cat)>=0)s+=20;
-  if((WHO_BAD[who]||[]).indexOf(a.cat)>=0)s-=25;
-  if(rain){if(['spa','museum','movie_theater','casino','swimming_pool','bowling_alley','restaurant','cafe'].indexOf(a.cat)>=0)s+=18;if(['beach','park','natural_feature','golf_course'].indexOf(a.cat)>=0)s-=28;}
-  else if(temp>20&&['beach','park','natural_feature'].indexOf(a.cat)>=0)s+=18;
-  else if(temp<12){if(['beach','park'].indexOf(a.cat)>=0)s-=15;if(['spa','restaurant','cafe','museum','movie_theater'].indexOf(a.cat)>=0)s+=10;}
-  if(h>=18&&h<=21&&main==='Clear'&&['natural_feature','beach'].indexOf(a.cat)>=0)s+=28;
-  if(h>=12&&h<=14&&['restaurant','cafe'].indexOf(a.cat)>=0)s+=15;
-  if(h>=19&&h<=22&&a.cat==='restaurant')s+=15;
-  if(h>=21&&['bar','casino','night_club'].indexOf(a.cat)>=0)s+=15;
-  var vm={outdoor:['beach','park','natural_feature','golf_course','gym'],chill:['spa','cafe','swimming_pool','restaurant'],food:['restaurant','cafe'],party:['bar','night_club','casino','bowling_alley']};
-  if(vibe&&vm[vibe]&&vm[vibe].indexOf(a.cat)>=0)s+=20;
-  var r=a.rating||0;if(r>=4.8)s+=12;else if(r>=4.5)s+=7;else if(r>0&&r<3.5)s-=10;
+
+  // BONUS moment
+  if((MOMENT_OK[moment]||[]).indexOf(a.cat)>=0)s+=20;
+  if(a.isOpen===true)s+=12;
+
+  // BONUS vibe — catégorie exactement dans le vibe
+  if(vibe&&VIBE_CATS[vibe]&&VIBE_CATS[vibe].indexOf(a.cat)>=0)s+=25;
+
+  // BONUS profil
+  if((WHO_BEST[who]||[]).indexOf(a.cat)>=0)s+=15;
+
+  // BONUS météo positif
+  if(!rain&&temp>20&&['beach','park','natural_feature'].indexOf(a.cat)>=0)s+=18;
+  if(rain&&['spa','museum','movie_theater','casino','swimming_pool','bowling_alley','restaurant','cafe'].indexOf(a.cat)>=0)s+=15;
+  if(temp<12&&['spa','restaurant','cafe','museum','movie_theater'].indexOf(a.cat)>=0)s+=8;
+
+  // BONUS heure
+  if(h>=18&&h<=21&&main==='Clear'&&['natural_feature','beach'].indexOf(a.cat)>=0)s+=25;
+  if(h>=12&&h<=14&&['restaurant','cafe'].indexOf(a.cat)>=0)s+=12;
+  if(h>=19&&h<=22&&a.cat==='restaurant')s+=12;
+  if(h>=21&&['bar','casino','night_club'].indexOf(a.cat)>=0)s+=12;
+
+  // BONUS qualité
+  var r=a.rating||0;
+  if(r>=4.8)s+=12;else if(r>=4.5)s+=7;else if(r>=4.0)s+=3;else if(r>0&&r<3.5)s-=10;
+
+  // PLAFOND par catégorie — un café ne peut jamais dépasser 75
+  var CAP={cafe:75,bar:80,bowling_alley:78,museum:82,art_gallery:80};
+  if(CAP[a.cat]&&s>CAP[a.cat])s=CAP[a.cat];
+
   return Math.max(1,Math.min(100,Math.round(s)));
 }
 
@@ -605,19 +659,43 @@ function loadWeather(){
 }
 
 function loadEvents(){
-  var today=new Date(),future=new Date(today.getTime()+30*24*60*60*1000);
+  var today=new Date(),future=new Date(today.getTime()+60*24*60*60*1000);
   function fmt(d){return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();}
-  fetch(PROXY+'/events?lat='+S.city.lat+'&lng='+S.city.lng+'&after='+fmt(today)+'&before='+fmt(future))
+  fetch(PROXY+'/events?lat='+S.city.lat+'&lng='+S.city.lng+'&after='+fmt(today)+'&before='+fmt(future)+'&size=100')
     .then(function(r){return r.json();}).then(function(d){
       var evts=d.events||d.data||[];if(!evts.length)return;
       S.events=evts.map(function(ev){
-        var t=ev.timings&&ev.timings[0]?ev.timings[0].begin:null,date=t?new Date(t):null,timeStr=null;
+        var t=ev.timings&&ev.timings[0]?ev.timings[0].begin:null;
+        var date=t?new Date(t):null,timeStr=null;
         if(date){var hh=date.getHours(),mm=date.getMinutes();timeStr=hh+'h'+(mm>0?String(mm).padStart(2,'0'):'');}
-        var kw=JSON.stringify(ev).toLowerCase(),type='Ev\u00e9nement';
-        if(kw.indexOf('concert')>=0)type='Concert';else if(kw.indexOf('festival')>=0)type='Festival';else if(kw.indexOf('spectacle')>=0)type='Spectacle';else if(kw.indexOf('expo')>=0)type='Expo';
-        var title=(ev.title&&ev.title.fr)?ev.title.fr:(typeof ev.title==='string'?ev.title:'Ev\u00e9nement');
-        var loc=(ev.location&&ev.location.name)?ev.location.name:'';
-        return{id:ev.uid,ttl:title,loc:loc,date:date?date.toISOString():null,time:timeStr,type:type,free:kw.indexOf('gratuit')>=0};
+        // Utiliser les champs enrichis si disponibles (nouveau proxy)
+        var type=ev.type||(function(){
+          var kw=JSON.stringify(ev).toLowerCase();
+          if(kw.indexOf('concert')>=0)return'Concert';
+          if(kw.indexOf('festival')>=0)return'Festival';
+          if(kw.indexOf('spectacle')>=0||kw.indexOf('theatre')>=0)return'Spectacle';
+          if(kw.indexOf('exposition')>=0||kw.indexOf('expo')>=0)return'Exposition';
+          if(kw.indexOf('braderie')>=0||kw.indexOf('brocante')>=0||kw.indexOf('marche')>=0)return'Braderie';
+          if(kw.indexOf('randonnee')>=0||kw.indexOf('balade')>=0)return'Sport';
+          if(kw.indexOf('atelier')>=0||kw.indexOf('cours')>=0)return'Atelier';
+          if(kw.indexOf('dedicace')>=0||kw.indexOf('livre')>=0)return'Culture';
+          if(kw.indexOf('famille')>=0||kw.indexOf('enfant')>=0)return'Famille';
+          return'Evénement';
+        })();
+        var title=ev.ttl||ev.title||'Evénement';
+        if(typeof title==='object')title=title.fr||title.en||'Evénement';
+        var loc=ev.loc||ev.location||'';
+        if(typeof loc==='object')loc=loc.name||loc.city||'';
+        var kw2=JSON.stringify(ev).toLowerCase();
+        return{
+          id:ev.uid,ttl:title,loc:loc,
+          date:date?date.toISOString():null,
+          time:timeStr,type:type,
+          emoji:ev.emoji||'',
+          free:ev.free||(kw2.indexOf('gratuit')>=0),
+          desc:ev.desc||'',
+          registrationUrl:ev.registrationUrl||null
+        };
       });
       renderEventsStrip();
     }).catch(function(){});
@@ -665,6 +743,86 @@ function updateHeroTitle(){
   var ttl=document.getElementById('hero-ttl');if(ttl)ttl.innerHTML=P[m]||'Vos prochaines <em>&eacute;motions</em> commencent ici.';
 }
 
+// ══ EXPÉRIENCES COMBINÉES ══
+// La vraie valeur Dolcia : penser à la place des utilisateurs
+var COMBOS={
+  famille:[
+    {
+      trigger:['amusement_park','gym','park','swimming_pool','bowling_alley'],
+      child_label:'Pour les enfants',
+      parent_label:'Pendant ce temps, pour vous',
+      parent_cats:['restaurant','spa','cafe','museum','bar'],
+      hook:'Et si vous en profitiez aussi ?'
+    }
+  ],
+  couple:[
+    {
+      trigger:['restaurant'],
+      after_label:'Pour prolonger la soirée',
+      after_cats:['bar','casino','natural_feature','movie_theater'],
+      hook:'La soirée ne fait que commencer.'
+    },
+    {
+      trigger:['spa'],
+      after_label:'Après le soin',
+      after_cats:['restaurant','natural_feature','cafe'],
+      hook:'Prolongez le bien-être.'
+    }
+  ],
+  amis:[
+    {
+      trigger:['bar','bowling_alley','casino'],
+      after_label:'Pour continuer',
+      after_cats:['restaurant','night_club','casino','bar'],
+      hook:'La nuit vous appartient.'
+    }
+  ],
+  solo:[
+    {
+      trigger:['museum','park','beach','natural_feature'],
+      after_label:'Une pause méritée',
+      after_cats:['cafe','restaurant'],
+      hook:'Prenez soin de vous.'
+    }
+  ]
+};
+
+function getCombo(mainAct){
+  var who=S.ans.who||'all';
+  var combos=COMBOS[who]||[];
+  for(var i=0;i<combos.length;i++){
+    var c=combos[i];
+    if(c.trigger.indexOf(mainAct.cat)>=0){
+      // Trouver l'activité complémentaire
+      var cats=c.parent_cats||c.after_cats||[];
+      var found=null;
+      for(var j=0;j<cats.length;j++){
+        var match=S.acts.filter(function(x){return x.cat===cats[j]&&x.id!==mainAct.id&&x.isOpen!==false&&(x.dist||0)<2;}).sort(function(a,b){return(b.rating||0)-(a.rating||0);})[0];
+        if(match){found=match;break;}
+      }
+      if(found)return{combo:c,act:found};
+    }
+  }
+  return null;
+}
+
+function renderComboBlock(mainAct){
+  var res=getCombo(mainAct);
+  if(!res)return'';
+  var c=res.combo,act=res.act;
+  var label=c.parent_label||c.after_label||'Complétez l’expérience';
+  var fallback=IMGS[act.cat]||null;
+  var th=fallback?'background-image:url("'+fallback+'");background-size:cover;background-position:center':cbg(act.cat);
+  return'<div style="margin:10px 0 0;background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.03));border:1px solid rgba(201,168,76,.18);border-radius:14px;padding:12px 13px;cursor:pointer" data-action="open" data-id="'+act.id+'">'
+    +'<div style="font-size:7px;letter-spacing:.32em;text-transform:uppercase;color:rgba(201,168,76,.8);font-weight:600;margin-bottom:6px">'+c.hook+'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="width:52px;height:52px;border-radius:11px;flex-shrink:0;'+th+'"></div>'
+    +'<div style="flex:1"><div style="font-size:8px;color:rgba(201,168,76,.6);margin-bottom:2px">'+label+'</div>'
+    +'<div style="font-family:var(--cormo);font-size:16px;color:#fff;font-weight:300">'+act.name+'</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:1px">'+(act.dist>0?ds(act.dist):'')+(act.rating>0?' · ★'+act.rating.toFixed(1):'')+'</div>'
+    +'</div><div style="font-size:16px;color:rgba(201,168,76,.5)">›</div></div></div>';
+}
+
 function renderCards(f){
   var w=document.getElementById('cards');if(!w)return;
   if(!f||!f.length){w.innerHTML='<div class="empty"><div class="empty-ico">&#127758;</div><h3>Aucun r\u00e9sultat</h3><p>Essayez un autre filtre ou agrandissez le rayon</p></div>';return;}
@@ -706,6 +864,7 @@ function renderCards(f){
       +(r2>0?'<div class="crd-stars"><span class="crd-stars-ico">'+stars+'</span><span class="crd-rating">'+r2.toFixed(1)+'</span>'+(a.reviews>0?'<span class="crd-reviews">('+a.reviews+')</span>':'')+'</div>':'')
       +(a.price?'<div class="crd-price">'+a.price+'</div>':'')
       +'<div class="crd-why">'+why+'</div>'
+      +renderComboBlock(a)
       +'<div class="crd-cta"><div class="crd-btn crd-btn-primary" data-action="open" data-id="'+a.id+'">D\u00e9couvrir &#8250;</div>'+phoneCta+'</div>'
       +'</div></div>';
   }).join('');
@@ -836,9 +995,62 @@ function switchTab(tab){
 
 function buildAgenda(){
   var evs=S.events||[];
+  var filter=S.agendaFilter||'all';
+  var dateFilter=S.agendaDate||'all';
+  var now=new Date(),today=now.getDate(),todayM=now.getMonth();
+
+  var filtered=evs.slice();
+  if(filter!=='all')filtered=filtered.filter(function(ev){return ev.type===filter;});
+  if(dateFilter==='today')filtered=filtered.filter(function(ev){if(!ev.date)return false;var d=new Date(ev.date);return d.getDate()===today&&d.getMonth()===todayM;});
+  else if(dateFilter==='weekend'){
+    var wd=now.getDay();
+    var sat=new Date(now);sat.setDate(now.getDate()+(wd===6?0:6-wd));
+    var sun=new Date(now);sun.setDate(now.getDate()+(wd===0?0:7-wd));
+    filtered=filtered.filter(function(ev){if(!ev.date)return false;var d=new Date(ev.date),dd=d.getDate(),dm=d.getMonth();return(dd===sat.getDate()&&dm===sat.getMonth())||(dd===sun.getDate()&&dm===sun.getMonth());});
+  }
+  else if(dateFilter==='month')filtered=filtered.filter(function(ev){if(!ev.date)return false;var d=new Date(ev.date);return d.getMonth()===todayM&&d.getFullYear()===now.getFullYear();});
+
+  var DTYPES=['Concert','Festival','Spectacle','Exposition','Culture','Braderie','Sport','Atelier','Famille','F\u00eate','Cin\u00e9ma'];
+  var typesPresents=DTYPES.filter(function(t){return evs.some(function(ev){return ev.type===t;});});
+
+  function dfBtn(d,cur){
+    var labels={all:'Tout',today:'Ce jour',weekend:'Week-end',month:'Ce mois'};
+    var on=d===cur;
+    var st='flex-shrink:0;padding:5px 12px;border-radius:99px;font-size:10px;cursor:pointer;white-space:nowrap;';
+    st+=on?'border:1.5px solid rgba(201,168,76,.5);background:rgba(201,168,76,.12);color:var(--gold2);':'border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:rgba(255,255,255,.5);';
+    return'<div style="'+st+'" onclick="S.agendaDate=\''+d+'\';var sc=document.getElementById(\'scroll\');if(sc)sc.innerHTML=buildAgenda();">'+labels[d]+'</div>';
+  }
+  function tfBtn(t,cur){
+    var on=t===cur;
+    var st='flex-shrink:0;padding:4px 10px;border-radius:99px;font-size:9.5px;cursor:pointer;white-space:nowrap;';
+    st+=on?'border:1px solid rgba(167,139,250,.4);background:rgba(167,139,250,.1);color:var(--purple);':'border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);color:rgba(255,255,255,.4);';
+    return'<div style="'+st+'" onclick="S.agendaFilter=\''+t+'\';var sc=document.getElementById(\'scroll\');if(sc)sc.innerHTML=buildAgenda();">'+(t==='all'?'Tous':t)+'</div>';
+  }
+
   var html='<div class="page"><div class="pg-ey">Agenda local</div><div class="pg-ttl">Ce qui se passe ici</div>';
-  if(!evs.length)return html+'<div class="empty"><div class="empty-ico">&#128197;</div><h3>Aucun \u00e9v\u00e9nement</h3><p>Revenez bient\u00f4t !</p></div></div>';
-  evs.slice(0,30).forEach(function(ev){var d=ev.date?new Date(ev.date):null,day=d?d.getDate():'?',mon=d?['jan','f\u00e9v','mar','avr','mai','jun','jul','ao\u00fb','sep','oct','nov','d\u00e9c'][d.getMonth()]:'';html+='<div class="ev-item"><div class="ev-date-b"><div class="ev-d">'+day+'</div><div class="ev-m">'+mon+'</div></div><div style="flex:1"><div class="ev-ttl">'+ev.ttl+'</div><div class="ev-loc">'+ev.loc+(ev.time?' &middot; '+ev.time:'')+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px"><span class="ev-tag">'+ev.type+'</span>'+(ev.free?'<span class="ev-tag free">Gratuit</span>':'')+'</div></div></div>';});
+  html+='<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px">'+['all','today','weekend','month'].map(function(d){return dfBtn(d,dateFilter);}).join('')+'</div>';
+  if(typesPresents.length)html+='<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px">'+['all'].concat(typesPresents).map(function(t){return tfBtn(t,filter);}).join('')+'</div>';
+
+  if(!filtered.length){
+    html+='<div class="empty"><div class="empty-ico">&#128197;</div><h3>Aucun \u00e9v\u00e9nement</h3><p>Essayez une autre p\u00e9riode ou un autre filtre</p></div>';
+  } else {
+    filtered.slice(0,50).forEach(function(ev){
+      var d=ev.date?new Date(ev.date):null;
+      var day=d?d.getDate():'?';
+      var mon=d?['jan','f\u00e9v','mar','avr','mai','jun','jul','ao\u00fb','sep','oct','nov','d\u00e9c'][d.getMonth()]:'';
+      html+='<div class="ev-item">'
+        +'<div class="ev-date-b"><div class="ev-d">'+day+'</div><div class="ev-m">'+mon+'</div></div>'
+        +'<div style="flex:1">'
+        +'<div class="ev-ttl">'+(ev.emoji?ev.emoji+' ':'')+ev.ttl+'</div>'
+        +'<div class="ev-loc">'+ev.loc+(ev.time?' \u00b7 '+ev.time:'')+'</div>'
+        +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">'
+        +'<span class="ev-tag">'+ev.type+'</span>'
+        +(ev.free?'<span class="ev-tag free">Gratuit</span>':'')
+        +'</div>'
+        +(ev.desc?'<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:3px;line-height:1.4">'+ev.desc.substring(0,100)+'</div>':'')
+        +'</div></div>';
+    });
+  }
   return html+'</div>';
 }
 
