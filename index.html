@@ -782,12 +782,77 @@ function loadFallback(){
 
 function loadActs(){
   var lat=S.city.lat,lng=S.city.lng,radius=(S.radius||5)*1000;
-  var types=['restaurant','spa','casino','night_club','museum','bar','cafe','amusement_park','swimming_pool','golf_course','bowling_alley','gym','movie_theater','park','tourist_attraction','natural_feature','beach','art_gallery'];
   var all=[],done=0;
+
+  // ── 1. TYPES GOOGLE PLACES (commerces & lieux) ──────────────────
+  var types=[
+    'restaurant','spa','casino','night_club','museum','bar','cafe',
+    'amusement_park','swimming_pool','golf_course','bowling_alley',
+    'gym','movie_theater','park','tourist_attraction','natural_feature',
+    'beach','art_gallery','campground','stadium','race_track',
+    'rv_park','zoo','aquarium'
+  ];
+
+  // ── 2. KEYWORDS PLEIN AIR & ACTIVITÉS GRATUITES ─────────────────
+  // Ce que Google Places nearbysearch NE remonte PAS avec les types seuls
+  var keywords=[
+    // Plein air & sport gratuit
+    {kw:'pétanque',cat:'outdoor_free'},
+    {kw:'char à voile',cat:'outdoor_free'},
+    {kw:'randonnée sentier',cat:'outdoor_free'},
+    {kw:'terrain de sport',cat:'outdoor_free'},
+    {kw:'skatepark',cat:'outdoor_free'},
+    {kw:'aire de jeux',cat:'outdoor_free'},
+    {kw:'parcours santé',cat:'outdoor_free'},
+    {kw:'beach volley',cat:'outdoor_free'},
+    {kw:'surf école',cat:'outdoor_sport'},
+    {kw:'kitesurf',cat:'outdoor_sport'},
+    {kw:'vélo location',cat:'outdoor_sport'},
+    {kw:'équitation',cat:'outdoor_sport'},
+    {kw:'escalade',cat:'outdoor_sport'},
+    {kw:'paintball',cat:'outdoor_sport'},
+    {kw:'karting',cat:'outdoor_sport'},
+    {kw:'laser game',cat:'indoor_sport'},
+    {kw:'accrobranche',cat:'outdoor_free'},
+    {kw:'base de loisirs',cat:'outdoor_free'},
+    // Culture & famille
+    {kw:'marché artisanal',cat:'culture'},
+    {kw:'visite guidée',cat:'culture'},
+    {kw:'galerie art',cat:'culture'},
+    {kw:'théâtre',cat:'culture'},
+    {kw:'escape game',cat:'indoor_sport'},
+    {kw:'trampoline parc',cat:'indoor_sport'},
+    // Nature & panoramas
+    {kw:'belvédère point de vue',cat:'outdoor_free'},
+    {kw:'dune plage naturelle',cat:'outdoor_free'},
+    {kw:'forêt balade',cat:'outdoor_free'},
+    {kw:'lac étang',cat:'outdoor_free'},
+  ];
+
+  var total=types.length+keywords.length;
+
+  // Requêtes par type
   types.forEach(function(t){
     fetch(PROXY+'/places?lat='+lat+'&lng='+lng+'&radius='+radius+'&type='+t)
-      .then(function(r){return r.json();}).then(function(d){if(d.results&&d.results.length)all=all.concat(d.results);}).catch(function(){})
-      .finally(function(){done++;if(done===types.length&&all.length)processActs(all);});
+      .then(function(r){return r.json();})
+      .then(function(d){if(d.results&&d.results.length)all=all.concat(d.results);})
+      .catch(function(){})
+      .finally(function(){done++;if(done===total&&all.length)processActs(all);});
+  });
+
+  // Requêtes par keyword (textsearch)
+  keywords.forEach(function(k){
+    fetch(PROXY+'/places?lat='+lat+'&lng='+lng+'&radius='+radius+'&mode=text&keyword='+encodeURIComponent(k.kw))
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.results&&d.results.length){
+          // On injecte la cat suggérée pour les activités non-reconnues par Google
+          d.results.forEach(function(p){p._suggestCat=k.cat;});
+          all=all.concat(d.results);
+        }
+      })
+      .catch(function(){})
+      .finally(function(){done++;if(done===total&&all.length)processActs(all);});
   });
   loadWeather();loadEvents();
   fetch(SUPA_URL+'/rest/v1/fiches?select=*&active=eq.true',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}})
@@ -804,20 +869,40 @@ function loadActs(){
 
 function processActs(results){
   var seen={},acts=[];
-  var pri=['restaurant','spa','casino','night_club','museum','beach','park','amusement_park','swimming_pool','golf_course','bowling_alley','gym','movie_theater','bar','cafe','art_gallery','natural_feature','bakery','tourist_attraction'];
+  var pri=['restaurant','spa','casino','night_club','museum','beach','park','amusement_park',
+           'swimming_pool','golf_course','bowling_alley','gym','movie_theater','bar','cafe',
+           'art_gallery','natural_feature','campground','stadium','zoo','aquarium','bakery',
+           'tourist_attraction'];
+  var CAT_MAP={outdoor_free:'park',outdoor_sport:'gym',indoor_sport:'bowling_alley',culture:'museum'};
+  var P=['Gratuit','\u20ac','\u20ac\u20ac','\u20ac\u20ac\u20ac','\u20ac\u20ac\u20ac\u20ac'];
   results.forEach(function(p){
     if(!p.place_id||seen[p.place_id])return;seen[p.place_id]=1;
-    var t2=p.types||[],cat='tourist_attraction';
+    var t2=p.types||[],cat=null;
     for(var pi=0;pi<pri.length;pi++){if(t2.indexOf(pri[pi])>=0){cat=pri[pi];break;}}
-    var dist=0;if(p.geometry&&p.geometry.location){var dlat=p.geometry.location.lat-S.city.lat,dlng=p.geometry.location.lng-S.city.lng;dist=Math.round(Math.sqrt(dlat*dlat+dlng*dlng)*111000)/1000;}
-    var P=['Gratuit','\u20ac','\u20ac\u20ac','\u20ac\u20ac\u20ac','\u20ac\u20ac\u20ac\u20ac'],pN=p.price_level!==undefined?p.price_level:-1;
+    if(!cat&&p._suggestCat)cat=CAT_MAP[p._suggestCat]||'tourist_attraction';
+    if(!cat)cat='tourist_attraction';
+    var dist=0;
+    if(p.geometry&&p.geometry.location){
+      var dlat=p.geometry.location.lat-S.city.lat,dlng=p.geometry.location.lng-S.city.lng;
+      dist=Math.round(Math.sqrt(dlat*dlat+dlng*dlng)*111000)/1000;
+    }
+    var pN=p.price_level!==undefined?p.price_level:-1;
+    if(pN<0&&p._suggestCat==='outdoor_free')pN=0;
     var op=null;if(p.opening_hours&&p.opening_hours.open_now!==undefined)op=p.opening_hours.open_now;
-    acts.push({id:p.place_id,name:p.name,cat:cat,types:t2,dist:dist,rating:p.rating||0,reviews:p.user_ratings_total||0,priceN:pN,price:pN>=0?P[pN]:'',isOpen:op,photoRef:p.photos&&p.photos[0]?p.photos[0].photo_reference:null,phone:p.formatted_phone_number||null,address:p.vicinity||''});
+    if(op===null&&p._suggestCat&&p._suggestCat.indexOf('outdoor')>=0)op=true;
+    acts.push({id:p.place_id,name:p.name,cat:cat,types:t2,dist:dist,
+      rating:p.rating||0,reviews:p.user_ratings_total||0,
+      priceN:pN,price:pN>=0?P[pN]:'',isOpen:op,
+      photoRef:p.photos&&p.photos[0]?p.photos[0].photo_reference:null,
+      phone:p.formatted_phone_number||null,
+      address:p.vicinity||p.formatted_address||'',
+      suggestCat:p._suggestCat||null});
   });
   if(!acts.length)return;
   S.acts=acts;S.live=true;
   var dot=document.getElementById('api-dot'),txt=document.getElementById('api-txt');
-  if(dot)dot.className='api-dot live';if(txt)txt.textContent=acts.length+' activit\u00e9s';
+  if(dot)dot.className='api-dot live';
+  if(txt)txt.textContent=acts.length+' activit\u00e9s';
   renderHome();updateHeroBg();
 }
 
