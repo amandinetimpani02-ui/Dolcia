@@ -315,17 +315,15 @@ body{color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialia
   </div>
 </div>
 
-<!-- ONBOARDING -->
+<!-- ONBOARDING MINIMALISTE -->
 <div id="onb" class="screen">
-  <img class="onb-bg" id="onb-bg" src="" alt="">
-  <div class="onb-shade"></div>
-  <div class="onb-bars" id="onb-bars"></div>
-  <button class="onb-skip" onclick="goHome()">Passer</button>
-  <div class="onb-layout">
-    <div class="onb-q-wrap"><span class="onb-sn" id="onb-sn"></span><div class="onb-q" id="onb-q"></div></div>
-    <div class="onb-grid" id="onb-grid"></div>
-    <button class="onb-next" id="onb-next" onclick="nextStep()">Continuer &rsaquo;</button>
+  <div class="onb-wrap" id="onb-wrap">
+    <div class="onb-prog" id="onb-prog"></div>
+    <div class="onb-step-label" id="onb-sn"></div>
+    <div class="onb-step-q" id="onb-q"></div>
+    <div class="onb-opts" id="onb-grid"></div>
   </div>
+  <div class="onb-skip-btn" onclick="goHome()">Passer</div>
 </div>
 
 <!-- HOME -->
@@ -488,6 +486,26 @@ var WHO_EXCL={
   all:[]
 };
 
+// Budget par categorie (prix moyen en euros)
+var CAT_BUDGET={
+  cafe:10,park:0,beach:0,natural_feature:0,tourist_attraction:0,
+  restaurant:45,bar:25,cafe:10,
+  spa:80,swimming_pool:20,gym:20,
+  museum:12,art_gallery:8,movie_theater:12,
+  golf_course:120,casino:50,night_club:30,
+  bowling_alley:20,amusement_park:35
+};
+
+function matchesBudget(a){
+  var budget=S.ans.budget||'high';
+  if(budget==='high')return true;
+  var price=a.priceN>=0?[0,15,45,90,200][Math.min(a.priceN,4)]:(CAT_BUDGET[a.cat]||30);
+  if(budget==='free')return a.priceN===0||price===0;
+  if(budget==='low')return price<=30;
+  if(budget==='mid')return price<=80;
+  return true;
+}
+
 function score(a){
   var h=H(),hc=hFor(S.moment),w=S.weather,main=w?w.weather[0].main:null,temp=w?w.main.temp:15;
   var rain=['Rain','Drizzle','Thunderstorm'].indexOf(main)>=0;
@@ -495,6 +513,7 @@ function score(a){
 
   // EXCLUSIONS ABSOLUES
   if(a.isOpen===false)return 0;
+  if(!matchesBudget(a))return 0;
   if(!isOpen(a.cat,hc))return 0;
   if((MOMENT_BAD[moment]||[]).indexOf(a.cat)>=0)return 0;
 
@@ -1104,7 +1123,7 @@ document.addEventListener('click',function(e){
   else if(a==='close-det'){var det=document.getElementById('det');if(det)det.style.display='none';}
   else if(a==='tab'){switchTab(id);}
   else if(a==='go-agenda')switchTab('agenda');
-  else if(a==='onb-pick'){var key=el.dataset.key,val=el.dataset.val;if(key&&val){S.ans[key]=val;document.querySelectorAll('.onb-card').forEach(function(c){c.classList.toggle('sel',c.dataset.key===key&&c.dataset.val===val);});var btn=document.getElementById('onb-next');if(btn)btn.style.display='block';setTimeout(function(){nextStep();},420);}}
+  else if(a==='onb-pick'){var key=el.dataset.key,val=el.dataset.val;if(key&&val){S.ans[key]=val;document.querySelectorAll('.onb-opt').forEach(function(c){var isMatch=c.dataset.key===key&&c.dataset.val===val;c.classList.toggle('sel',isMatch);var chk=c.querySelector('.onb-opt-chk');if(chk)chk.innerHTML=isMatch?'&#10003;':'';});setTimeout(function(){nextStep();},380);}}
 });
 
 document.addEventListener('click',function(e){
