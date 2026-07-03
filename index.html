@@ -1,120 +1,21 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" name="viewport"/>
-<meta content="yes" name="apple-mobile-web-app-capable"/>
-<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<meta content="#07070A" name="theme-color"/>
-<link href="/manifest.json" rel="manifest"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#07070A" />
+<link rel="manifest" href="/manifest.json" />
 <title>Dolcia</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&amp;family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&amp;display=swap" rel="stylesheet"/>
-<link href="style.css" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-<!-- SPLASH -->
-<div class="screen active" id="splash">
-<div class="sp-slides"><div class="sp-slide"></div><div class="sp-slide"></div><div class="sp-slide"></div><div class="sp-slide"></div><div class="sp-slide"></div></div>
-<div class="sp-overlay"></div>
-<div class="sp-inner">
-<div class="sp-logo">
-<div class="sp-ring"><div class="sp-ring-in">
-<svg fill="none" height="30" viewbox="0 0 120 120" width="30"><defs><lineargradient id="dlg" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#5A3410"></stop><stop offset="45%" stop-color="#E8CC72"></stop><stop offset="100%" stop-color="#7A5010"></stop></lineargradient></defs><path d="M24 18v84l34 0C84 102 98 86 98 60 98 34 84 18 58 18ZM40 32h16c18 0 24 12 24 28 0 16-6 28-24 28H40Z" fill="url(#dlg)"></path><line stroke="url(#dlg)" stroke-linecap="round" stroke-width="5" x1="16" x2="74" y1="82" y2="20"></line></svg>
-</div></div>
-<div class="sp-name">DOLCIA</div>
-<div class="sp-tag">L’assistant du temps libre</div>
-</div>
-<div class="sp-words" id="sp-words"></div>
-<div class="sp-loc" id="sp-loc" onclick="doGeo()">
-<div class="sp-dot"></div>
-<div style="flex:1"><div class="sp-city" id="sp-city">Le Touquet-Paris-Plage</div><div class="sp-hint" id="sp-sub">Toucher pour me localiser</div></div>
-<svg fill="none" height="12" stroke="rgba(255,255,255,.28)" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="12"><polyline points="9 18 15 12 9 6"></polyline></svg>
-</div>
-<button class="sp-cta" onclick="goOnb()">COMMENCER L’AVENTURE ›</button>
-<div class="sp-skip" onclick="goOnb()">Continuer sans localisation ›</div>
-</div>
-</div>
-<!-- ONBOARDING MINIMALISTE -->
-<div class="screen" id="onb">
-<div class="onb-bg-layer">
-<div class="onb-bg-photo" id="onb-bg1"></div>
-<div class="onb-bg-photo" id="onb-bg2"></div>
-<div class="onb-bg-shade"></div>
-</div>
-<div class="onb-wrap" id="onb-wrap">
-<div class="onb-prog" id="onb-prog"></div>
-<div class="onb-step-label" id="onb-sn"></div>
-<div class="onb-step-q" id="onb-q"></div>
-<div class="onb-opts" id="onb-grid"></div>
-</div>
-<div class="onb-skip-btn" onclick="goHome()">Passer</div>
-</div>
-<!-- HOME -->
-<div class="screen" id="home">
-<div class="hdr">
-<div class="hdr-logo">Dolcia</div>
-<div class="hdr-loc" onclick="showLoc()"><div class="hdr-dot"></div><span class="hdr-city" id="hdr-city">Le Touquet</span></div>
-</div>
-<div class="scroll" id="scroll">
-<div class="hero">
-<div class="hero-bg" id="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&amp;q=80')"></div>
-<img alt="" class="hero-img" id="hero-img" src=""/>
-<div class="hero-shade"></div>
-<div class="hero-body">
-<div class="hero-ey">Dolcia • L’assistant du temps libre</div>
-<div class="hero-ttl" id="hero-ttl">Vos prochaines <em>émotions</em><br/>commencent ici.</div>
-<div class="hero-pills">
-<div class="hpill on" data-p="now">Maintenant</div>
-<div class="hpill" data-p="tonight">Ce soir</div>
-<div class="hpill" data-p="tomorrow">Demain</div>
-<div class="hpill" data-p="weekend">Week-end</div>
-<div class="hpill" data-p="halfday">Demi-journée</div>
-</div>
-</div>
-</div>
-<div class="wb" id="weather-bar" style="display:none">
-<div class="wb-icon" id="wb-icon">⛅</div>
-<div class="wb-txt" id="wb-txt">Chargement...</div>
-<div class="wb-reco" id="wb-reco">Pour vous</div>
-</div>
-<div class="qa-wrap">
-<div class="qa-row">
-<div class="qa-pill qa-surprise" onclick="doSurprise()"><span>Surprends-moi</span></div>
-<div class="qa-pill qa-program" onclick="doProgram()"><span>Mon programme</span></div>
-<div class="qa-pill qa-events" data-action="tab" data-id="agenda"><span>Agenda ce soir</span></div>
-<div class="qa-pill qa-services" data-action="tab" data-id="services"><span>Services</span></div>
-</div>
-</div>
-<div id="events-strip"></div>
-<div class="cats-wrap"><div class="cats-row" id="cats-row"></div></div>
-<div class="sec-hdr"><div class="sec-ttl" id="sec-ttl">Pour vous</div><div class="sec-badge" id="sec-n"></div></div>
-<div class="cards" id="cards"></div>
-</div>
-<div class="nav-fade"></div>
-<div class="nav">
-<button class="ntab on" data-action="tab" data-id="discover" data-t="discover">
-<div class="ntab-ic"><svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" viewbox="0 0 24 24" width="15"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg></div>
-<span class="ntab-lb">Découvrir</span>
-</button>
-<button class="ntab" data-action="tab" data-id="agenda" data-t="agenda">
-<div class="ntab-ic"><svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" viewbox="0 0 24 24" width="15"><rect height="18" rx="2" width="18" x="3" y="4"></rect><line x1="3" x2="21" y1="10" y2="10"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="16" x2="16" y1="2" y2="6"></line></svg></div>
-<span class="ntab-lb">Agenda</span>
-</button>
-<button class="ntab" data-action="tab" data-id="services" data-t="services">
-<div class="ntab-ic"><svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" viewbox="0 0 24 24" width="15"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
-<span class="ntab-lb">Services</span>
-</button>
-<button class="ntab" data-action="tab" data-id="saved" data-t="saved">
-<div class="ntab-ic"><svg fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" viewbox="0 0 24 24" width="15"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
-<span class="ntab-lb">Favoris</span>
-</button>
-</div>
-<div class="api-pill"><div class="api-dot mock" id="api-dot"></div><span id="api-txt">Chargement</span></div>
-</div>
-<div id="det"></div>
-<div class="ov" id="ov" onclick="if(event.target===this)closeSheet()"><div class="sheet" id="sheet"></div></div>
-<div class="snack" id="snack"></div>
-<script src="app.js"></script>
+  <div id="app"></div>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
 </body>
 </html>
