@@ -1,21 +1,92 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#07070A" />
-<link rel="manifest" href="/manifest.json" />
-<title>Dolcia</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#07070A" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Dolcia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div id="app"></div>
-  <div id="toast" class="toast"></div>
+  <main id="app">
+    <section id="splash" class="screen active">
+      <div class="cinema-bg">
+        <div class="bg-frame on" style="background-image:url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=85')"></div>
+        <div class="bg-frame" style="background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=85')"></div>
+        <div class="bg-frame" style="background-image:url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=85')"></div>
+        <div class="bg-frame" style="background-image:url('https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=1400&q=85')"></div>
+      </div>
+      <div class="veil"></div>
+      <div class="splash-content">
+        <div class="brand-mark">D</div>
+        <h1>DOLCIA</h1>
+        <p class="claim">Découvrez. Ressentez. Vivez.</p>
+        <p class="subclaim">L'assistant premium qui compose vos loisirs selon vos envies, votre météo, votre temps et votre budget.</p>
+        <button class="gold-button" id="startBtn">Commencer l'expérience</button>
+      </div>
+    </section>
+
+    <section id="wizard" class="screen">
+      <div class="wizard-bg" id="wizardBg"></div>
+      <div class="wizard-overlay"></div>
+      <header class="wizard-top">
+        <button class="ghost" id="backBtn">Retour</button>
+        <div class="progress"><span id="progressFill"></span></div>
+        <button class="ghost" id="skipBtn">Passer</button>
+      </header>
+      <div class="wizard-body">
+        <p class="eyebrow" id="stepCount">Étape 1 sur 4</p>
+        <h2 id="stepTitle">Pour quand ?</h2>
+        <p id="stepSubtitle" class="step-subtitle"></p>
+        <div id="options" class="premium-options"></div>
+      </div>
+    </section>
+
+    <section id="loading" class="screen">
+      <div class="loading-bg"></div>
+      <div class="veil"></div>
+      <div class="loading-card">
+        <div class="orb"></div>
+        <p class="eyebrow">Dolcia compose</p>
+        <h2>Nous cherchons les vraies possibilités autour de vous.</h2>
+        <p>Aucune activité n'est inventée. Les propositions viennent de Google Places, OpenAgenda et de la météo.</p>
+      </div>
+    </section>
+
+    <section id="results" class="screen results-screen">
+      <header class="results-hero">
+        <div class="hero-photo" id="resultsHeroPhoto"></div>
+        <div class="hero-gradient"></div>
+        <div class="results-head">
+          <button class="mini-back" id="restartBtn">Recommencer</button>
+          <p class="eyebrow">Votre sélection Dolcia</p>
+          <h2 id="resultsTitle">Des idées réellement disponibles</h2>
+          <p id="resultsSummary"></p>
+          <div class="criteria-line" id="criteriaLine"></div>
+        </div>
+      </header>
+
+      <nav class="result-actions">
+        <button id="surpriseBtn" class="surprise-action">Surprends-moi avec ces critères</button>
+        <button id="expandBtn" class="secondary-action">Élargir</button>
+      </nav>
+
+      <section class="program-section" id="programSection"></section>
+      <section class="cards-section" id="cardsSection"></section>
+      <section class="events-section" id="eventsSection"></section>
+    </section>
+
+    <section id="detail" class="detail-screen">
+      <button class="detail-close" id="detailClose">Retour</button>
+      <div id="detailContent"></div>
+    </section>
+  </main>
   <script src="/app.js"></script>
 </body>
 </html>
