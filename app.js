@@ -2,7 +2,7 @@
    Règle absolue : aucune activité inventée.
    Les activités affichées viennent uniquement de Google Places, OpenAgenda ou partenaires réels.
 */
-const API_BASES = ["", "https://dolcia.vercel.app"];
+const API_BASES = [""];
 const app = document.getElementById("app");
 
 const IMG = {
@@ -299,7 +299,7 @@ async function apiFetch(path){
 }
 async function loadWeather(){
   try{ S.weather = await apiFetch(`/api/weather?lat=${S.location.lat}&lng=${S.location.lng}`); }
-  catch(e){ S.weather=null; S.diagnostics.push("Météo : "+e.message); }
+  catch(e){ S.weather=null; S.diagnostics.push("Météo : "+explainApiError(e.message)); }
 }
 async function loadAllRealData(){
   S.places=[]; S.events=[];
@@ -310,11 +310,11 @@ async function loadAllRealData(){
   for(const w of wanted){
     for(const type of w.types.slice(0,4)){
       calls.push(apiFetch(`/api/places?lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&type=${encodeURIComponent(type)}`)
-        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google ${type} : ${e.message}`)));
+        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google ${type} : ${explainApiError(e.message)}`)));
     }
     for(const kw of w.keywords.slice(0,5)){
       calls.push(apiFetch(`/api/places?mode=text&lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&keyword=${encodeURIComponent(kw)}`)
-        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google text ${kw} : ${e.message}`)));
+        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google text ${kw} : ${explainApiError(e.message)}`)));
     }
   }
   calls.push(loadEvents());
@@ -343,7 +343,7 @@ async function loadEvents(){
     const data = await apiFetch(`/api/events?lat=${S.location.lat}&lng=${S.location.lng}&radius=${Math.max(20, Math.round(S.radius/1000))}&after=${fmt(S.dateStart)}&before=${fmt(S.dateEnd)}&size=100`);
     const list = data.events || data.results || data.data || [];
     for(const ev of list){ const n = normalizeOpenAgenda(ev); if(n) S.events.push(n); }
-  }catch(e){ S.diagnostics.push("OpenAgenda : "+e.message); }
+  }catch(e){ S.diagnostics.push("OpenAgenda : "+explainApiError(e.message)); }
 }
 function normalizeOpenAgenda(ev){
   const title = textOf(ev.title || ev.name || ev.longDescription || ev.description) || "Événement";
@@ -449,13 +449,13 @@ function renderResults(){
           <h2>${resultTitle()}</h2>
           <p>${summaryText()}</p>
           <div class="chips">${criteriaChips().map(c=>`<span class="chip">${c}</span>`).join("")}</div>
-          <div class="result-actions"><button class="gold-btn" onclick="surprise()">Surprends-moi avec ces critères</button><button class="outline-btn" onclick="expandSearch()">Élargir</button></div>
+          <div class="result-actions"><button class="gold-btn" onclick="surprise()">Recomposer l’agenda</button><button class="outline-btn" onclick="expandSearch()">Élargir</button></div>
         </div>
       </div>
       ${S.diagnostics.length?`<div class="diagnostic"><b>Diagnostic API</b><br>${S.diagnostics.slice(0,8).join("<br>")}<br><br><button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button></div>`:""}
       ${!S.items.length ? emptyHTML() : `<section class="section screen-inner"><div class="section-head"><h3>Votre programme</h3><span class="section-caption">${S.program.length} étapes réelles</span></div><div class="timeline">${S.program.map(slotHTML).join("")}</div></section><section class="section screen-inner"><div class="section-head"><h3>Autres idées réelles</h3><span class="section-caption">Remplacez une étape</span></div><div class="cards-grid">${S.items.slice(0,16).map(cardHTML).join("")}</div></section>`}
     </div>
-    <nav class="bottom-nav"><button class="navtab active" onclick="renderResults()">Découvrir</button><button class="navtab center" onclick="surprise()">Surprendre</button><button class="navtab" onclick="renderAgenda()">Agenda</button></nav>
+    <nav class="bottom-nav"><button class="navtab active" onclick="renderResults()">Découvrir</button><button class="navtab" onclick="startDate()">Composer</button><button class="navtab" onclick="renderAgenda()">Agenda</button></nav>
     <div id="detail" class="detail"></div><div id="rating" class="rating-panel"></div>
   </section>`;
 }
@@ -480,7 +480,7 @@ function openDetail(id){
 function closeDetail(){document.getElementById("detail")?.classList.remove("open");}
 function addAgenda(id){const it=S.items.find(x=>x.id===id); if(!it)return; if(!S.agenda.find(x=>x.id===it.id)){S.agenda.push({...it, agendaDate:it.date||S.dateStart.toISOString(), addedAt:new Date().toISOString()}); save();} toast("Ajouté à Mon Agenda Dolcia");}
 function renderAgenda(){
-  app.innerHTML=`<section class="screen results"><div class="scroll" style="bottom:calc(76px + var(--safeBottom))"><header class="topbar"><button class="iconbtn" onclick="renderResults()">←</button><div class="logo">Agenda</div><button class="ghostbtn" onclick="startDate()">Composer</button></header><section class="section screen-inner" style="padding-top:calc(90px + env(safe-area-inset-top,0px))"><div class="eyebrow">Mon Agenda Dolcia</div><h2>Vos moments à vivre.</h2><p class="step-sub">Activités aujourd’hui, demain, dans un mois ou pendant vos vacances. C’est le compagnon de séjour Dolcia.</p><div class="pill-row"><button class="pill active">À venir</button><button class="pill">Aujourd’hui</button><button class="pill">Séjour</button><button class="pill">Historique</button></div>${S.agenda.length?S.agenda.map(agendaHTML).join(""):`<div class="empty"><h3>Agenda vide</h3><p>Ajoutez une activité réelle depuis une fiche Dolcia.</p></div>`}</section></div><nav class="bottom-nav"><button class="navtab" onclick="renderResults()">Découvrir</button><button class="navtab center" onclick="surprise()">Surprendre</button><button class="navtab active" onclick="renderAgenda()">Agenda</button></nav><div id="rating" class="rating-panel"></div></section>`;
+  app.innerHTML=`<section class="screen results"><div class="scroll" style="bottom:calc(76px + var(--safeBottom))"><header class="topbar"><button class="iconbtn" onclick="renderResults()">←</button><div class="logo">Agenda</div><button class="ghostbtn" onclick="startDate()">Composer</button></header><section class="section screen-inner" style="padding-top:calc(90px + env(safe-area-inset-top,0px))"><div class="eyebrow">Mon Agenda Dolcia</div><h2>Vos moments à vivre.</h2><p class="step-sub">Activités aujourd’hui, demain, dans un mois ou pendant vos vacances. C’est le compagnon de séjour Dolcia.</p><div class="pill-row"><button class="pill active">À venir</button><button class="pill">Aujourd’hui</button><button class="pill">Séjour</button><button class="pill">Historique</button></div>${S.agenda.length?S.agenda.map(agendaHTML).join(""):`<div class="empty"><h3>Agenda vide</h3><p>Ajoutez une activité réelle depuis une fiche Dolcia.</p></div>`}</section></div><nav class="bottom-nav"><button class="navtab" onclick="renderResults()">Découvrir</button><button class="navtab" onclick="startDate()">Composer</button><button class="navtab active" onclick="renderAgenda()">Agenda</button></nav><div id="rating" class="rating-panel"></div></section>`;
 }
 function agendaHTML(it){return `<div class="agenda-card"><div class="agenda-img" style="background-image:url('${imageFor(it)}')"></div><div style="flex:1"><div class="agenda-title">${escapeHtml(it.name)}</div><div class="agenda-meta">${it.source} · ${it.time||new Date(it.agendaDate).toLocaleDateString("fr-FR")}</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="outline-btn" style="height:38px" onclick="calendarLink('${it.id}')">Calendrier</button><button class="dark-btn" style="height:38px" onclick="rate('${it.id}')">Noter</button></div></div></div>`}
 function calendarLink(id){const it=S.agenda.find(x=>x.id===id)||S.items.find(x=>x.id===id); if(!it)return; const start=new Date(it.date||it.agendaDate||Date.now()+3600000); const end=new Date(start.getTime()+2*3600000); const fmtCal=d=>d.toISOString().replace(/[-:]/g,"").split(".")[0]+"Z"; const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(it.name+" — Dolcia")}&dates=${fmtCal(start)}/${fmtCal(end)}&location=${encodeURIComponent(it.address||"")}&details=${encodeURIComponent("Ajouté depuis Dolcia. Source réelle : "+it.source)}`; window.open(url,"_blank");}
@@ -499,6 +499,21 @@ async function runApiDiagnostic(){
   }
   alert("Diagnostic API Dolcia\\n\\n"+tests.join("\\n\\n")+"\\n\\nVariables attendues : GOOGLE_KEY, OPENAGENDA_KEY, OPENWEATHER_KEY.");
 }
+
+function explainApiError(msg){
+  const m=String(msg||"");
+  if(m.includes("referer restrictions") || m.includes("API keys with referer restrictions")){
+    return "clé GOOGLE_KEY bloquée : elle est limitée par domaine HTTP referrer. Pour /api/places.js côté serveur Vercel, il faut une clé Google Places séparée sans restriction HTTP referrer, avec restriction par API + quota.";
+  }
+  if(m.includes("exceeding of requests limitation") || m.includes("temporary blocked")){
+    return "compte OpenWeather temporairement bloqué/quota dépassé. Il faut attendre le reset, augmenter le plan, ou changer OPENWEATHER_KEY.";
+  }
+  if(m.includes("not configured")){
+    return "variable Vercel manquante ou non cochée en Production/Preview/Development.";
+  }
+  return m;
+}
+
 function toast(msg){const el=document.createElement("div"); el.textContent=msg; el.style.cssText="position:fixed;left:50%;bottom:110px;z-index:999;transform:translateX(-50%);padding:12px 18px;border-radius:999px;background:rgba(10,10,14,.95);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;box-shadow:0 18px 45px rgba(0,0,0,.45)"; document.body.appendChild(el); setTimeout(()=>el.remove(),2400);}
 function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
 function distanceKm(lat1,lon1,lat2,lon2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}

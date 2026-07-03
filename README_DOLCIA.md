@@ -69,3 +69,13 @@ La version actuelle affiche déjà le séjour sous forme d'agenda :
 - validation activité par activité ;
 - régénération d'une activité à la fois ;
 - validation de tout le séjour.
+
+
+## V5 API + UI
+- Suppression du fallback `https://dolcia.vercel.app` pour éviter les diagnostics confus depuis les Preview Vercel.
+- Navigation bas de page nettoyée : plus de gros onglet "Surprendre".
+- Le bouton principal devient "Recomposer l’agenda".
+- Diagnostic API plus clair :
+  - Google Places : une clé avec restriction HTTP referrer ne fonctionne pas côté serveur `/api/places.js`.
+  - Solution : créer une clé Google serveur séparée, autoriser Places API + Places Photo API, limiter par API et quotas.
+  - OpenWeather : le message indique un blocage quota/compte, donc changer la clé ou attendre le reset.
