@@ -1,21 +1,26 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  const { ref, maxwidth = 600 } = req.query;
-  if (!ref) return res.status(400).json({ error: 'Missing ref' });
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  const { ref, maxwidth = 900 } = req.query;
+  if (!ref) return res.status(400).json({ error: "Missing ref" });
 
   const GK = process.env.GOOGLE_KEY;
-  if (!GK) return res.status(500).json({ error: 'GOOGLE_KEY not configured' });
+  if (!GK) return res.status(500).json({ error: "GOOGLE_KEY not configured" });
 
-  const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxwidth}&photo_reference=${ref}&key=${GK}`;
+  const safeWidth = Math.min(Number(maxwidth) || 900, 1600);
+  const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${safeWidth}&photo_reference=${encodeURIComponent(ref)}&key=${GK}`;
 
   try {
     const r = await fetch(url);
-    const contentType = r.headers.get('content-type') || 'image/jpeg';
+    if (!r.ok) return res.status(r.status).json({ error: "Google Photo error", status: r.status });
+    const contentType = r.headers.get("content-type") || "image/jpeg";
     const buffer = await r.arrayBuffer();
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400");
     return res.status(200).send(Buffer.from(buffer));
   } catch (e) {
     return res.status(500).json({ error: e.message });
