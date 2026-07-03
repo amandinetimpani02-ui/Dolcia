@@ -27,3 +27,15 @@ Dolcia n'invente aucune activité. Si les API ne remontent rien, l'application a
 - Bouton Réserver grisé sauf lien réel disponible.
 - Notes utilisateur pour personnalisation future.
 - Diagnostic API.
+
+
+## V2 Calendar first
+Cette version corrige un point essentiel : Dolcia demande la date AVANT les envies.
+Sans dates, OpenAgenda ne peut pas remonter correctement les concerts, spectacles, festivals et événements éphémères.
+
+Nouveautés :
+- écran calendrier premium obligatoire en début de parcours ;
+- choix aujourd’hui / ce soir / demain / week-end / dates libres / vacances ;
+- OpenAgenda appelé avec `after` et `before` réels ;
+- programme multi-jours si l’utilisateur choisit plusieurs dates ;
+- bouton `Test API` pour diagnostiquer directement weather / places / events.
