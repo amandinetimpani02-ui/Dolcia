@@ -163,3 +163,33 @@ p{line-height:1.55}
 .bottom-nav{justify-content:center;gap:10px;padding-left:18px;padding-right:18px}
 .navtab{max-width:220px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035)}
 .navtab.center{background:rgba(255,255,255,.035);color:rgba(255,255,255,.45);box-shadow:none}
+
+/* V6 Conciergerie Luxe */
+.concierge-loading .bg-photo::after{background:linear-gradient(180deg,rgba(7,7,10,.34),rgba(7,7,10,.94))}
+.loading-center.concierge h2{font-size:clamp(44px,10vw,78px)}
+.lux-checks{display:grid;gap:9px;margin-top:22px;color:rgba(255,255,255,.72);font-size:13px}
+.concierge-hero{padding:calc(96px + env(safe-area-inset-top,0px)) 22px 18px}
+.concierge-hero h2{font-size:clamp(48px,12vw,86px);line-height:.9;margin-bottom:14px}
+.concierge-hero p{max-width:760px;color:rgba(255,255,255,.72);font-size:16px;line-height:1.55}
+.agenda-shell{padding:12px 20px 24px}
+.agenda-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.agenda-top h3{font-size:38px}
+.day-tabs{display:flex;gap:9px;overflow-x:auto;padding:3px 0 14px;scrollbar-width:none}
+.day-tab{flex-shrink:0;height:42px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);color:rgba(255,255,255,.62);font-weight:800}
+.day-tab.active{background:linear-gradient(105deg,#8a6422,var(--gold) 60%,#ffe9a7);color:#09090A;border-color:transparent}
+.concierge-note{display:grid;gap:5px;padding:15px 16px;margin:4px 0 18px;border:1px solid rgba(214,180,91,.18);border-radius:22px;background:rgba(214,180,91,.07)}
+.concierge-note b{color:var(--gold2);font-size:13px;text-transform:uppercase;letter-spacing:.12em}
+.concierge-note span{color:rgba(255,255,255,.70);font-size:13px;line-height:1.5}
+.lux-agenda{display:grid;gap:15px}
+.lux-slot{position:relative}
+.lux-time{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold2);font-weight:900;margin:0 0 8px 4px}
+.lux-card{display:grid;grid-template-columns:112px 1fr;gap:13px;padding:10px;border-radius:28px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10);box-shadow:0 18px 45px rgba(0,0,0,.26)}
+.lux-photo{height:132px;border-radius:22px;background-size:cover;background-position:center}
+.lux-copy h4{font-family:var(--fontSerif);font-size:30px;font-weight:400;line-height:1;margin:4px 0 8px}
+.lux-copy p{font-size:12.5px;color:rgba(255,255,255,.66);line-height:1.45;margin:8px 0 10px}
+.lux-actions{display:grid;gap:10px;margin-top:20px}
+.lux-actions .gold-btn,.lux-actions .dark-btn,.lux-actions .outline-btn{width:100%}
+@media(max-width:520px){
+  .lux-card{grid-template-columns:1fr}
+  .lux-photo{height:190px}
+}

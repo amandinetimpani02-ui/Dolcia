@@ -79,3 +79,12 @@ La version actuelle affiche déjà le séjour sous forme d'agenda :
   - Google Places : une clé avec restriction HTTP referrer ne fonctionne pas côté serveur `/api/places.js`.
   - Solution : créer une clé Google serveur séparée, autoriser Places API + Places Photo API, limiter par API et quotas.
   - OpenWeather : le message indique un blocage quota/compte, donc changer la clé ou attendre le reset.
+
+
+## V6 Conciergerie Luxe
+- Suppression de l'écran résultat trop grand et vide.
+- Les diagnostics API ne sont plus affichés à l'utilisateur dans les résultats.
+- Arrivée directe sur un agenda premium.
+- Vue par jour pour les séjours.
+- Chaque activité peut être validée, changée, réservée si lien réel.
+- Positionnement : concierge loisirs personnel, programme sur mesure.

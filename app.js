@@ -266,12 +266,18 @@ async function compose(){
   renderResults();
 }
 function renderLoading(){
-  app.innerHTML = `<section class="screen">
-    <div class="bg-photo" style="background-image:url('${IMG.soir||IMG.splash}')"></div>
-    <div class="loading-center">
+  app.innerHTML = `<section class="screen concierge-loading">
+    <div class="bg-photo" style="background-image:url('${IMG.splash}')"></div>
+    <div class="loading-center concierge">
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
-      <p>Recherche des événements aux bonnes dates, analyse de la météo, vérification des lieux réels et construction de votre itinéraire.</p>
+      <p>Analyse de votre destination · météo · événements réels · meilleures adresses · construction de votre agenda.</p>
+      <div class="lux-checks">
+        <span>✓ Destination analysée</span>
+        <span>✓ Météo vérifiée</span>
+        <span>✓ Événements recherchés</span>
+        <span>✓ Agenda en préparation</span>
+      </div>
     </div>
   </section>`;
 }
@@ -437,29 +443,131 @@ function buildProgram(items){
 function strip(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
 
 function renderResults(){
-  const cover = S.program[0]?.item ? imageFor(S.program[0].item) : IMG.splash;
+  const days = groupProgramByDay();
+  const activeDay = window.dolciaActiveDay || Object.keys(days)[0] || "Jour 1";
   app.innerHTML = `
-  <section class="screen results">
+  <section class="screen concierge-results">
     <div class="scroll" style="bottom:calc(76px + var(--safeBottom))">
-      <div class="cover">
-        <div class="cover-photo" style="background-image:url('${cover}')"></div>
-        <header class="topbar results"><button class="iconbtn" onclick="renderStep()">←</button><div class="logo">Dolcia</div><button class="ghostbtn" onclick="startDate()">Dates</button></header>
-        <div class="results-copy screen-inner">
-          <div class="eyebrow">Votre sélection Dolcia</div>
-          <h2>${resultTitle()}</h2>
-          <p>${summaryText()}</p>
-          <div class="chips">${criteriaChips().map(c=>`<span class="chip">${c}</span>`).join("")}</div>
-          <div class="result-actions"><button class="gold-btn" onclick="surprise()">Recomposer l’agenda</button><button class="outline-btn" onclick="expandSearch()">Élargir</button></div>
-        </div>
-      </div>
-      ${S.diagnostics.length?`<div class="diagnostic"><b>Diagnostic API</b><br>${S.diagnostics.slice(0,8).join("<br>")}<br><br><button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button></div>`:""}
-      ${!S.items.length ? emptyHTML() : `<section class="section screen-inner"><div class="section-head"><h3>Votre programme</h3><span class="section-caption">${S.program.length} étapes réelles</span></div><div class="timeline">${S.program.map(slotHTML).join("")}</div></section><section class="section screen-inner"><div class="section-head"><h3>Autres idées réelles</h3><span class="section-caption">Remplacez une étape</span></div><div class="cards-grid">${S.items.slice(0,16).map(cardHTML).join("")}</div></section>`}
+      <header class="topbar results">
+        <button class="iconbtn" onclick="renderStep()">←</button>
+        <div class="logo">Dolcia</div>
+        <button class="ghostbtn" onclick="startDate()">Modifier</button>
+      </header>
+
+      <section class="concierge-hero screen-inner">
+        <div class="eyebrow">Votre concierge loisirs personnel</div>
+        <h2>Votre agenda est prêt.</h2>
+        <p>${conciergeIntro()}</p>
+        <div class="chips">${criteriaChips().slice(0,6).map(c=>`<span class="chip">${c}</span>`).join("")}</div>
+      </section>
+
+      ${!S.items.length ? userFriendlyEmptyHTML() : `
+        <section class="agenda-shell screen-inner">
+          <div class="agenda-top">
+            <div>
+              <div class="eyebrow">Programme sur mesure</div>
+              <h3>${!sameDay(S.dateStart,S.dateEnd) ? "Votre séjour" : "Votre journée"}</h3>
+            </div>
+            <button class="outline-btn" onclick="validateAllProgram()">Tout ajouter</button>
+          </div>
+
+          <div class="day-tabs">
+            ${Object.keys(days).map(d=>`<button class="day-tab ${d===activeDay?'active':''}" onclick="setActiveDay('${d}')">${d}</button>`).join("")}
+          </div>
+
+          <div class="concierge-note">
+            <b>Pourquoi ce programme ?</b>
+            <span>Dolcia a combiné vos dates, votre profil, vos envies, la météo et les données réelles disponibles. Aucune activité n’est inventée.</span>
+          </div>
+
+          <div class="lux-agenda">
+            ${(days[activeDay]||[]).map((s,i)=>agendaSlotHTML(s,i,activeDay)).join("")}
+          </div>
+
+          <div class="lux-actions">
+            <button class="gold-btn" onclick="validateAllProgram()">Ajouter tout à mon agenda</button>
+            <button class="dark-btn" onclick="surprise()">Recomposer cette journée</button>
+            <button class="outline-btn" onclick="expandSearch()">Chercher plus large</button>
+          </div>
+        </section>
+
+        <section class="section screen-inner">
+          <div class="section-head"><h3>Remplacer une activité</h3><span class="section-caption">Suggestions réelles</span></div>
+          <div class="cards-grid">${S.items.slice(0,8).map(cardHTML).join("")}</div>
+        </section>
+      `}
     </div>
-    <nav class="bottom-nav"><button class="navtab active" onclick="renderResults()">Découvrir</button><button class="navtab" onclick="startDate()">Composer</button><button class="navtab" onclick="renderAgenda()">Agenda</button></nav>
-    <div id="detail" class="detail"></div><div id="rating" class="rating-panel"></div>
+    <nav class="bottom-nav">
+      <button class="navtab active" onclick="renderResults()">Agenda</button>
+      <button class="navtab" onclick="startDate()">Composer</button>
+      <button class="navtab" onclick="renderAgenda()">Mes sorties</button>
+    </nav>
+    <div id="detail" class="detail"></div>
+    <div id="rating" class="rating-panel"></div>
   </section>`;
 }
-function emptyHTML(){return `<section class="empty screen-inner"><h3>Aucune activité réelle n’a remonté.</h3><p>Dolcia n’invente rien. Vérifiez GOOGLE_KEY, OPENAGENDA_KEY, OPENWEATHER_KEY dans Vercel, les quotas Google Places, le dossier /api, puis testez les API.</p><div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="gold-btn" onclick="expandSearch()">Élargir</button><button class="outline-btn" onclick="runApiDiagnostic()">Test API</button></div></section>`}
+
+function groupProgramByDay(){
+  const out = {};
+  S.program.forEach((s,idx)=>{
+    let m = String(s.slot||"").match(/Jour\s+\d+/i);
+    let day = m ? m[0].replace("jour","Jour") : (sameDay(S.dateStart,S.dateEnd) ? niceDate(S.dateStart) : "Jour 1");
+    if(!out[day]) out[day]=[];
+    out[day].push({...s, globalIndex:idx});
+  });
+  return out;
+}
+function setActiveDay(day){
+  window.dolciaActiveDay = day;
+  renderResults();
+}
+function conciergeIntro(){
+  const period = !sameDay(S.dateStart,S.dateEnd) ? `du ${niceDate(S.dateStart)} au ${niceDate(S.dateEnd)}` : `le ${niceDate(S.dateStart)}`;
+  const temp = S.weather?.main?.temp ? `${Math.round(S.weather.main.temp)} °C` : "météo actuelle";
+  return `J’ai préparé un programme ${period}, autour de ${S.location.name}, adapté à ${labelFor("who",S.answers.who)}, à vos envies et à la ${temp}.`;
+}
+function userFriendlyEmptyHTML(){
+  return `<section class="empty screen-inner">
+    <h3>Je continue la recherche.</h3>
+    <p>Certaines sources sont temporairement indisponibles. Dolcia n’invente rien : élargissez le rayon ou vérifiez les API depuis l’écran d’accueil.</p>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="gold-btn" onclick="expandSearch()">Élargir le rayon</button>
+      <button class="outline-btn" onclick="startDate()">Modifier les critères</button>
+    </div>
+  </section>`;
+}
+function agendaSlotHTML(s,i,day){
+  const idx = s.globalIndex ?? i;
+  const it = s.item;
+  const ok = !!S.acceptedSlots[it.id];
+  return `<article class="lux-slot" onclick="openDetail('${it.id}')">
+    <div class="lux-time">${cleanSlotLabel(s.slot)}${ok?' · validé':''}</div>
+    <div class="lux-card">
+      <div class="lux-photo" style="background-image:url('${imageFor(it)}')"></div>
+      <div class="lux-copy">
+        <div class="exp-type">${it.source} · ${SOURCE_MAP[it.category]?.label||"Expérience réelle"}</div>
+        <h4>${escapeHtml(it.name)}</h4>
+        <div class="meta">
+          ${it.distance!=null?`<span>${it.distance.toFixed(1)} km</span>`:""}
+          ${it.rating?`<span>★ ${it.rating.toFixed(1)}</span>`:""}
+          ${it.priceLabel?`<span>${it.priceLabel}</span>`:""}
+          ${it.time?`<span>${it.time}</span>`:""}
+        </div>
+        <p>${whyText(it)}</p>
+        <div class="slot-controls" onclick="event.stopPropagation()">
+          <button class="outline-btn ${ok?'validated':''}" onclick="validateSlot(${idx})">${ok?'Validé':'Valider'}</button>
+          <button class="dark-btn" onclick="regenSlot(${idx})">Changer</button>
+          <button class="${it.bookingUrl?'gold-btn':'outline-btn disabled'}" onclick="${it.bookingUrl?`book('${it.id}')`:`toast('Réservation bientôt disponible avec les partenaires Dolcia')`}">${it.bookingUrl?'Réserver':'Bientôt'}</button>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+function cleanSlotLabel(slot){
+  return String(slot||"").replace(/Jour\s+\d+\s*/i,"").trim() || "Moment";
+}
+
+function emptyHTML(){return userFriendlyEmptyHTML()}
 function resultTitle(){return !sameDay(S.dateStart,S.dateEnd) ? "Votre séjour se dessine." : (S.dateMode==="tonight"?"Votre soirée se dessine.":"Dolcia a composé votre moment.")}
 function summaryText(){const w=S.weather?.main?.temp?`${Math.round(S.weather.main.temp)}°`:"météo actuelle";return `Sélection réelle du ${niceDate(S.dateStart)}${!sameDay(S.dateStart,S.dateEnd)?" au "+niceDate(S.dateEnd):""} autour de ${S.location.name}, adaptée à ${labelFor("who",S.answers.who)} et ${w}.`}
 function labelFor(key,id){const st=STEPS.find(s=>s.key===key); if(!st)return id; return st.options.find(o=>o.id===id)?.label || id;}
