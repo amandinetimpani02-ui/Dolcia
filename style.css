@@ -193,3 +193,18 @@ p{line-height:1.55}
   .lux-card{grid-template-columns:1fr}
   .lux-photo{height:190px}
 }
+
+/* V7 anti-crash + sticky calendar actions */
+.sticky-continue{
+  position:fixed;
+  left:18px;
+  right:18px;
+  bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  z-index:80;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:0;
+}
+.step-wrap{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+.loading-skip{margin-top:22px;height:46px}

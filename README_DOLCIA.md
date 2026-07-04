@@ -88,3 +88,12 @@ La version actuelle affiche déjà le séjour sous forme d'agenda :
 - Vue par jour pour les séjours.
 - Chaque activité peut être validée, changée, réservée si lien réel.
 - Positionnement : concierge loisirs personnel, programme sur mesure.
+
+
+## V7 No crash / Sticky Calendar
+Corrections :
+- le bouton Continuer du calendrier est maintenant fixe en bas et reste toujours visible ;
+- les appels API ont un timeout ;
+- Dolcia ne reste plus bloqué indéfiniment sur “prépare votre expérience” ;
+- la génération utilise `Promise.allSettled` pour afficher l’agenda même si une API échoue ;
+- réduction du nombre d’appels Google pour éviter les quotas/timeouts.

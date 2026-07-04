@@ -148,7 +148,7 @@ function renderDateStep(){
         <div class="cal-days">${["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(x=>`<span>${x}</span>`).join("")}</div>
         <div class="cal-grid">${calendarCells()}</div>
       </div>
-      <div class="step-actions">
+      <div class="sticky-continue">
         <button class="dark-btn" onclick="renderSplash()">Retour</button>
         <button class="gold-btn" onclick="goSteps()">Continuer</button>
       </div>
@@ -259,10 +259,16 @@ function nextStep(){
 async function compose(){
   renderLoading();
   S.diagnostics=[]; S.apiReport=null;
-  if(S.answers.where==="gps") await locateIfPossible();
-  await Promise.all([loadWeather(), loadAllRealData()]);
-  S.items = normalizeAndScore([...S.places, ...S.events]);
-  S.program = buildProgram(S.items);
+  try{
+    if(S.answers.where==="gps") await locateIfPossible();
+    await Promise.allSettled([loadWeather(), loadAllRealData()]);
+    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+    S.program = buildProgram(S.items);
+  }catch(e){
+    S.diagnostics.push("Génération : " + explainApiError(e.message));
+    S.items = S.items || [];
+    S.program = S.program || [];
+  }
   renderResults();
 }
 function renderLoading(){
@@ -278,6 +284,7 @@ function renderLoading(){
         <span>✓ Événements recherchés</span>
         <span>✓ Agenda en préparation</span>
       </div>
+      <button class="outline-btn loading-skip" onclick="renderResults()">Voir l’agenda</button>
     </div>
   </section>`;
 }
@@ -293,13 +300,19 @@ function locateIfPossible(){
 async function apiFetch(path){
   let lastErr = null;
   for(const base of API_BASES){
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), 8500);
     try{
-      const res = await fetch(base + path);
+      const res = await fetch(base + path, { signal: controller.signal });
+      clearTimeout(timer);
       const txt = await res.text();
       let data; try{ data = JSON.parse(txt); }catch{ data = {raw:txt}; }
       if(res.ok && !data.error) return data;
       lastErr = `${base||"local"} ${data.error || data.status || txt || res.statusText}`;
-    }catch(e){ lastErr = `${base||"local"} ${e.message}`; }
+    }catch(e){
+      clearTimeout(timer);
+      lastErr = `${base||"local"} ${e.name === "AbortError" ? "timeout API" : e.message}`;
+    }
   }
   throw new Error(lastErr || "API inaccessible");
 }
@@ -314,11 +327,11 @@ async function loadAllRealData(){
   const calls = [];
   const seen = new Set();
   for(const w of wanted){
-    for(const type of w.types.slice(0,4)){
+    for(const type of w.types.slice(0,2)){
       calls.push(apiFetch(`/api/places?lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&type=${encodeURIComponent(type)}`)
         .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google ${type} : ${explainApiError(e.message)}`)));
     }
-    for(const kw of w.keywords.slice(0,5)){
+    for(const kw of w.keywords.slice(0,2)){
       calls.push(apiFetch(`/api/places?mode=text&lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&keyword=${encodeURIComponent(kw)}`)
         .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google text ${kw} : ${explainApiError(e.message)}`)));
     }
@@ -529,7 +542,7 @@ function conciergeIntro(){
 function userFriendlyEmptyHTML(){
   return `<section class="empty screen-inner">
     <h3>Je continue la recherche.</h3>
-    <p>Certaines sources sont temporairement indisponibles. Dolcia n’invente rien : élargissez le rayon ou vérifiez les API depuis l’écran d’accueil.</p>
+    <p>Certaines sources sont temporairement indisponibles ou trop lentes. Dolcia n’invente rien : élargissez le rayon, modifiez les critères ou vérifiez les clés API côté Vercel.</p>
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button class="gold-btn" onclick="expandSearch()">Élargir le rayon</button>
       <button class="outline-btn" onclick="startDate()">Modifier les critères</button>
