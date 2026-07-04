@@ -97,3 +97,9 @@ Corrections :
 - Dolcia ne reste plus bloqué indéfiniment sur “prépare votre expérience” ;
 - la génération utilise `Promise.allSettled` pour afficher l’agenda même si une API échoue ;
 - réduction du nombre d’appels Google pour éviter les quotas/timeouts.
+
+## V8 Ultra Stable
+- Plus de blocage infini : rendu forcé après 8,5 secondes.
+- Timeouts API courts.
+- Moins d'appels API.
+- Bouton Voir l’agenda maintenant.

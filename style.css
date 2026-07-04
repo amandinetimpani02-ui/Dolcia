@@ -208,3 +208,6 @@ p{line-height:1.55}
 }
 .step-wrap{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 .loading-skip{margin-top:22px;height:46px}
+
+/* V8 ultra stable */
+.loading-skip{margin-top:22px;height:46px}

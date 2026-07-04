@@ -259,35 +259,60 @@ function nextStep(){
 async function compose(){
   renderLoading();
   S.diagnostics=[]; S.apiReport=null;
+  S.items=[]; S.places=[]; S.events=[]; S.program=[];
+  let done=false;
+  const safety=setTimeout(()=>{
+    if(!done){
+      done=true;
+      S.diagnostics.push("Sécurité : les API prennent trop de temps. Affichage sans blocage.");
+      forceResults();
+    }
+  }, 9000);
   try{
     if(S.answers.where==="gps") await locateIfPossible();
     await Promise.allSettled([loadWeather(), loadAllRealData()]);
-    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-    S.program = buildProgram(S.items);
+    if(!done){
+      done=true; clearTimeout(safety);
+      S.items=normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+      S.program=buildProgram(S.items);
+      renderResults();
+    }
   }catch(e){
-    S.diagnostics.push("Génération : " + explainApiError(e.message));
-    S.items = S.items || [];
-    S.program = S.program || [];
+    if(!done){
+      done=true; clearTimeout(safety);
+      S.diagnostics.push("Génération : " + explainApiError(e.message));
+      renderResults();
+    }
   }
-  renderResults();
 }
+
 function renderLoading(){
   app.innerHTML = `<section class="screen concierge-loading">
     <div class="bg-photo" style="background-image:url('${IMG.splash}')"></div>
     <div class="loading-center concierge">
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
-      <p>Analyse de votre destination · météo · événements réels · meilleures adresses · construction de votre agenda.</p>
+      <p>Analyse rapide de votre destination, météo, événements réels et construction de votre agenda.</p>
       <div class="lux-checks">
         <span>✓ Destination analysée</span>
-        <span>✓ Météo vérifiée</span>
-        <span>✓ Événements recherchés</span>
+        <span>✓ Recherche lancée</span>
         <span>✓ Agenda en préparation</span>
       </div>
-      <button class="outline-btn loading-skip" onclick="renderResults()">Voir l’agenda</button>
+      <button class="outline-btn loading-skip" onclick="forceResults()">Voir l’agenda maintenant</button>
     </div>
   </section>`;
+  setTimeout(()=>{ if(document.querySelector('.concierge-loading')) forceResults(); }, 3000);
 }
+function forceResults(){
+  try{
+    S.items=normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+    S.program=buildProgram(S.items);
+  }catch(e){
+    S.items=[]; S.program=[];
+  }
+  renderResults();
+}
+
 function locateIfPossible(){
   return new Promise(resolve=>{
     if(!navigator.geolocation) return resolve();
@@ -327,11 +352,11 @@ async function loadAllRealData(){
   const calls = [];
   const seen = new Set();
   for(const w of wanted){
-    for(const type of w.types.slice(0,2)){
+    for(const type of w.types.slice(0,1)){
       calls.push(apiFetch(`/api/places?lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&type=${encodeURIComponent(type)}`)
         .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google ${type} : ${explainApiError(e.message)}`)));
     }
-    for(const kw of w.keywords.slice(0,2)){
+    for(const kw of w.keywords.slice(0,1)){
       calls.push(apiFetch(`/api/places?mode=text&lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&keyword=${encodeURIComponent(kw)}`)
         .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google text ${kw} : ${explainApiError(e.message)}`)));
     }
