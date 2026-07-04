@@ -211,3 +211,7 @@ p{line-height:1.55}
 
 /* V8 ultra stable */
 .loading-skip{margin-top:22px;height:46px}
+
+/* V9 definitive anti infinite loading */
+.loading-skip{margin-top:24px;min-width:220px}
+.concierge-loading .loading-center{z-index:5}

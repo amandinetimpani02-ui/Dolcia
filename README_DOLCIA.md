@@ -103,3 +103,8 @@ Corrections :
 - Timeouts API courts.
 - Moins d'appels API.
 - Bouton Voir l’agenda maintenant.
+
+## V9 No Infinite Loading — correction définitive
+Cette version ne bloque plus jamais sur l'écran “Dolcia prépare votre expérience”.
+Le résultat s'affiche automatiquement après 1,5 seconde, même si Google/OpenAgenda/OpenWeather répondent lentement ou échouent.
+Les API continuent ensuite en arrière-plan.

@@ -258,32 +258,36 @@ function nextStep(){
 
 async function compose(){
   renderLoading();
-  S.diagnostics=[]; S.apiReport=null;
-  S.items=[]; S.places=[]; S.events=[]; S.program=[];
-  let done=false;
-  const safety=setTimeout(()=>{
-    if(!done){
-      done=true;
-      S.diagnostics.push("Sécurité : les API prennent trop de temps. Affichage sans blocage.");
+  S.diagnostics=[];
+  S.apiReport=null;
+  S.items=[];
+  S.places=[];
+  S.events=[];
+  S.program=[];
+
+  // Anti-blocage total : on affiche l'écran résultat très vite.
+  setTimeout(()=> {
+    if(document.querySelector('.concierge-loading')){
       forceResults();
     }
-  }, 9000);
-  try{
-    if(S.answers.where==="gps") await locateIfPossible();
-    await Promise.allSettled([loadWeather(), loadAllRealData()]);
-    if(!done){
-      done=true; clearTimeout(safety);
-      S.items=normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-      S.program=buildProgram(S.items);
-      renderResults();
-    }
-  }catch(e){
-    if(!done){
-      done=true; clearTimeout(safety);
+  }, 1200);
+
+  // Les API travaillent en arrière-plan. Elles ne bloquent JAMAIS l'interface.
+  (async()=>{
+    try{
+      if(S.answers.where==="gps") await locateIfPossible();
+      await Promise.allSettled([loadWeather(), loadAllRealData()]);
+      S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+      S.program = buildProgram(S.items);
+      // Si l'utilisateur est encore sur l'écran de chargement ou l'écran vide, on actualise.
+      if(document.querySelector('.concierge-loading') || document.querySelector('.empty')){
+        renderResults();
+      }
+    }catch(e){
       S.diagnostics.push("Génération : " + explainApiError(e.message));
-      renderResults();
+      if(document.querySelector('.concierge-loading')) forceResults();
     }
-  }
+  })();
 }
 
 function renderLoading(){
@@ -292,23 +296,23 @@ function renderLoading(){
     <div class="loading-center concierge">
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
-      <p>Analyse rapide de votre destination, météo, événements réels et construction de votre agenda.</p>
-      <div class="lux-checks">
-        <span>✓ Destination analysée</span>
-        <span>✓ Recherche lancée</span>
-        <span>✓ Agenda en préparation</span>
-      </div>
-      <button class="outline-btn loading-skip" onclick="forceResults()">Voir l’agenda maintenant</button>
+      <p>Je construis votre agenda. Si les API sont lentes, l'application affichera quand même l'écran suivant sans rester bloquée.</p>
+      <button class="gold-btn loading-skip" onclick="forceResults()">Voir l’agenda</button>
     </div>
   </section>`;
-  setTimeout(()=>{ if(document.querySelector('.concierge-loading')) forceResults(); }, 3000);
+  setTimeout(()=> {
+    if(document.querySelector('.concierge-loading')){
+      forceResults();
+    }
+  }, 1500);
 }
 function forceResults(){
   try{
-    S.items=normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-    S.program=buildProgram(S.items);
+    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+    S.program = buildProgram(S.items);
   }catch(e){
-    S.items=[]; S.program=[];
+    S.items = [];
+    S.program = [];
   }
   renderResults();
 }
