@@ -100,10 +100,23 @@ function save(){
   localStorage.setItem("dolcia_ratings", JSON.stringify(S.ratings));
 }
 
+
 function renderSafeAgenda(){
-  if(typeof S!=='undefined'&&S.items&&S.items.length>0){try{renderResults();return;}catch(e){}}
-  const selectedDate = (typeof S !== 'undefined' && S.dateStart) ? niceDate(S.dateStart) : "aujourd’hui";
-  const placeName = (typeof S !== 'undefined' && S.location && S.location.name) ? S.location.name : "votre destination";
+  const selectedDate = (S && S.dateStart) ? niceDate(S.dateStart) : "aujourd’hui";
+  const placeName = (S && S.location && S.location.name) ? S.location.name : "votre destination";
+  const hasProgram = Array.isArray(S.program) && S.program.length > 0;
+  const body = hasProgram
+    ? `<div class="lux-agenda">${S.program.map((s,i)=>safeAgendaSlotHTML(s,i)).join("")}</div>`
+    : `<div class="empty">
+        <h3>Aucune activité réelle n’a encore remonté.</h3>
+        <p>Dolcia n’invente rien. Si les API répondent, les activités réelles apparaîtront. Sinon vérifiez les clés côté Vercel.</p>
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="gold-btn" onclick="startDate()">Recomposer</button>
+          <button class="outline-btn" onclick="expandSearch()">Élargir</button>
+          <button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button>
+        </div>
+      </div>`;
+
   app.innerHTML = `<section class="screen concierge-results">
     <div class="scroll" style="bottom:calc(76px + var(--safeBottom))">
       <header class="topbar results">
@@ -111,36 +124,54 @@ function renderSafeAgenda(){
         <div class="logo">Dolcia</div>
         <button class="ghostbtn" onclick="startDate()">Modifier</button>
       </header>
+
       <section class="concierge-hero screen-inner">
         <div class="eyebrow">Votre concierge loisirs personnel</div>
-        <h2>Votre agenda est prêt.</h2>
-        <p>Dolcia prépare votre programme pour ${selectedDate}, autour de ${placeName}. Les activités réelles continuent de charger en arrière-plan.</p>
+        <h2>${hasProgram ? "Votre agenda est prêt." : "Dolcia cherche vos meilleures expériences."}</h2>
+        <p>Programme pour ${selectedDate}, autour de ${placeName}. Dolcia n’affiche que des activités réelles.</p>
       </section>
+
       <section class="agenda-shell screen-inner">
         <div class="agenda-top">
-          <div><div class="eyebrow">Programme sur mesure</div><h3>Votre journée</h3></div>
-          <button class="outline-btn" onclick="startDate()">Recomposer</button>
+          <div><div class="eyebrow">Programme sur mesure</div><h3>${sameDay(S.dateStart,S.dateEnd) ? "Votre journée" : "Votre séjour"}</h3></div>
+          ${hasProgram ? `<button class="outline-btn" onclick="validateAllProgram()">Tout ajouter</button>` : `<button class="outline-btn" onclick="startDate()">Recomposer</button>`}
         </div>
-        <div class="concierge-note">
-          <b>Recherche en cours</b>
-          <span>Dolcia n’invente rien. Si les API répondent, les activités réelles apparaîtront. Sinon vous ne restez plus bloquée.</span>
-        </div>
-        <div class="empty">
-          <h3>Chargement des activités réelles…</h3>
-          <p>Vous pouvez modifier vos critères ou tester les API.</p>
-          <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-            <button class="gold-btn" onclick="startDate()">Recomposer</button>
-            <button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button>
-          </div>
-        </div>
+        <div class="concierge-note"><b>Règle absolue</b><span>Aucune activité inventée. Si les API échouent, Dolcia affiche un état vide propre.</span></div>
+        ${body}
       </section>
+
+      ${Array.isArray(S.items)&&S.items.length ? `<section class="section screen-inner"><div class="section-head"><h3>Autres idées réelles</h3><span class="section-caption">${S.items.length} résultats</span></div><div class="cards-grid">${S.items.slice(0,10).map(cardHTML).join("")}</div></section>` : ""}
     </div>
     <nav class="bottom-nav">
       <button class="navtab active" onclick="renderSafeAgenda()">Agenda</button>
       <button class="navtab" onclick="startDate()">Composer</button>
       <button class="navtab" onclick="renderAgenda()">Mes sorties</button>
     </nav>
+    <div id="detail" class="detail"></div><div id="rating" class="rating-panel"></div>
   </section>`;
+}
+
+function safeAgendaSlotHTML(s,i){
+  const it=s && s.item ? s.item : null;
+  if(!it) return "";
+  const ok = !!(S.acceptedSlots && S.acceptedSlots[it.id]);
+  return `<article class="lux-slot" onclick="openDetail('${it.id}')">
+    <div class="lux-time">${(typeof cleanSlotLabel==="function" ? cleanSlotLabel(s.slot) : (s.slot||"Moment"))}${ok ? " · validé" : ""}</div>
+    <div class="lux-card">
+      <div class="lux-photo" style="background-image:url('${imageFor(it)}')"></div>
+      <div class="lux-copy">
+        <div class="exp-type">${it.source || "Source réelle"} · ${SOURCE_MAP[it.category]?.label || "Expérience"}</div>
+        <h4>${escapeHtml(it.name)}</h4>
+        <div class="meta">${it.distance!=null?`<span>${it.distance.toFixed(1)} km</span>`:""}${it.rating?`<span>★ ${Number(it.rating).toFixed(1)}</span>`:""}${it.priceLabel?`<span>${it.priceLabel}</span>`:""}${it.time?`<span>${it.time}</span>`:""}</div>
+        <p>${whyText(it)}</p>
+        <div class="slot-controls" onclick="event.stopPropagation()">
+          <button class="outline-btn ${ok?'validated':''}" onclick="validateSlot(${i})">${ok?'Validé':'Valider'}</button>
+          <button class="dark-btn" onclick="regenSlot(${i})">Changer</button>
+          <button class="${it.bookingUrl?'gold-btn':'outline-btn disabled'}" onclick="${it.bookingUrl?`book('${it.id}')`:`toast('Réservation bientôt disponible avec les partenaires Dolcia')`}">${it.bookingUrl?'Réserver':'Bientôt'}</button>
+        </div>
+      </div>
+    </div>
+  </article>`;
 }
 
 function renderSplash(){
@@ -301,31 +332,19 @@ function nextStep(){
 }
 
 
+
 async function compose(){
   renderLoading();
-  // Fallback après 9 secondes si tout échoue
-  const fallbackTimer = setTimeout(()=>{
-    if(!S._rendered) renderSafeAgenda();
-  }, 9000);
-  S._rendered = false;
+  setTimeout(()=>{ if(document.querySelector('.concierge-loading')) renderSafeAgenda(); }, 1000);
   try{
-    S.diagnostics=[];
-    S.items=[]; S.places=[]; S.events=[]; S.program=[];
+    S.diagnostics=[]; S.items=[]; S.places=[]; S.events=[]; S.program=[];
     if(S.answers.where==="gps") await locateIfPossible();
     await Promise.allSettled([loadWeather(), loadAllRealData()]);
     S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
     S.program = buildProgram(S.items);
-    clearTimeout(fallbackTimer);
-    S._rendered = true;
-    if(S.items && S.items.length > 0){
-      try { renderResults(); } catch(e) { renderSafeAgenda(); }
-    } else {
-      renderSafeAgenda();
-    }
+    renderSafeAgenda();
   }catch(e){
-    clearTimeout(fallbackTimer);
-    S._rendered = true;
-    try{ S.diagnostics.push("Génération : " + (e.message || e)); }catch(_){}
+    try{ S.diagnostics.push("Génération : "+explainApiError(e.message||e)); }catch(_){}
     renderSafeAgenda();
   }
 }
@@ -337,14 +356,13 @@ function renderLoading(){
     <div class="loading-center concierge">
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
-      <p>Passage automatique à l’agenda.</p>
-      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l'agenda maintenant</button>
+      <p>Recherche des activités réelles. Si une API bloque, Dolcia affichera quand même l’agenda.</p>
+      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l’agenda</button>
     </div>
   </section>`;
+  setTimeout(()=>{ if(document.querySelector('.concierge-loading')) renderSafeAgenda(); }, 1000);
 }
-function forceResults(){
-  renderSafeAgenda();
-}
+function forceResults(){ renderSafeAgenda(); }
 
 function locateIfPossible(){
   return new Promise(resolve=>{
