@@ -101,6 +101,7 @@ function save(){
 }
 
 function renderSafeAgenda(){
+  if(typeof S!=='undefined'&&S.items&&S.items.length>0){try{renderResults();return;}catch(e){}}
   const selectedDate = (typeof S !== 'undefined' && S.dateStart) ? niceDate(S.dateStart) : "aujourd’hui";
   const placeName = (typeof S !== 'undefined' && S.location && S.location.name) ? S.location.name : "votre destination";
   app.innerHTML = `<section class="screen concierge-results">
@@ -302,7 +303,11 @@ function nextStep(){
 
 async function compose(){
   renderLoading();
-  setTimeout(renderSafeAgenda, 700);
+  // Fallback après 9 secondes si tout échoue
+  const fallbackTimer = setTimeout(()=>{
+    if(!S._rendered) renderSafeAgenda();
+  }, 9000);
+  S._rendered = false;
   try{
     S.diagnostics=[];
     S.items=[]; S.places=[]; S.events=[]; S.program=[];
@@ -310,11 +315,18 @@ async function compose(){
     await Promise.allSettled([loadWeather(), loadAllRealData()]);
     S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
     S.program = buildProgram(S.items);
-    if(S.items && S.items.length){
+    clearTimeout(fallbackTimer);
+    S._rendered = true;
+    if(S.items && S.items.length > 0){
       try { renderResults(); } catch(e) { renderSafeAgenda(); }
+    } else {
+      renderSafeAgenda();
     }
   }catch(e){
+    clearTimeout(fallbackTimer);
+    S._rendered = true;
     try{ S.diagnostics.push("Génération : " + (e.message || e)); }catch(_){}
+    renderSafeAgenda();
   }
 }
 
@@ -326,10 +338,9 @@ function renderLoading(){
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
       <p>Passage automatique à l’agenda.</p>
-      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l’agenda</button>
+      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l'agenda maintenant</button>
     </div>
   </section>`;
-  setTimeout(renderSafeAgenda, 700);
 }
 function forceResults(){
   renderSafeAgenda();
