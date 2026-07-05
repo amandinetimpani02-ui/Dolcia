@@ -215,3 +215,5 @@ p{line-height:1.55}
 /* V9 definitive anti infinite loading */
 .loading-skip{margin-top:24px;min-width:220px}
 .concierge-loading .loading-center{z-index:5}
+
+.loading-skip{margin-top:24px;min-width:220px}

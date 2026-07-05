@@ -99,6 +99,49 @@ function save(){
   localStorage.setItem("dolcia_agenda", JSON.stringify(S.agenda));
   localStorage.setItem("dolcia_ratings", JSON.stringify(S.ratings));
 }
+
+function renderSafeAgenda(){
+  const selectedDate = (typeof S !== 'undefined' && S.dateStart) ? niceDate(S.dateStart) : "aujourd’hui";
+  const placeName = (typeof S !== 'undefined' && S.location && S.location.name) ? S.location.name : "votre destination";
+  app.innerHTML = `<section class="screen concierge-results">
+    <div class="scroll" style="bottom:calc(76px + var(--safeBottom))">
+      <header class="topbar results">
+        <button class="iconbtn" onclick="startDate()">←</button>
+        <div class="logo">Dolcia</div>
+        <button class="ghostbtn" onclick="startDate()">Modifier</button>
+      </header>
+      <section class="concierge-hero screen-inner">
+        <div class="eyebrow">Votre concierge loisirs personnel</div>
+        <h2>Votre agenda est prêt.</h2>
+        <p>Dolcia prépare votre programme pour ${selectedDate}, autour de ${placeName}. Les activités réelles continuent de charger en arrière-plan.</p>
+      </section>
+      <section class="agenda-shell screen-inner">
+        <div class="agenda-top">
+          <div><div class="eyebrow">Programme sur mesure</div><h3>Votre journée</h3></div>
+          <button class="outline-btn" onclick="startDate()">Recomposer</button>
+        </div>
+        <div class="concierge-note">
+          <b>Recherche en cours</b>
+          <span>Dolcia n’invente rien. Si les API répondent, les activités réelles apparaîtront. Sinon vous ne restez plus bloquée.</span>
+        </div>
+        <div class="empty">
+          <h3>Chargement des activités réelles…</h3>
+          <p>Vous pouvez modifier vos critères ou tester les API.</p>
+          <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="gold-btn" onclick="startDate()">Recomposer</button>
+            <button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <nav class="bottom-nav">
+      <button class="navtab active" onclick="renderSafeAgenda()">Agenda</button>
+      <button class="navtab" onclick="startDate()">Composer</button>
+      <button class="navtab" onclick="renderAgenda()">Mes sorties</button>
+    </nav>
+  </section>`;
+}
+
 function renderSplash(){
   S.phase="splash";
   app.innerHTML = `
@@ -256,39 +299,25 @@ function nextStep(){
   if(S.step<STEPS.length-1){S.step++; renderStep();} else compose();
 }
 
+
 async function compose(){
   renderLoading();
-  S.diagnostics=[];
-  S.apiReport=null;
-  S.items=[];
-  S.places=[];
-  S.events=[];
-  S.program=[];
-
-  // Anti-blocage total : on affiche l'écran résultat très vite.
-  setTimeout(()=> {
-    if(document.querySelector('.concierge-loading')){
-      forceResults();
+  setTimeout(renderSafeAgenda, 700);
+  try{
+    S.diagnostics=[];
+    S.items=[]; S.places=[]; S.events=[]; S.program=[];
+    if(S.answers.where==="gps") await locateIfPossible();
+    await Promise.allSettled([loadWeather(), loadAllRealData()]);
+    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
+    S.program = buildProgram(S.items);
+    if(S.items && S.items.length){
+      try { renderResults(); } catch(e) { renderSafeAgenda(); }
     }
-  }, 1200);
-
-  // Les API travaillent en arrière-plan. Elles ne bloquent JAMAIS l'interface.
-  (async()=>{
-    try{
-      if(S.answers.where==="gps") await locateIfPossible();
-      await Promise.allSettled([loadWeather(), loadAllRealData()]);
-      S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-      S.program = buildProgram(S.items);
-      // Si l'utilisateur est encore sur l'écran de chargement ou l'écran vide, on actualise.
-      if(document.querySelector('.concierge-loading') || document.querySelector('.empty')){
-        renderResults();
-      }
-    }catch(e){
-      S.diagnostics.push("Génération : " + explainApiError(e.message));
-      if(document.querySelector('.concierge-loading')) forceResults();
-    }
-  })();
+  }catch(e){
+    try{ S.diagnostics.push("Génération : " + (e.message || e)); }catch(_){}
+  }
 }
+
 
 function renderLoading(){
   app.innerHTML = `<section class="screen concierge-loading">
@@ -296,25 +325,14 @@ function renderLoading(){
     <div class="loading-center concierge">
       <div class="orbit"></div>
       <h2>Dolcia prépare votre expérience...</h2>
-      <p>Je construis votre agenda. Si les API sont lentes, l'application affichera quand même l'écran suivant sans rester bloquée.</p>
-      <button class="gold-btn loading-skip" onclick="forceResults()">Voir l’agenda</button>
+      <p>Passage automatique à l’agenda.</p>
+      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l’agenda</button>
     </div>
   </section>`;
-  setTimeout(()=> {
-    if(document.querySelector('.concierge-loading')){
-      forceResults();
-    }
-  }, 1500);
+  setTimeout(renderSafeAgenda, 700);
 }
 function forceResults(){
-  try{
-    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-    S.program = buildProgram(S.items);
-  }catch(e){
-    S.items = [];
-    S.program = [];
-  }
-  renderResults();
+  renderSafeAgenda();
 }
 
 function locateIfPossible(){
