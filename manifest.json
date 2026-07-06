@@ -1,9 +1,8 @@
 {
   "name": "Dolcia",
   "short_name": "Dolcia",
-  "start_url": "/",
   "display": "standalone",
-  "background_color": "#07070A",
   "theme_color": "#07070A",
-  "icons": []
+  "background_color": "#07070A",
+  "start_url": "/"
 }
