@@ -1,1012 +1,153 @@
-/* DOLCIA V2 PREMIUM — CALENDRIER D'ABORD + API DIAGNOSTIC
-   Règle absolue : aucune activité inventée.
-   Les activités affichées viennent uniquement de Google Places, OpenAgenda ou partenaires réels.
-*/
-const API_BASES = [""];
-const app = document.getElementById("app");
+const app = document.querySelector('#app');
 
-const IMG = {
-  splash:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=85",
-  date:"https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?auto=format&fit=crop&w=1600&q=85",
-  map:"https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1600&q=85",
-  couple:"https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1200&q=85",
-  famille:"https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1200&q=85",
-  amis:"https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1200&q=85",
-  solo:"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85",
-  pro:"https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=85",
-  food:"https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=85",
-  nature:"https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=85",
-  culture:"https://images.unsplash.com/photo-1555921015-5532091f6026?auto=format&fit=crop&w=1200&q=85",
-  bienetre:"https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=85",
-  sport:"https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1200&q=85",
-  night:"https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1200&q=85",
-  famille_exp:"https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1200&q=85",
-  gratuit:"https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=1200&q=85",
-  fallback:"https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?auto=format&fit=crop&w=1200&q=85"
+const IMAGES = {
+  hero:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=88',
+  couple:'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1000&q=85',
+  family:'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1000&q=85',
+  friends:'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1000&q=85',
+  solo:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1000&q=85',
+  slow:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=85',
+  culture:'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1000&q=85',
+  food:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1000&q=85',
+  outside:'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=85',
+  night:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=85',
+  active:'https://images.unsplash.com/photo-1530137073520-4ea6e2f10a48?auto=format&fit=crop&w=1000&q=85',
+  fallback:'https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?auto=format&fit=crop&w=1000&q=85'
 };
 
-const SOURCE_MAP = {
-  // NB : "types" = requêtes nearbySearch larges (peu coûteuses, taxonomie Google stable).
-  // "keywords" = requêtes textSearch ciblées pour les activités niche que Google Places
-  // ne référencie sous AUCUN type dédié (paddle, foil, char à voile, équitation...).
-  // Les deux listes sont désormais interrogées EN ENTIER (voir loadAllRealData) —
-  // avant, seul le 1er élément de chaque liste était utilisé, d'où les résultats manquants.
-  food:{label:"Gastronomie", types:["restaurant","cafe","bakery","bar"], keywords:["restaurant terrasse vue mer","restaurant vue mer","gastronomie","brunch","dégustation"], oa:["gastronomie","food","marché"]},
-  nautique:{label:"Nautique & Plein air", types:["tourist_attraction","gym","park"], keywords:["paddle","foil","surf","kitesurf","voile","kayak","windsurf","char à voile","planche à voile","nautique","baignade","plage","mer"], oa:["nautique","voile","surf","paddle","plage"]},
-  nature:{label:"Nature", types:["park","tourist_attraction"], keywords:["plage","balade","point de vue","randonnée","sentier","jardin","forêt","dune"], oa:["balade","randonnée","nature"]},
-  culture:{label:"Culture", types:["museum","art_gallery","movie_theater"], keywords:["musée","cinéma","théâtre","exposition","concert","festival","spectacle"], oa:["concert","festival","théâtre","cinéma","exposition","culture"]},
-  bienetre:{label:"Bien-être", types:["spa","beauty_salon"], keywords:["spa","massage","yoga","bien-être","piscine"], oa:["yoga","méditation","bien-être"]},
-  sport:{label:"Loisirs", types:["bowling_alley","amusement_park","aquarium","zoo"], keywords:["escape game","karting","laser game","paddle","golf","bowling","parc attractions","équitation","cheval","poney"], oa:["sport","loisirs","compétition"]},
-  night:{label:"Sortir", types:["bar","night_club","casino","restaurant"], keywords:["cocktail","bar","club","soirée","concert ce soir"], oa:["soirée","club","dj","concert"]},
-  famille_exp:{label:"Famille", types:["amusement_park","zoo","aquarium","park","movie_theater","bowling_alley"], keywords:["enfants","famille","parc","ferme pédagogique","atelier enfant"], oa:["famille","enfant","atelier"]},
-  gratuit:{label:"Gratuit", types:["park","tourist_attraction"], keywords:["gratuit","entrée libre","plage","parc"], oa:["gratuit","entrée libre"]}
-  // "marché" retiré des keywords Google Places : les marchés ne sont pas référencés
-  // de façon fiable dans Places (source = OpenAgenda uniquement, cf. oa ci-dessus).
-};
-
-const STEPS = [
-  {key:"where", title:"Où voulez-vous vivre ce moment ?", sub:"Autour de vous ou dans une destination précise.", options:[
-    {id:"gps", label:"Autour de moi", sub:"Dolcia utilise votre position", img:IMG.map, big:true},
-    {id:"touquet", label:"Le Touquet", sub:"Destination par défaut", img:IMG.splash},
-    {id:"manual", label:"Une autre ville", sub:"À saisir dans la prochaine version", img:IMG.date}
+const FLOW = [
+  {key:'who', eyebrow:'Le contexte', title:'Avec qui partagez-vous ce moment ?', sub:'Dolcia adapte le rythme, les horaires et les expériences à votre compagnie.', options:[
+    ['couple','À deux','Une parenthèse complice',IMAGES.couple],['family','En famille','Pensé pour petits et grands',IMAGES.family],['friends','Entre amis','Des souvenirs à plusieurs',IMAGES.friends],['solo','Pour moi','Suivre ses propres envies',IMAGES.solo]
   ]},
-  {key:"who", title:"Avec qui vivez-vous ce moment ?", sub:"Dolcia adapte l’expérience au contexte : couple, famille, amis, solo ou professionnel.", options:[
-    {id:"couple", label:"En couple", sub:"Une expérience à deux", img:IMG.couple, big:true},
-    {id:"famille", label:"En famille", sub:"Enfants, bébé, grands-parents", img:IMG.famille},
-    {id:"amis", label:"Entre amis", sub:"Sorties, rires et découvertes", img:IMG.amis},
-    {id:"solo", label:"Solo", sub:"Pour soi, sans compromis", img:IMG.solo},
-    {id:"pro", label:"Professionnel", sub:"Clients, équipe, séminaire", img:IMG.pro}
+  {key:'duration', eyebrow:'Le rythme', title:'Combien de temps avez-vous ?', sub:'De deux heures à un séjour complet, chaque proposition respecte votre tempo.', options:[
+    ['2h','Deux heures','Une belle respiration',IMAGES.food],['half','Une demi-journée','Prendre le temps, juste assez',IMAGES.slow],['day','Toute la journée','Un programme qui s’enchaîne',IMAGES.outside],['stay','Tout le séjour','Jour après jour, sans charge mentale',IMAGES.culture]
   ]},
-  {key:"pace", title:"Quel rythme souhaitez-vous ?", sub:"Deux heures, un après-midi, une journée ou tout le séjour.", options:[
-    {id:"2h", label:"2 heures", sub:"Court, efficace, inspirant", img:IMG.food},
-    {id:"halfday", label:"Demi-journée", sub:"Une belle respiration", img:IMG.nature, big:true},
-    {id:"day", label:"Journée", sub:"Un vrai programme", img:IMG.culture},
-    {id:"stay", label:"Tout le séjour", sub:"Programme jour par jour", img:IMG.date}
+  {key:'vibes', eyebrow:'Les envies', title:'Qu’avez-vous envie de ressentir ?', sub:'Vous pouvez choisir plusieurs atmosphères. Nous nous chargeons de les accorder.', multi:true, options:[
+    ['food','Bien manger','Tables, brunchs et découvertes',IMAGES.food],['outside','Prendre l’air','Nature, plage et horizons',IMAGES.outside],['culture','Être surpris','Art, scènes et patrimoine',IMAGES.culture],['slow','Ralentir','Bien-être et douceur',IMAGES.slow],['active','Bouger','Loisirs et sensations',IMAGES.active],['night','Vibrer le soir','Concerts, bars et nuits',IMAGES.night]
   ]},
-  {key:"vibe", title:"Qu’avez-vous envie de vivre ?", sub:"Choisissez une ou plusieurs envies. Dolcia compose ensuite.", multi:true, options:[
-    {id:"food", label:"Gastronomie", sub:"Tables, brunchs, marchés", img:IMG.food},
-    {id:"nature", label:"Nature", sub:"Balades, plages, points de vue", img:IMG.nature},
-    {id:"culture", label:"Culture", sub:"Concerts, expo, théâtre", img:IMG.culture, big:true},
-    {id:"bienetre", label:"Bien-être", sub:"Spa, massage, détente", img:IMG.bienetre},
-    {id:"sport", label:"Loisirs", sub:"Parcs, bowling, sensations", img:IMG.sport},
-    {id:"night", label:"Sortir", sub:"Bars, clubs, casino", img:IMG.night},
-    {id:"famille_exp", label:"Famille", sub:"Idées adaptées aux enfants", img:IMG.famille_exp},
-    {id:"gratuit", label:"Gratuit", sub:"Le meilleur sans dépenser", img:IMG.gratuit}
-  ]},
-  {key:"budget", title:"Quel budget indicatif ?", sub:"Dolcia filtre sans rendre l’expérience froide.", options:[
-    {id:"free", label:"Gratuit", sub:"Uniquement si la donnée indique gratuit", img:IMG.gratuit},
-    {id:"low", label:"Raisonnable", sub:"Sortir sans exploser le budget", img:IMG.nature},
-    {id:"mid", label:"Confort", sub:"De belles expériences", img:IMG.food, big:true},
-    {id:"premium", label:"Premium", sub:"Le meilleur du moment", img:IMG.bienetre}
+  {key:'budget', eyebrow:'Le budget', title:'Quelle liberté vous donnez-vous ?', sub:'Un repère simple, jamais une contrainte froide.', options:[
+    ['free','Sans dépenser','Priorité aux expériences gratuites',IMAGES.outside],['easy','Léger','De belles idées accessibles',IMAGES.family],['comfort','Confort','Se faire plaisir sereinement',IMAGES.food],['premium','Exceptionnel','Pour un moment qui compte',IMAGES.slow]
   ]}
 ];
 
-let S = {
-  phase:"splash",
-  step:0,
-  answers:{vibe:[]},
-  dateMode:"today",
-  calendarMonth:new Date(),
-  dateStart:null,
-  dateEnd:null,
-  location:{name:"Le Touquet-Paris-Plage", lat:50.5214, lng:1.5912},
-  radius:12000,
-  items:[],
-  places:[],
-  events:[],
-  weather:null,
-  program:[],
-  current:null,
-  agenda:JSON.parse(localStorage.getItem("dolcia_agenda")||"[]"),
-  ratings:JSON.parse(localStorage.getItem("dolcia_ratings")||"{}"),
-  diagnostics:[],
-  apiReport:null
+const state = {
+  view:'home', step:0, dateMode:'today', month:new Date(), dateStart:new Date(), dateEnd:new Date(),
+  location:{name:'Le Touquet-Paris-Plage',lat:50.5214,lng:1.5912}, answers:{vibes:[]}, items:[], weather:null, radius:16000,
+  agenda:JSON.parse(localStorage.getItem('dolcia_agenda_v2')||'[]'), ratings:JSON.parse(localStorage.getItem('dolcia_ratings_v2')||'{}')
 };
 
-function save(){
-  localStorage.setItem("dolcia_agenda", JSON.stringify(S.agenda));
-  localStorage.setItem("dolcia_ratings", JSON.stringify(S.ratings));
-}
+const esc = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+const iso = d => d.toISOString().slice(0,10);
+const sameDay = (a,b) => a&&b&&a.toDateString()===b.toDateString();
+const save = () => {localStorage.setItem('dolcia_agenda_v2',JSON.stringify(state.agenda));localStorage.setItem('dolcia_ratings_v2',JSON.stringify(state.ratings))};
 
-function renderSafeAgenda(){
-  if(typeof S!=='undefined'&&S.items&&S.items.length>0){try{renderResults();return;}catch(e){}}
-  const selectedDate = (typeof S !== 'undefined' && S.dateStart) ? niceDate(S.dateStart) : "aujourd’hui";
-  const placeName = (typeof S !== 'undefined' && S.location && S.location.name) ? S.location.name : "votre destination";
-  app.innerHTML = `<section class="screen concierge-results">
-    <div class="scroll" style="bottom:calc(76px + var(--safeBottom))">
-      <header class="topbar results">
-        <button class="iconbtn" onclick="startDate()">←</button>
-        <div class="logo">Dolcia</div>
-        <button class="ghostbtn" onclick="startDate()">Modifier</button>
-      </header>
-      <section class="concierge-hero screen-inner">
-        <div class="eyebrow">Votre concierge loisirs personnel</div>
-        <h2>Votre agenda est prêt.</h2>
-        <p>Dolcia prépare votre programme pour ${selectedDate}, autour de ${placeName}. Les activités réelles continuent de charger en arrière-plan.</p>
-      </section>
-      <section class="agenda-shell screen-inner">
-        <div class="agenda-top">
-          <div><div class="eyebrow">Programme sur mesure</div><h3>Votre journée</h3></div>
-          <button class="outline-btn" onclick="startDate()">Recomposer</button>
-        </div>
-        <div class="concierge-note">
-          <b>Recherche en cours</b>
-          <span>Dolcia n’invente rien. Si les API répondent, les activités réelles apparaîtront. Sinon vous ne restez plus bloquée.</span>
-        </div>
-        <div class="empty">
-          <h3>Chargement des activités réelles…</h3>
-          <p>Vous pouvez modifier vos critères ou tester les API.</p>
-          <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-            <button class="gold-btn" onclick="startDate()">Recomposer</button>
-            <button class="outline-btn" onclick="runApiDiagnostic()">Tester les API</button>
-          </div>
-        </div>
-      </section>
-    </div>
-    <nav class="bottom-nav">
-      <button class="navtab active" onclick="renderSafeAgenda()">Agenda</button>
-      <button class="navtab" onclick="startDate()">Composer</button>
-      <button class="navtab" onclick="renderAgenda()">Mes sorties</button>
-    </nav>
-  </section>`;
+function shell(content, active='discover'){
+  return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="showToast('Votre espace personnel arrive bientôt')">VD</button></div></header>${content}${nav(active)}</main>`;
 }
+function nav(active){return `<nav class="bottom-nav" aria-label="Navigation"><button class="nav-item ${active==='discover'?'active':''}" onclick="home()">Découvrir</button><button class="nav-item ${active==='compose'?'active':''}" onclick="startCompose()">Composer</button><button class="nav-item ${active==='agenda'?'active':''}" onclick="renderAgenda()">Agenda ${state.agenda.length?`· ${state.agenda.length}`:''}</button></nav>`}
 
-function renderSplash(){
-  S.phase="splash";
-  app.innerHTML = `
-  <section class="screen">
-    <div class="bg-photo" style="background-image:url('${IMG.splash}')"></div>
-    <header class="topbar"><div class="logo">DOL<span class="gold">CIA</span></div><button class="ghostbtn" onclick="runApiDiagnostic()">Test API</button></header>
-    <div class="hero screen-inner">
-      <div class="eyebrow">Le premier moteur d’inspiration du temps libre</div>
-      <h1>Vos prochaines émotions commencent ici.</h1>
-      <p>Dolcia compose des journées, des soirées et des séjours à partir de vraies activités autour de vous. Aucun lieu inventé. Jamais.</p>
-      <button class="gold-btn" onclick="startDate()">Commencer</button>
-    </div>
-  </section>`;
+function home(){
+  state.view='home';
+  app.innerHTML=shell(`<section class="hero"><div class="hero-photo"></div><div class="hero-copy"><span class="kicker">Votre concierge du temps libre</span><h1>Vivez plus.<br><em>Cherchez moins.</em></h1><p>Des expériences réelles, choisies et composées selon votre moment. Dolcia transforme votre temps disponible en souvenirs.</p><div class="hero-cta"><button class="primary" onclick="startCompose()">Composer mon moment <span class="arrow">→</span></button><button class="round-action" onclick="document.querySelector('#inspiration').scrollIntoView({behavior:'smooth'})" aria-label="Voir les inspirations">↓</button></div></div><div class="hero-index"><b>01</b> / 03</div></section>
+  <section class="section" id="inspiration"><div class="section-head"><div><span class="kicker">L’inspiration du moment</span><h2>Et si c’était<br>pour aujourd’hui ?</h2></div><p class="section-copy">Une sélection éditoriale pour donner envie. Votre programme final sera construit uniquement avec des lieux et événements issus de sources réelles.</p></div><div class="moments">
+    ${moment('Ce soir','Une table, puis la mer',IMAGES.food)}${moment('En famille','Dehors, sans courir',IMAGES.family)}${moment('À deux','Une échappée douce',IMAGES.couple)}
+  </div></section>
+  <section class="drops-section"><div class="drops-head"><div><span class="kicker">Les drops Dolcia</span><h2>Des raisons de<br><em>sortir maintenant.</em></h2></div><p>Des propositions qui changent avec l’heure, la météo et vos goûts. Les offres commerciales ne s’affichent que lorsqu’elles viennent d’un partenaire vérifié.</p></div><div class="drops">
+    ${dropCard('Ce soir seulement','Une soirée déjà composée','Table, spectacle et dernier verre — en un seul élan.',IMAGES.night,'#4936ff')}
+    ${dropCard('Plan B magique','La pluie devient une bonne idée','Dolcia réorganise votre moment avec des expériences intérieures.',IMAGES.culture,'#ff7143')}
+    ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#d7f36a')}
+  </div><button class="desire-cta" onclick="startCompose()"><span>Je ne sais pas quoi faire</span><strong>Dolcia, décide pour moi</strong><b>→</b></button></section>`);
 }
-function startDate(){
-  S.dateStart = new Date(); S.dateEnd = new Date();
-  renderDateStep();
-}
-function renderDateStep(){
-  S.phase="date";
-  const d1 = S.dateStart ? niceDate(S.dateStart) : "Choisir";
-  const d2 = S.dateEnd && !sameDay(S.dateStart,S.dateEnd) ? " → " + niceDate(S.dateEnd) : "";
-  app.innerHTML = `
-  <section class="screen">
-    <div class="bg-photo" style="background-image:url('${IMG.date}')"></div>
-    <header class="topbar"><button class="iconbtn" onclick="renderSplash()">←</button><div class="logo">Dolcia</div><button class="ghostbtn" onclick="runApiDiagnostic()">Test API</button></header>
-    <div class="step-wrap screen-inner">
-      <div class="progress"><span style="width:12%"></span></div>
-      <div class="eyebrow">Étape essentielle</div>
-      <h2 class="step-title">Quand souhaitez-vous vivre quelque chose ?</h2>
-      <p class="step-sub">Sans date, Dolcia ne peut pas proposer les vrais concerts, festivals, spectacles, marchés, offres flash ou événements éphémères.</p>
-      <div class="pill-row" style="padding-bottom:14px">
-        ${datePill("now","Maintenant")}
-        ${datePill("today","Aujourd’hui")}
-        ${datePill("tonight","Ce soir")}
-        ${datePill("tomorrow","Demain")}
-        ${datePill("weekend","Ce week-end")}
-        ${datePill("custom","Choisir mes dates")}
-        ${datePill("vacation","Vacances")}
-      </div>
-      <div class="calendar-panel">
-        <div class="cal-head">
-          <button class="iconbtn" onclick="calNav(-1)">‹</button>
-          <div><b>${monthLabel(S.calendarMonth)}</b><small>${d1}${d2}</small></div>
-          <button class="iconbtn" onclick="calNav(1)">›</button>
-        </div>
-        <div class="cal-days">${["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(x=>`<span>${x}</span>`).join("")}</div>
-        <div class="cal-grid">${calendarCells()}</div>
-      </div>
-      <div class="sticky-continue">
-        <button class="dark-btn" onclick="renderSplash()">Retour</button>
-        <button class="gold-btn" onclick="goSteps()">Continuer</button>
-      </div>
-    </div>
-  </section>`;
-}
-function datePill(id,label){return `<button class="pill ${S.dateMode===id?'active':''}" onclick="setDateMode('${id}')">${label}</button>`}
-function setDateMode(mode){
-  S.dateMode=mode;
-  const now=new Date(); let s=new Date(now), e=new Date(now);
-  if(mode==="tonight"){s=new Date(now); e=new Date(now);}
-  if(mode==="tomorrow"){s.setDate(s.getDate()+1); e=new Date(s);}
-  if(mode==="weekend"){const day=now.getDay(); const add=(6-day+7)%7 || 0; s=new Date(now); s.setDate(now.getDate()+add); e=new Date(s); e.setDate(s.getDate()+1);}
-  if(mode==="vacation"){e=new Date(s); e.setDate(s.getDate()+3);}
-  if(mode==="custom"){/* keep manual calendar */}
-  if(mode!=="custom"){S.dateStart=s; S.dateEnd=e; S.calendarMonth=new Date(s.getFullYear(),s.getMonth(),1);}
-  renderDateStep();
-}
-function calendarCells(){
-  const y=S.calendarMonth.getFullYear(), m=S.calendarMonth.getMonth();
-  const first=new Date(y,m,1); let start=(first.getDay()+6)%7;
-  const days=new Date(y,m+1,0).getDate(); let html="";
-  for(let i=0;i<start;i++) html+=`<button class="cal-cell empty"></button>`;
-  for(let d=1; d<=days; d++){
-    const date=new Date(y,m,d);
-    const sel = isSelected(date);
-    const inrange = inRange(date);
-    const today = sameDay(date,new Date());
-    html+=`<button class="cal-cell ${sel?'sel':''} ${inrange?'range':''} ${today?'today':''}" onclick="pickCal(${y},${m},${d})">${d}</button>`;
-  }
-  return html;
-}
-function pickCal(y,m,d){
-  const date=new Date(y,m,d);
-  S.dateMode="custom";
-  if(!S.dateStart || (S.dateStart && S.dateEnd && !sameDay(S.dateStart,S.dateEnd))){
-    S.dateStart=date; S.dateEnd=date;
-  } else if(date < S.dateStart){
-    S.dateStart=date; S.dateEnd=date;
-  } else {
-    S.dateEnd=date;
-  }
-  renderDateStep();
-}
-function calNav(n){S.calendarMonth=new Date(S.calendarMonth.getFullYear(),S.calendarMonth.getMonth()+n,1); renderDateStep();}
-function sameDay(a,b){if(!a||!b)return false; return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
-function isSelected(d){return sameDay(d,S.dateStart)||sameDay(d,S.dateEnd)}
-function inRange(d){return S.dateStart&&S.dateEnd&&d>S.dateStart&&d<S.dateEnd}
-function monthLabel(d){return d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
-function niceDate(d){return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}
-function goSteps(){S.step=0; renderStep();}
+function moment(kicker,title,image){return `<button class="moment-card" onclick="startCompose()"><img src="${image}" alt=""><span class="moment-copy"><small>${kicker}</small><h3>${title}</h3></span></button>`}
+function dropCard(tag,title,copy,image,color){return `<button class="drop" style="--accent:${color}" onclick="startCompose()"><div class="drop-visual" style="background-image:url('${image}')"><span>${tag}</span></div><div class="drop-copy"><h3>${title}</h3><p>${copy}</p><b>Créer ce moment →</b></div></button>`}
 
-function renderStep(){
-  const st = STEPS[S.step];
-  const pct = 12+((S.step+1)/STEPS.length)*82;
-  const bg = st.options[0]?.img || IMG.splash;
-  app.innerHTML = `
-  <section class="screen">
-    <div class="bg-photo" style="background-image:url('${bg}')"></div>
-    <header class="topbar">
-      <button class="iconbtn" onclick="${S.step===0?'renderDateStep()':'prevStep()'}">←</button>
-      <div class="logo">Dolcia</div>
-      <button class="ghostbtn" onclick="renderDateStep()">Dates</button>
-    </header>
-    <div class="step-wrap screen-inner">
-      <div class="progress"><span style="width:${pct}%"></span></div>
-      <div class="eyebrow">${niceDate(S.dateStart)}${!sameDay(S.dateStart,S.dateEnd)?" → "+niceDate(S.dateEnd):""}</div>
-      <h2 class="step-title">${st.title}</h2>
-      <p class="step-sub">${st.sub}</p>
-      <div class="option-grid">
-        ${st.options.map(o=>optionHTML(st,o)).join("")}
-      </div>
-      <div class="step-actions">
-        <button class="dark-btn" onclick="${S.step===0?'renderDateStep()':'prevStep()'}">Retour</button>
-        <button class="gold-btn" onclick="nextStep()">Continuer</button>
-      </div>
-    </div>
-  </section>`;
+function startCompose(){state.step=-1; state.view='compose'; renderComposer()}
+function renderComposer(){
+  if(state.step===-1) return renderDate();
+  const s=FLOW[state.step], selected=state.answers[s.key];
+  app.innerHTML=shell(`<section class="composer"><div class="composer-shell"><div class="composer-head"><div><span class="kicker">${s.eyebrow}</span><h2>${s.title}</h2></div><div class="step-count">${state.step+1} / ${FLOW.length}<div class="progress"><span style="width:${((state.step+1)/FLOW.length)*100}%"></span></div></div></div><p class="step-lead">${s.sub}</p><div class="choice-grid">${s.options.map(o=>choice(s,o,selected)).join('')}</div><div class="composer-actions"><button class="secondary" onclick="backStep()">← Retour</button><button class="primary" onclick="nextStep()">${state.step===FLOW.length-1?'Composer mon moment':'Continuer →'}</button></div></div></section>`,'compose');
 }
-function optionHTML(st,o){
-  const val = S.answers[st.key];
-  const selected = st.multi ? (Array.isArray(val)&&val.includes(o.id)) : val===o.id;
-  return `<button class="option-card ${o.big?'big':''} ${selected?'selected':''}" onclick="choose('${st.key}','${o.id}',${!!st.multi})">
-    <div class="option-img" style="background-image:url('${o.img}')"></div>
-    <div class="option-label"><b>${o.label}</b><small>${o.sub||""}</small></div>
-  </button>`;
-}
-function choose(key,id,multi){
-  if(multi){
-    S.answers[key] = S.answers[key] || [];
-    if(S.answers[key].includes(id)) S.answers[key]=S.answers[key].filter(x=>x!==id);
-    else S.answers[key].push(id);
-  }else{
-    S.answers[key]=id;
-    if(key==="where" && id==="gps") locateIfPossible().then(()=>{});
-    setTimeout(nextStep,150);
-  }
-  renderStep();
-}
-function prevStep(){ if(S.step>0){S.step--; renderStep();} }
-function nextStep(){
-  const st=STEPS[S.step];
-  const val=S.answers[st.key];
-  if(!val || (Array.isArray(val)&&!val.length)) return;
-  if(S.step<STEPS.length-1){S.step++; renderStep();} else compose();
-}
+function choice(step,o,selected){const active=step.multi?selected.includes(o[0]):selected===o[0]; return `<button class="choice ${active?'selected':''}" onclick="pick('${step.key}','${o[0]}',${!!step.multi})"><img src="${o[3]}" alt=""><span class="choice-copy"><h3>${o[1]}</h3><p>${o[2]}</p></span></button>`}
+function pick(key,val,multi){if(multi){const a=state.answers[key];state.answers[key]=a.includes(val)?a.filter(x=>x!==val):[...a,val]}else state.answers[key]=val;renderComposer()}
+function nextStep(){if(state.step>=0){const s=FLOW[state.step],v=state.answers[s.key];if(!v||(Array.isArray(v)&&!v.length))return showToast('Choisissez une option pour continuer')} if(state.step<FLOW.length-1){state.step++;renderComposer()}else compose()}
+function backStep(){if(state.step<=0){state.step=-1;renderDate()}else{state.step--;renderComposer()}}
 
+function renderDate(){
+  app.innerHTML=shell(`<section class="composer"><div class="composer-shell"><div class="composer-head"><div><span class="kicker">Le moment</span><h2>Quand voulez-vous vivre quelque chose ?</h2></div><div class="step-count">Point de départ<div class="progress"><span style="width:12%"></span></div></div></div><p class="step-lead">La date nous permet de trouver les événements, horaires et expériences réellement disponibles.</p><div class="date-grid"><div class="date-presets">${[['today','Aujourd’hui','Le temps disponible maintenant'],['tonight','Ce soir','Après 18 heures'],['tomorrow','Demain','Prendre un peu d’avance'],['weekend','Ce week-end','Changer d’air']].map(x=>`<button class="date-pill ${state.dateMode===x[0]?'active':''}" onclick="setDate('${x[0]}')"><b>${x[1]}</b><br><small>${x[2]}</small></button>`).join('')}</div>${calendar()}</div><div class="composer-actions"><button class="secondary" onclick="home()">← Accueil</button><button class="primary" onclick="state.step=0;renderComposer()">Continuer →</button></div></div></section>`,'compose');
+}
+function setDate(mode){const now=new Date();state.dateMode=mode;let d=new Date(now);if(mode==='tomorrow')d.setDate(d.getDate()+1);if(mode==='weekend'){const add=(6-d.getDay()+7)%7;d.setDate(d.getDate()+add)}state.dateStart=d;state.dateEnd=mode==='weekend'?new Date(d.getFullYear(),d.getMonth(),d.getDate()+1):new Date(d);state.month=new Date(d.getFullYear(),d.getMonth(),1);renderDate()}
+function calendar(){const y=state.month.getFullYear(),m=state.month.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,count=new Date(y,m+1,0).getDate();let cells='';for(let i=0;i<first;i++)cells+='<button class="cal-cell empty"></button>';for(let d=1;d<=count;d++){const date=new Date(y,m,d);cells+=`<button class="cal-cell ${sameDay(date,state.dateStart)?'selected':''}" onclick="pickDate(${y},${m},${d})">${d}</button>`}return `<div class="calendar"><div class="cal-head"><button onclick="moveMonth(-1)">←</button><b>${state.month.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</b><button onclick="moveMonth(1)">→</button></div><div class="cal-days">${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cal-grid">${cells}</div></div>`}
+function moveMonth(n){state.month=new Date(state.month.getFullYear(),state.month.getMonth()+n,1);renderDate()}
+function pickDate(y,m,d){state.dateMode='custom';state.dateStart=new Date(y,m,d);state.dateEnd=new Date(y,m,d);renderDate()}
+
+async function useLocation(){
+  if(!navigator.geolocation)return showToast('La géolocalisation n’est pas disponible');
+  showToast('Localisation en cours…');navigator.geolocation.getCurrentPosition(p=>{state.location={name:'Autour de vous',lat:p.coords.latitude,lng:p.coords.longitude};home()},()=>showToast('Localisation non autorisée'),{timeout:5000,maximumAge:600000});
+}
 
 async function compose(){
-  renderLoading();
-  // Fallback après 9 secondes si tout échoue
-  const fallbackTimer = setTimeout(()=>{
-    if(!S._rendered) renderSafeAgenda();
-  }, 9000);
-  S._rendered = false;
+  state.view='loading';app.innerHTML=shell(`<section class="loading"><div class="loading-card"><div class="loader"></div><span class="kicker">Concierge Dolcia</span><h2>Nous composons votre moment.</h2><p>Nous croisons vos envies, la date, la météo et les expériences réelles autour de ${esc(state.location.name)}.</p><div class="live-search"><div class="live-line"><span>Météo locale</span><b id="load-weather">En cours</b></div><div class="live-line"><span>Événements aux bonnes dates</span><b id="load-events">En cours</b></div><div class="live-line"><span>Lieux accordés à vos envies</span><b id="load-places">En cours</b></div><div class="live-preview" id="live-preview"></div></div></div></section>`,'compose');
+  state.items=[]; const queries=queriesForVibes();
   try{
-    S.diagnostics=[];
-    S.items=[]; S.places=[]; S.events=[]; S.program=[];
-    if(S.answers.where==="gps") await locateIfPossible();
-    await Promise.allSettled([loadWeather(), loadAllRealData()]);
-    S.items = normalizeAndScore([...(S.places||[]), ...(S.events||[])]);
-    S.program = buildProgram(S.items);
-    clearTimeout(fallbackTimer);
-    S._rendered = true;
-    if(S.items && S.items.length > 0){
-      try { renderResults(); } catch(e) { renderSafeAgenda(); }
-    } else {
-      renderSafeAgenda();
-    }
-  }catch(e){
-    clearTimeout(fallbackTimer);
-    S._rendered = true;
-    try{ S.diagnostics.push("Génération : " + (e.message || e)); }catch(_){}
-    renderSafeAgenda();
-  }
-}
-
-
-function renderLoading(){
-  app.innerHTML = `<section class="screen concierge-loading">
-    <div class="bg-photo" style="background-image:url('${IMG.splash}')"></div>
-    <div class="loading-center concierge">
-      <div class="orbit"></div>
-      <h2>Dolcia prépare votre expérience...</h2>
-      <p>Passage automatique à l’agenda.</p>
-      <button class="gold-btn loading-skip" onclick="renderSafeAgenda()">Voir l'agenda maintenant</button>
-    </div>
-  </section>`;
-}
-function forceResults(){
-  renderSafeAgenda();
-}
-
-function locateIfPossible(){
-  return new Promise(resolve=>{
-    if(!navigator.geolocation) return resolve();
-    navigator.geolocation.getCurrentPosition(pos=>{
-      S.location.lat=pos.coords.latitude; S.location.lng=pos.coords.longitude; S.location.name="Autour de vous";
-      resolve();
-    },()=>resolve(),{timeout:3500, maximumAge:600000});
-  });
-}
-async function apiFetch(path){
-  let lastErr = null;
-  for(const base of API_BASES){
-    const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(), 8500);
-    try{
-      const res = await fetch(base + path, { signal: controller.signal });
-      clearTimeout(timer);
-      const txt = await res.text();
-      let data; try{ data = JSON.parse(txt); }catch{ data = {raw:txt}; }
-      if(res.ok && !data.error) return data;
-      lastErr = `${base||"local"} ${data.error || data.status || txt || res.statusText}`;
-    }catch(e){
-      clearTimeout(timer);
-      lastErr = `${base||"local"} ${e.name === "AbortError" ? "timeout API" : e.message}`;
-    }
-  }
-  throw new Error(lastErr || "API inaccessible");
-}
-async function loadWeather(){
-  try{ S.weather = await apiFetch(`/api/weather?lat=${S.location.lat}&lng=${S.location.lng}`); }
-  catch(e){ S.weather=null; S.diagnostics.push("Météo : "+explainApiError(e.message)); }
-}
-async function loadAllRealData(){
-  S.places=[]; S.events=[];
-  const vibes = S.answers.vibe?.length ? S.answers.vibe : ["food","nature","culture","bienetre","sport"];
-  const wanted = vibes.map(v=>SOURCE_MAP[v]).filter(Boolean);
-  const calls = [];
-  const seen = new Set();
-  const requestedUrls = new Set(); // évite d'interroger 2x la même requête (ex: "plage" partagé par plusieurs catégories)
-  for(const w of wanted){
-    for(const type of w.types){
-      const url = `/api/places?lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&type=${encodeURIComponent(type)}`;
-      if(requestedUrls.has(url)) continue;
-      requestedUrls.add(url);
-      calls.push(apiFetch(url)
-        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google ${type} : ${explainApiError(e.message)}`)));
-    }
-    for(const kw of w.keywords){
-      const url = `/api/places?mode=text&lat=${S.location.lat}&lng=${S.location.lng}&radius=${S.radius}&keyword=${encodeURIComponent(kw)}`;
-      if(requestedUrls.has(url)) continue;
-      requestedUrls.add(url);
-      calls.push(apiFetch(url)
-        .then(d=>addPlaces(d.results||[], seen)).catch(e=>S.diagnostics.push(`Google text ${kw} : ${explainApiError(e.message)}`)));
-    }
-  }
-  calls.push(loadEvents());
-  await Promise.allSettled(calls);
-}
-function addPlaces(results, seen){
-  const priceLabels=["Gratuit","€","€€","€€€","€€€€"];
-  for(const p of results){
-    if(!p.place_id || seen.has("g_"+p.place_id)) continue;
-    seen.add("g_"+p.place_id);
-    const loc=p.geometry?.location;
-    const dist= loc ? distanceKm(S.location.lat,S.location.lng,loc.lat,loc.lng) : null;
-    const photoRefs = (p.photos||[]).slice(0,4).map(ph=>ph.photo_reference).filter(Boolean);
-    S.places.push({
-      id:"g_"+p.place_id, source:"Google Places", kind:"place", name:p.name,
-      address:p.vicinity || p.formatted_address || "", lat:loc?.lat, lng:loc?.lng,
-      types:p.types||[], category:categoryFromTypes(p.types||[]),
-      rating:p.rating || null, reviews:p.user_ratings_total || 0,
-      priceLevel:p.price_level ?? null, priceLabel:p.price_level!=null ? priceLabels[p.price_level] : "",
-      isOpen:p.opening_hours?.open_now ?? null, photoRef:photoRefs[0]||null, photoRefs,
-      bookingUrl:null, raw:p, distance:dist
-    });
-  }
-}
-async function loadEvents(){
-  try{
-    const data = await apiFetch(`/api/events?lat=${S.location.lat}&lng=${S.location.lng}&radius=${Math.max(20, Math.round(S.radius/1000))}&after=${fmt(S.dateStart)}&before=${fmt(S.dateEnd)}&size=100`);
-    const list = data.events || data.results || data.data || [];
-    for(const ev of list){ const n = normalizeOpenAgenda(ev); if(n) S.events.push(n); }
-  }catch(e){ S.diagnostics.push("OpenAgenda : "+explainApiError(e.message)); }
-}
-function normalizeOpenAgenda(ev){
-  const title = textOf(ev.title || ev.name || ev.longDescription || ev.description) || "Événement";
-  const timing = ev.timings?.[0] || ev.firstTiming || {};
-  const date = timing.begin || ev.date || ev.daterange?.[0]?.from;
-  const loc = ev.location || ev.locations?.[0] || {};
-  const city = typeof loc==="string" ? loc : (loc.name || loc.city || loc.address || "");
-  const registrationUrl = ev.registrationUrl || ev.registration?.[0]?.value || ev.onlineAccessLink || ev.url || null;
-  const txt = JSON.stringify(ev).toLowerCase();
-  return {
-    id:"oa_"+(ev.uid || ev.slug || title+date),
-    source:"OpenAgenda", kind:"event", name:title, address:city,
-    category:categoryFromText(txt), date:date || null,
-    time:date ? new Date(date).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}) : "",
-    bookingUrl:registrationUrl, rating:null, reviews:0,
-    priceLevel: txt.includes("gratuit") || txt.includes("entrée libre") ? 0 : null,
-    priceLabel: txt.includes("gratuit") || txt.includes("entrée libre") ? "Gratuit" : "",
-    photoUrl: ev.image || ev.thumbnail || null, raw:ev, distance:null
-  };
-}
-function textOf(v){ if(!v)return ""; if(typeof v==="string")return v; if(typeof v==="object")return Object.values(v).join(" "); return String(v); }
-function fmt(d){ return d.toISOString().split("T")[0]; }
-function categoryFromTypes(types, name){
-  const n = (name||"").toLowerCase();
-  // Activites nautiques et sport outdoor par nom
-  if(/paddle|foil|surf|kite|voile|nautique|planche|windsurf|kayak|cano|jet.ski|aqua|baignade|char.a.voile|char à voile/.test(n)) return "nautique";
-  if(/équitation|equitation|cheval|poney|golf|karting|escape.?game|laser.?game/.test(n)) return "sport";
-  if(/piscine/.test(n)) return "bienetre";
-  if(types.includes("restaurant")||types.includes("cafe")||types.includes("bakery")||types.includes("bar")) return "food";
-  if(types.includes("spa")||types.includes("beauty_salon")) return "bienetre";
-  if(types.includes("museum")||types.includes("art_gallery")||types.includes("movie_theater")) return "culture";
-  if(types.includes("night_club")||types.includes("casino")) return "night";
-  if(types.includes("amusement_park")||types.includes("zoo")||types.includes("aquarium")||types.includes("bowling_alley")) return "sport";
-  if(types.includes("park")||types.includes("tourist_attraction")) return "nature";
-  return "culture";
-}
-function categoryFromText(t){
-  // Ordre important : du plus spécifique au plus générique, pour éviter
-  // qu'un mot générique ("sport") n'écrase une catégorie plus précise (nautique, bien-être...).
-  if(/paddle|foil|surf|kite|voile|nautique|kayak|planche.{0,3}voile|windsurf|char.{0,3}voile|aviron|canoë|canoe/.test(t)) return "nautique";
-  if(/bien.?[êe]tre|\byoga\b|m[ée]ditation|\bspa\b|massage|thalasso|sophrologie/.test(t)) return "bienetre";
-  if(/randonn[ée]e|\bbalade\b|sentier|\btrail\b|marche à pied|à pied|\bvélo\b|\bvelo\b|\bvtt\b/.test(t)) return "nature";
-  if(/braderie|brocante|vide.?grenier|\bfoire\b|\bsalon\b|marché|marche(?!\s?à)|street.?food|food.?truck/.test(t)) return "food";
-  if(/gastronomie|restaurant|d[ée]gustation|brunch/.test(t)) return "food";
-  if(/concert|festival|th[ée][âa]tre|exposition|vernissage|cin[ée]ma|spectacle|humour|conf[ée]rence|patrimoine|d[ée]dicace/.test(t)) return "culture";
-  if(/enfant|famille|jeune public|kids/.test(t)) return "famille_exp";
-  if(/karting|escape.?game|laser.?game|bowling|\bgolf\b|équitation|equitation|\bcheval\b|poney/.test(t)) return "sport";
-  if(/soir[ée]e|\bclub\b|\bdj\b|discoth[èe]que/.test(t)) return "night";
-  if(/atelier|\bcours\b|\bstage\b|initiation|formation/.test(t)) return "culture";
-  if(/\bsport\b|comp[ée]tition|tournoi|\bmatch\b/.test(t)) return "sport";
-  return "culture";
-}
-function normalizeAndScore(items){
-  const vibes = S.answers.vibe||[]; const budget=S.answers.budget;
-  const temp = S.weather?.main?.temp || 18;
-  const cond = S.weather?.weather?.[0]?.main || "";
-  const hour = new Date().getHours();
-
-  // Seuils météo
-  const isCanicule = temp >= 28; // Forte chaleur / canicule
-  const isChaud = temp >= 23;
-  const isFroid = temp <= 10;
-  const isPluie = ["Rain","Drizzle","Thunderstorm"].includes(cond);
-  const isCoucherSoleil = hour >= 19 && hour <= 21 && cond === "Clear";
-
-  return items.filter(Boolean).filter(it=>{
-    if(budget==="free" && it.priceLevel!==0) return false;
-    if(S.answers.who==="famille" && ["night"].includes(it.category)) return false;
-    // Canicule : exclure activités en salle chaude si plein air dispo
-    if(isCanicule && it.category==="culture" && vibes.includes("nature")) return false;
-    return true;
-  }).map(it=>{
-    let score=50;
-    const n = (it.name||"").toLowerCase();
-    const isNautique = /paddle|foil|surf|kite|voile|nautique|planche|windsurf|kayak|baignade|char.a.voile/.test(n) || it.category==="nautique";
-    const isAquatique = isNautique || it.category==="bienetre" || /piscine|aqua|water|mer|plage|beach/.test(n);
-
-    // === ALGO CANICULE ===
-    if(isCanicule){
-      if(isNautique) score += 40; // Paddle, foil, surf = priorité absolue
-      if(isAquatique) score += 28; // Piscine, plage, thalasso
-      if(it.category==="bienetre" && /thalasso|spa|piscine/.test(n)) score += 20;
-      if(["culture","night"].includes(it.category) && !isNautique) score -= 15; // Musée/club en canicule = moins prioritaire
-    }
-    // === ALGO CHAUD ===
-    else if(isChaud){
-      if(isNautique) score += 25;
-      if(["nature","sport"].includes(it.category)) score += 15;
-      if(it.category==="bienetre") score += 10;
-    }
-    // === ALGO FROID ===
-    else if(isFroid){
-      if(["culture","bienetre","food"].includes(it.category)) score += 18;
-      if(["nature","sport"].includes(it.category) && !isNautique) score -= 10;
-    }
-    // === ALGO PLUIE ===
-    if(isPluie){
-      if(["culture","bienetre","food","night"].includes(it.category)) score += 20;
-      if(isNautique) score -= 25;
-      if(it.category==="nature" && !isNautique) score -= 15;
-    }
-    // === COUCHER DE SOLEIL ===
-    if(isCoucherSoleil && ["nature","nautique"].includes(it.category)) score += 22;
-
-    // Scoring standard
-    if(vibes.includes(it.category)) score += 22;
-    if(it.kind==="event") score += 18;
-    if(it.rating>=4.5) score += 12;
-    if(it.reviews>100) score += 5;
-    if(it.isOpen===true) score += 10;
-    if(it.distance!=null && it.distance<3) score += 8;
-    if(S.dateMode==="tonight" && ["food","night","culture"].includes(it.category)) score += 8;
-    if(S.answers.who==="famille" && ["famille_exp","sport","nature","nautique"].includes(it.category)) score += 10;
-
-    return {...it, score, isNautique};
-  }).sort((a,b)=>b.score-a.score);
-}
-function buildProgram(items){
-  if(!items.length) return [];
-  const days = Math.max(1, Math.round((strip(S.dateEnd)-strip(S.dateStart))/(86400000))+1);
-  const pace=S.answers.pace;
-  let slots;
-  if(pace==="2h") slots=["Maintenant"];
-  else if(pace==="halfday") slots=["Début","Pause","Final"];
-  else if(pace==="day") slots=["Matin","Midi","Après-midi","Soir"];
-  else {
-    slots=[];
-    for(let i=1;i<=Math.min(days,5);i++) slots.push(`Jour ${i} matin`,`Jour ${i} midi`,`Jour ${i} après-midi`,`Jour ${i} soir`);
-  }
-  const used=new Set();
-  const prefs = {
-    "matin":["nature","culture","sport","famille_exp"],
-    "midi":["food"],
-    "après-midi":["bienetre","sport","culture","nature"],
-    "soir":["food","night","culture"],
-    "début":["nature","culture","sport","bienetre"],
-    "pause":["food"],
-    "final":["food","culture","night","bienetre"],
-    "maintenant":[...(S.answers.vibe||[])]
-  };
-  return slots.map(slot=>{
-    const key = Object.keys(prefs).find(k=>slot.toLowerCase().includes(k)) || "maintenant";
-    const cats = prefs[key] || (S.answers.vibe||[]);
-    let cand = items.find(x=>!used.has(x.id) && cats.includes(x.category)) || items.find(x=>!used.has(x.id));
-    if(cand) used.add(cand.id);
-    return cand ? {slot, item:cand} : null;
-  }).filter(Boolean);
-}
-function strip(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
-
-function renderResults(){
-  const days = groupProgramByDay();
-  const activeDay = window.dolciaActiveDay || Object.keys(days)[0] || "Jour 1";
-  app.innerHTML = `
-  <section class="screen concierge-results">
-    <div class="scroll" style="bottom:calc(76px + var(--safeBottom))">
-      <header class="topbar results">
-        <button class="iconbtn" onclick="renderStep()">←</button>
-        <div class="logo">Dolcia</div>
-        <button class="ghostbtn" onclick="startDate()">Modifier</button>
-      </header>
-
-      <section class="concierge-hero screen-inner">
-        <div class="eyebrow">Votre concierge loisirs personnel</div>
-        <h2>Votre agenda est prêt.</h2>
-        <p>${conciergeIntro()}</p>
-        <div class="chips">${criteriaChips().slice(0,6).map(c=>`<span class="chip">${c}</span>`).join("")}</div>
-      </section>
-
-      ${!S.items.length ? userFriendlyEmptyHTML() : `
-        <section class="agenda-shell screen-inner">
-          <div class="agenda-top">
-            <div>
-              <div class="eyebrow">Programme sur mesure</div>
-              <h3>${!sameDay(S.dateStart,S.dateEnd) ? "Votre séjour" : "Votre journée"}</h3>
-            </div>
-            <button class="outline-btn" onclick="validateAllProgram()">Tout ajouter</button>
-          </div>
-
-          <div class="day-tabs">
-            ${Object.keys(days).map(d=>`<button class="day-tab ${d===activeDay?'active':''}" onclick="setActiveDay('${d}')">${d}</button>`).join("")}
-          </div>
-
-          <div class="concierge-note">
-            <b>Pourquoi ce programme ?</b>
-            <span>Dolcia a combiné vos dates, votre profil, vos envies, la météo et les données réelles disponibles. Aucune activité n’est inventée.</span>
-          </div>
-
-          <div class="lux-agenda">
-            ${(days[activeDay]||[]).map((s,i)=>agendaSlotHTML(s,i,activeDay)).join("")}
-          </div>
-
-          <div class="lux-actions">
-            <button class="gold-btn" onclick="validateAllProgram()">Ajouter tout à mon agenda</button>
-            <button class="dark-btn" onclick="surprise()">Recomposer cette journée</button>
-            <button class="outline-btn" onclick="expandSearch()">Chercher plus large</button>
-          </div>
-        </section>
-
-        <section class="section screen-inner">
-          <div class="section-head"><h3>Remplacer une activité</h3><span class="section-caption">Suggestions réelles</span></div>
-          <div class="cards-grid">${S.items.slice(0,8).map(cardHTML).join("")}</div>
-        </section>
-      `}
-    </div>
-    <nav class="bottom-nav">
-      <button class="navtab active" onclick="renderResults()">Agenda</button>
-      <button class="navtab" onclick="startDate()">Composer</button>
-      <button class="navtab" onclick="renderAgenda()">Mes sorties</button>
-    </nav>
-    <div id="detail" class="detail"></div>
-    <div id="rating" class="rating-panel"></div>
-  </section>`;
-}
-
-function groupProgramByDay(){
-  const out = {};
-  S.program.forEach((s,idx)=>{
-    let m = String(s.slot||"").match(/Jour\s+\d+/i);
-    let day = m ? m[0].replace("jour","Jour") : (sameDay(S.dateStart,S.dateEnd) ? niceDate(S.dateStart) : "Jour 1");
-    if(!out[day]) out[day]=[];
-    out[day].push({...s, globalIndex:idx});
-  });
-  return out;
-}
-function setActiveDay(day){
-  window.dolciaActiveDay = day;
+    const weather=`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`;
+    const event=`/api/events?lat=${state.location.lat}&lng=${state.location.lng}&radius=30&after=${iso(state.dateStart)}&before=${iso(new Date(state.dateEnd.getTime()+86400000))}&size=40`;
+    const placeQueries=queries.slice(0,5).map(q=>`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=16000&mode=text&keyword=${encodeURIComponent(q)}`);
+    const get=async url=>{const r=await fetch(url);if(!r.ok)throw new Error('source');return r.json()};
+    const weatherJob=get(weather).then(d=>{if(!d.error)state.weather=d;markLoaded('weather',d.error?'Indisponible':`${Math.round(d.main?.temp||0)}°`)}).catch(()=>markLoaded('weather','Indisponible'));
+    const eventJob=get(event).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);markLoaded('events',`${found.length} trouvés`);updateLivePreview()}).catch(()=>markLoaded('events','Source au repos'));
+    let placesFound=0;
+    const placeJobs=placeQueries.map(url=>get(url).then(d=>{const found=normalizePlaces(d.results||[]);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés`);updateLivePreview()}).catch(()=>null));
+    await Promise.allSettled([weatherJob,eventJob,...placeJobs]);
+    state.items=scoreItems(dedupe(state.items)).slice(0,18);
+  }catch(_){/* L'état de repli reste volontairement non technique. */}
   renderResults();
 }
-function conciergeIntro(){
-  const period = !sameDay(S.dateStart,S.dateEnd) ? `du ${niceDate(S.dateStart)} au ${niceDate(S.dateEnd)}` : `le ${niceDate(S.dateStart)}`;
-  const temp = S.weather?.main?.temp ? `${Math.round(S.weather.main.temp)} °C` : "météo actuelle";
-  return `J’ai préparé un programme ${period}, autour de ${S.location.name}, adapté à ${labelFor("who",S.answers.who)}, à vos envies et à la ${temp}.`;
-}
-function userFriendlyEmptyHTML(){
-  const isFreeFilter = S.answers.budget === "free";
-  return `<section class="empty screen-inner">
-    <h3>Rien de réel ne correspond encore à ces critères.</h3>
-    <p>Dolcia n'invente jamais une activité pour combler un vide. Élargissez la recherche pour découvrir ce qui existe vraiment autour de vous.</p>
-    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="gold-btn" onclick="expandSearch()">Élargir le rayon</button>
-      <button class="outline-btn" onclick="changeVibe()">Essayer une autre ambiance</button>
-      ${isFreeFilter ? `<button class="outline-btn" onclick="removeFreeFilter()">Voir aussi les activités payantes</button>` : ``}
-      <button class="outline-btn" onclick="startDate()">Recommencer</button>
-    </div>
-  </section>`;
-}
-function changeVibe(){ const i=STEPS.findIndex(s=>s.key==="vibe"); S.step = i>=0?i:3; renderStep(); }
-function removeFreeFilter(){ S.answers.budget="low"; compose(); }
-function agendaSlotHTML(s,i,day){
-  const idx = s.globalIndex ?? i;
-  const it = s.item;
-  const ok = !!S.acceptedSlots[it.id];
-  return `<article class="lux-slot" onclick="openDetail('${it.id}')">
-    <div class="lux-time">${cleanSlotLabel(s.slot)}${ok?' · validé':''}</div>
-    <div class="lux-card">
-      <div class="lux-photo" style="background-image:url('${imageFor(it)}')"></div>
-      <div class="lux-copy">
-        <div class="exp-type">${it.source} · ${SOURCE_MAP[it.category]?.label||"Expérience réelle"}</div>
-        <h4>${escapeHtml(it.name)}</h4>
-        <div class="meta">
-          ${it.distance!=null?`<span>${it.distance.toFixed(1)} km</span>`:""}
-          ${it.rating?`<span>★ ${it.rating.toFixed(1)}</span>`:""}
-          ${it.priceLabel?`<span>${it.priceLabel}</span>`:""}
-          ${it.time?`<span>${it.time}</span>`:""}
-        </div>
-        <p>${whyText(it)}</p>
-        <div class="slot-controls" onclick="event.stopPropagation()">
-          <button class="outline-btn ${ok?'validated':''}" onclick="validateSlot(${idx})">${ok?'Validé':'Valider'}</button>
-          <button class="dark-btn" onclick="regenSlot(${idx})">Changer</button>
-          <button class="${it.bookingUrl?'gold-btn':'outline-btn disabled'}" onclick="${it.bookingUrl?`book('${it.id}')`:`toast('Réservation bientôt disponible avec les partenaires Dolcia')`}">${it.bookingUrl?'Réserver':'Bientôt'}</button>
-        </div>
-      </div>
-    </div>
-  </article>`;
-}
-function cleanSlotLabel(slot){
-  return String(slot||"").replace(/Jour\s+\d+\s*/i,"").trim() || "Moment";
+function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if(el){el.textContent=text;el.classList.add('done')}}
+function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
+function queriesForVibes(){const map={food:'restaurant expérience',outside:'nature balade',culture:'musée exposition',slow:'spa bien-être',active:'loisirs activité',night:'concert bar'};return (state.answers.vibes||[]).map(v=>map[v]).filter(Boolean)}
+function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`);return {id:'g-'+(p.place_id||i),name:p.name,source:'Google Places',category:category(p.types?.join(' ')+' '+p.name),address:p.vicinity||p.formatted_address,lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,isOpen:p.opening_hours?.open_now,photo:photos[0]||null,photos,booking:null}})}
+function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:'OpenAgenda',category:category(`${e.type} ${e.title}`),address:e.location||'',date:e.date,photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free}))}
+function category(text=''){const t=text.toLowerCase();if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|art|cinema|theater|culture|expo/.test(t))return'culture';if(/spa|beauty|yoga|bien/.test(t))return'slow';if(/bar|night|concert|music/.test(t))return'night';if(/park|nature|plage|garden/.test(t))return'outside';return'active'}
+function dedupe(items){const seen=new Set();return items.filter(x=>{const k=(x.name||'').toLowerCase().trim();if(!k||seen.has(k))return false;seen.add(k);return true})}
+function itemImage(i){return i.photo||IMAGES[i.category]||IMAGES.fallback}
+function distanceKm(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,q=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
+function scoreItems(items){
+  const temp=state.weather?.main?.temp??18,cond=(state.weather?.weather?.[0]?.main||'').toLowerCase(),vibes=state.answers.vibes||[],who=state.answers.who;
+  return items.filter(i=>state.answers.budget!=='free'||i.free||i.price===0).map(i=>{
+    const text=(i.name||'').toLowerCase(),distance=i.lat&&i.lng?distanceKm(state.location.lat,state.location.lng,i.lat,i.lng):null;let score=50;
+    if(vibes.includes(i.category))score+=24;if(i.source==='OpenAgenda')score+=18;if(i.rating>=4.5)score+=12;if(i.reviews>100)score+=5;if(i.isOpen===true)score+=10;if(distance!==null&&distance<3)score+=8;
+    if(temp>=25&&/paddle|surf|voile|kayak|plage|nautique/.test(text))score+=35;if(temp>=25&&['outside','slow'].includes(i.category))score+=12;
+    if(/rain|drizzle|thunder|snow/.test(cond)){if(['culture','slow','food'].includes(i.category))score+=22;if(i.category==='outside')score-=15}
+    if(state.dateMode==='tonight'&&['food','night','culture'].includes(i.category))score+=10;if(who==='family'&&['outside','active'].includes(i.category))score+=12;
+    const learned=state.ratings[i.id];if(learned?.value==='like')score+=18;if(learned?.value==='dislike')score-=30;
+    return {...i,score,distance};
+  }).sort((a,b)=>b.score-a.score)
 }
 
-function emptyHTML(){return userFriendlyEmptyHTML()}
-function resultTitle(){return !sameDay(S.dateStart,S.dateEnd) ? "Votre séjour se dessine." : (S.dateMode==="tonight"?"Votre soirée se dessine.":"Dolcia a composé votre moment.")}
-function summaryText(){const w=S.weather?.main?.temp?`${Math.round(S.weather.main.temp)}°`:"météo actuelle";return `Sélection réelle du ${niceDate(S.dateStart)}${!sameDay(S.dateStart,S.dateEnd)?" au "+niceDate(S.dateEnd):""} autour de ${S.location.name}, adaptée à ${labelFor("who",S.answers.who)} et ${w}.`}
-function labelFor(key,id){const st=STEPS.find(s=>s.key===key); if(!st)return id; return st.options.find(o=>o.id===id)?.label || id;}
-function criteriaChips(){return [`${niceDate(S.dateStart)}${!sameDay(S.dateStart,S.dateEnd)?" → "+niceDate(S.dateEnd):""}`,labelFor("pace",S.answers.pace),labelFor("who",S.answers.who),labelFor("budget",S.answers.budget),...(S.answers.vibe||[]).map(v=>SOURCE_MAP[v]?.label||v)].filter(Boolean)}
-function slotHTML(s){return `<div class="slot"><div class="slot-time">${s.slot}</div>${cardHTML(s.item)}</div>`}
-function cardHTML(it){
-  const canBook=!!it.bookingUrl;
-  return `<article class="exp-card" onclick="openDetail('${it.id}')"><div class="exp-img" style="background-image:url('${imageFor(it)}')"></div><div class="exp-body"><div class="exp-type">${it.source} · ${SOURCE_MAP[it.category]?.label||"Expérience réelle"}</div><div class="exp-title">${escapeHtml(it.name)}</div><div class="meta">${it.distance!=null?`<span>${it.distance.toFixed(1)} km</span>`:""}${it.rating?`<span>★ ${it.rating.toFixed(1)} ${it.reviews?`(${it.reviews})`:""}</span>`:""}${it.priceLabel?`<span>${it.priceLabel}</span>`:""}${it.time?`<span>${it.time}</span>`:""}${it.isOpen===true?`<span>Ouvert</span>`:""}</div><div class="why">${whyText(it)}</div><div class="card-actions" onclick="event.stopPropagation()"><button class="dark-btn" onclick="addAgenda('${it.id}')">Agenda</button><button class="${canBook?'gold-btn':'outline-btn disabled'}" onclick="${canBook?`book('${it.id}')`:`toast('Réservation bientôt disponible chez les partenaires Dolcia')`}">${canBook?'Réserver':'Réserver bientôt'}</button></div></div></article>`;
+function renderResults(){
+  const criteria=[fmt(state.dateStart),label('who'),label('duration'),label('budget')].filter(Boolean);
+  app.innerHTML=shell(`<section class="results-hero"><div class="results-photo" style="background-image:url('${IMAGES.hero}')"></div><div class="results-copy"><span class="kicker">Composé pour vous</span><h1>Votre moment<br>prend forme.</h1><p>${state.weather?.main?.temp?`${Math.round(state.weather.main.temp)}°, `:''}${esc(state.location.name)}. Une sélection courte et réelle, pensée selon votre rythme — pas une liste interminable.</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div></section><section class="program">${weatherPlan()}<div class="program-head"><div><span class="kicker">Votre programme</span><h2>${state.items.length?'Nos choix pour vous':'Une autre piste ?'}</h2></div><div class="program-actions"><button class="secondary" onclick="surprise()">Surprends-moi</button><button class="secondary" onclick="startCompose()">Ajuster</button></div></div>${state.items.length?state.items.map(experience).join(''):emptyState()}${state.items.length?`<button class="add-all" onclick="addAll()"><span>Ce programme me plaît</span><strong>Tout ajouter à mon agenda</strong><b>→</b></button>`:''}</section>`,'discover');
 }
-function imageFor(it){if(it.photoUrl)return it.photoUrl; if(it.photoRef)return `/api/photo?ref=${encodeURIComponent(it.photoRef)}&maxwidth=900`; return IMG[it.category]||IMG.fallback;}
-function photoUrlFromRef(ref,w){return `/api/photo?ref=${encodeURIComponent(ref)}&maxwidth=${w||400}`;}
-function photoGalleryHTML(it){
-  const refs = (it.photoRefs||[]).slice(1); // la 1ère photo est déjà affichée en grand
-  if(!refs.length) return "";
-  return `<div class="photo-gallery">${refs.map(r=>`<div class="thumb" style="background-image:url('${photoUrlFromRef(r,400)}')"></div>`).join("")}</div>`;
-}
-function whyText(it){if(it.kind==="event")return "Événement réel disponible aux dates choisies. C’est exactement pourquoi Dolcia commence par le calendrier."; if(S.answers.who==="famille"&&["sport","nature","famille_exp"].includes(it.category))return "Choisi car il fonctionne bien en famille et peut s’intégrer dans une journée avec enfants."; if(it.rating>=4.5)return "Très bien noté : Dolcia privilégie les expériences qui inspirent confiance."; return "Sélectionné car il correspond à vos critères, vos dates, votre localisation et aux données réelles disponibles."}
-function openDetail(id){
-  const it=S.items.find(x=>x.id===id); if(!it)return;
-  const d=document.getElementById("detail"); S.current=it;
-  d.innerHTML=`<div class="scroll"><div class="detail-photo" style="background-image:url('${imageFor(it)}')"></div>${photoGalleryHTML(it)}<header class="topbar detailbar"><button class="iconbtn" onclick="closeDetail()">←</button><div class="logo">Dolcia</div><button class="ghostbtn" onclick="rate('${it.id}')">Noter</button></header><div class="detail-content screen-inner"><div class="eyebrow">${it.source}</div><h2 class="detail-title">${escapeHtml(it.name)}</h2><div class="chips">${[SOURCE_MAP[it.category]?.label,it.priceLabel,it.distance!=null?it.distance.toFixed(1)+" km":null,it.rating?"★ "+it.rating:null].filter(Boolean).map(c=>`<span class="chip">${c}</span>`).join("")}</div><p class="why">${whyText(it)}</p><div class="detail-row"><b>Date</b><span>${it.date?new Date(it.date).toLocaleString("fr-FR"):niceDate(S.dateStart)}</span></div><div class="detail-row"><b>Adresse</b><span>${escapeHtml(it.address||"Adresse non fournie par la source")}</span></div><div class="detail-row"><b>Source</b><span>${it.source}</span></div><div class="detail-row"><b>Réservation</b><span>${it.bookingUrl?"Lien réel disponible":"Bientôt disponible via partenaires Dolcia"}</span></div></div></div><div class="fixed-actions"><button class="dark-btn" onclick="addAgenda('${it.id}')">Ajouter à mon agenda</button><button class="${it.bookingUrl?'gold-btn':'outline-btn disabled'}" onclick="${it.bookingUrl?`book('${it.id}')`:`toast('Réserver sera actif dès qu’un partenariat Dolcia existe')`}">${it.bookingUrl?'Réserver':'Réserver bientôt'}</button></div>`;
-  d.classList.add("open");
-}
-function closeDetail(){document.getElementById("detail")?.classList.remove("open");}
-function addAgenda(id){const it=S.items.find(x=>x.id===id); if(!it)return; if(!S.agenda.find(x=>x.id===it.id)){S.agenda.push({...it, agendaDate:it.date||S.dateStart.toISOString(), addedAt:new Date().toISOString()}); save();} toast("Ajouté à Mon Agenda Dolcia");}
-function renderAgenda(){
-  app.innerHTML=`<section class="screen results"><div class="scroll" style="bottom:calc(76px + var(--safeBottom))"><header class="topbar"><button class="iconbtn" onclick="renderResults()">←</button><div class="logo">Agenda</div><button class="ghostbtn" onclick="startDate()">Composer</button></header><section class="section screen-inner" style="padding-top:calc(90px + env(safe-area-inset-top,0px))"><div class="eyebrow">Mon Agenda Dolcia</div><h2>Vos moments à vivre.</h2><p class="step-sub">Activités aujourd’hui, demain, dans un mois ou pendant vos vacances. C’est le compagnon de séjour Dolcia.</p><div class="pill-row"><button class="pill active">À venir</button><button class="pill">Aujourd’hui</button><button class="pill">Séjour</button><button class="pill">Historique</button></div>${S.agenda.length?S.agenda.map(agendaHTML).join(""):`<div class="empty"><h3>Agenda vide</h3><p>Ajoutez une activité réelle depuis une fiche Dolcia.</p></div>`}</section></div><nav class="bottom-nav"><button class="navtab" onclick="renderResults()">Découvrir</button><button class="navtab" onclick="startDate()">Composer</button><button class="navtab active" onclick="renderAgenda()">Agenda</button></nav><div id="rating" class="rating-panel"></div></section>`;
-}
-function agendaHTML(it){return `<div class="agenda-card"><div class="agenda-img" style="background-image:url('${imageFor(it)}')"></div><div style="flex:1"><div class="agenda-title">${escapeHtml(it.name)}</div><div class="agenda-meta">${it.source} · ${it.time||new Date(it.agendaDate).toLocaleDateString("fr-FR")}</div><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="outline-btn" style="height:38px" onclick="calendarLink('${it.id}')">Calendrier</button><button class="dark-btn" style="height:38px" onclick="rate('${it.id}')">Noter</button></div></div></div>`}
-function calendarLink(id){const it=S.agenda.find(x=>x.id===id)||S.items.find(x=>x.id===id); if(!it)return; const start=new Date(it.date||it.agendaDate||Date.now()+3600000); const end=new Date(start.getTime()+2*3600000); const fmtCal=d=>d.toISOString().replace(/[-:]/g,"").split(".")[0]+"Z"; const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(it.name+" — Dolcia")}&dates=${fmtCal(start)}/${fmtCal(end)}&location=${encodeURIComponent(it.address||"")}&details=${encodeURIComponent("Ajouté depuis Dolcia. Source réelle : "+it.source)}`; window.open(url,"_blank");}
-function book(id){const it=S.items.find(x=>x.id===id)||S.agenda.find(x=>x.id===id); if(it?.bookingUrl)window.open(it.bookingUrl,"_blank");}
-function rate(id){const it=S.items.find(x=>x.id===id)||S.agenda.find(x=>x.id===id); if(!it)return; const r=document.getElementById("rating")||document.createElement("div"); r.className="rating-panel open"; r.innerHTML=`<div class="eyebrow">Dolcia apprend</div><h3>Avez-vous aimé ?</h3><p class="step-sub">Cette note reste dans Dolcia pour personnaliser les prochaines propositions.</p><div class="stars">${[1,2,3,4,5].map(n=>`<button class="star" onclick="saveRating('${it.id}',${n})">★</button>`).join("")}</div><button class="dark-btn" onclick="closeRating()">Plus tard</button>`; if(!r.parentElement)document.body.appendChild(r);}
-function saveRating(id,n){S.ratings[id]={rating:n,date:new Date().toISOString()}; save(); toast("Merci. Dolcia affinera vos prochaines idées."); closeRating();}
-function closeRating(){document.querySelectorAll(".rating-panel").forEach(x=>x.classList.remove("open"));}
-function surprise(){if(!S.items.length){expandSearch();return;} S.items=shuffle(S.items); S.program=buildProgram(S.items); renderResults();}
-function expandSearch(){S.radius=Math.min(S.radius*2,60000); compose();}
-async function runApiDiagnostic(){
-  S.diagnostics=[]; const tests=[];
-  const paths=[`/api/weather?lat=${S.location.lat}&lng=${S.location.lng}`,`/api/places?lat=${S.location.lat}&lng=${S.location.lng}&radius=5000&type=restaurant`,`/api/events?lat=${S.location.lat}&lng=${S.location.lng}&radius=30&after=${fmt(S.dateStart||new Date())}&before=${fmt(S.dateEnd||new Date())}`];
-  for(const p of paths){
-    try{const d=await apiFetch(p); tests.push("OK "+p+" → "+JSON.stringify(d).slice(0,120));}
-    catch(e){tests.push("ERREUR "+p+" → "+e.message);}
-  }
-  alert("Diagnostic API Dolcia\\n\\n"+tests.join("\\n\\n")+"\\n\\nVariables attendues : GOOGLE_KEY, OPENAGENDA_KEY, OPENWEATHER_KEY.");
-}
+function weatherPlan(){const condition=(state.weather?.weather?.[0]?.main||'').toLowerCase();if(!/rain|drizzle|thunder|snow/.test(condition))return'';return `<aside class="plan-b"><span>Plan B météo activé</span><strong>La météo change. Votre moment reste magique.</strong><p>Les expériences intérieures passent en priorité. Les propositions extérieures restent disponibles si vous souhaitez les conserver.</p><button onclick="toggleOutdoor()">Voir aussi les idées dehors</button></aside>`}
+function toggleOutdoor(){state.items=[...state.items].sort((a,b)=>(b.category==='outside')-(a.category==='outside'));renderResults()}
+function label(key){const s=FLOW.find(x=>x.key===key),v=state.answers[key];return s?.options.find(o=>o[0]===v)?.[1]}
+function experience(i,index){const reaction=state.ratings[i.id]?.value;return `<article class="experience"><img class="exp-image" src="${itemImage(i)}" alt=""><div class="exp-copy"><span class="exp-label">${index===0?'Le choix Dolcia':esc(i.source)}</span><h3>${esc(i.name)}</h3><p>${esc(i.address||'À proximité de votre destination')}</p><div class="exp-meta">${i.distance!=null?`<span>${i.distance.toFixed(1)} km</span>`:''}${i.rating?`<span>${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${i.price!=null?`<span>${i.price===0?'Gratuit':'€'.repeat(Math.min(i.price,4))}</span>`:''}${i.isOpen===true?'<span>Ouvert</span>':''}${i.date?`<span>${new Date(i.date).toLocaleDateString('fr-FR')}</span>`:''}<span>${why(i)}</span></div></div><div class="exp-actions reactions"><button class="icon-action ${reaction==='favorite'?'selected':''}" onclick="rate('${i.id}','favorite')" aria-label="Mettre en favori">♥</button><button class="icon-action ${reaction==='like'?'selected':''}" onclick="rate('${i.id}','like')" aria-label="J’aime">↑</button><button class="icon-action ${reaction==='dislike'?'selected':''}" onclick="rate('${i.id}','dislike')" aria-label="Moins de propositions comme celle-ci">↓</button><button class="icon-action" onclick="openDetail('${i.id}')" aria-label="Voir la fiche">↗</button><button class="icon-action" onclick="addAgenda('${i.id}')" aria-label="Ajouter à l’agenda">＋</button></div></article>`}
+function why(i){if(i.source==='OpenAgenda')return'Disponible à vos dates';if(i.rating>=4.5)return'Très apprécié';return'Accordé à vos envies'}
+function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Élargissons l’horizon.</h3><p>Les sources réelles n’ont pas encore livré de proposition assez juste. Vous pouvez relancer dans un rayon plus large ou choisir une autre ambiance.</p><div class="empty-actions"><button class="primary" onclick="compose()">Relancer la recherche</button><button class="secondary" onclick="state.step=2;renderComposer()">Changer d’ambiance</button></div></div>`}
 
-function explainApiError(msg){
-  const m=String(msg||"");
-  if(m.includes("referer restrictions") || m.includes("API keys with referer restrictions")){
-    return "clé GOOGLE_KEY bloquée : elle est limitée par domaine HTTP referrer. Pour /api/places.js côté serveur Vercel, il faut une clé Google Places séparée sans restriction HTTP referrer, avec restriction par API + quota.";
-  }
-  if(m.includes("exceeding of requests limitation") || m.includes("temporary blocked")){
-    return "compte OpenWeather temporairement bloqué/quota dépassé. Il faut attendre le reset, augmenter le plan, ou changer OPENWEATHER_KEY.";
-  }
-  if(m.includes("not configured")){
-    return "variable Vercel manquante ou non cochée en Production/Preview/Development.";
-  }
-  return m;
-}
+function openDetail(id){const i=state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;const photos=(i.photos?.length?i.photos:[itemImage(i)]).slice(0,5);document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="modal" onclick="if(event.target===this)closeDetail()"><article class="detail"><button class="close" onclick="closeDetail()">×</button><div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${esc(i.source)}</span><h2>${esc(i.name)}</h2><p>${whyDetail(i)}</p><div class="tags"><span class="tag" style="color:var(--ink);border-color:var(--line)">${esc(i.address||state.location.name)}</span>${i.rating?`<span class="tag" style="color:var(--ink);border-color:var(--line)">${i.rating}/5</span>`:''}</div><div class="detail-actions"><button class="primary" onclick="addAgenda('${i.id}')">Ajouter à mon agenda</button><button class="secondary" ${i.booking?`onclick="window.open('${esc(i.booking)}','_blank')"`:'disabled'}>${i.booking?'Réserver':'Réservation bientôt'}</button></div></div></article></div>`)}
+function selectPhoto(button,url){document.querySelector('#detailHero').style.backgroundImage=`url('${url}')`;document.querySelectorAll('.photo-thumb').forEach(x=>x.classList.remove('active'));button.classList.add('active')}
+function whyDetail(i){return i.source==='OpenAgenda'?'Cette expérience a lieu pendant les dates choisies et correspond à l’ambiance recherchée.':'Cette adresse réelle correspond à vos envies, à votre destination et au rythme du moment.'}
+function closeDetail(){document.querySelector('#modal')?.remove()}
+function addAgenda(id){const i=state.items.find(x=>x.id===id);if(!i)return;if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:i.date||state.dateStart.toISOString()});save()}showToast('Ajouté à votre agenda');closeDetail()}
+function addAll(){state.items.slice(0,state.answers.duration==='2h'?2:state.answers.duration==='half'?3:5).forEach(i=>{if(!state.agenda.some(x=>x.id===i.id))state.agenda.push({...i,agendaDate:i.date||state.dateStart.toISOString()})});save();showToast('Votre programme est dans l’agenda')}
+function surprise(){state.items=[...state.items].sort(()=>Math.random()-.5);renderResults();showToast('Une nouvelle composition, avec les mêmes envies')}
+function rate(id,value){const current=state.ratings[id]?.value;state.ratings[id]={value:current===value?null:value,date:new Date().toISOString()};save();state.items=scoreItems(state.items);renderResults();showToast(value==='favorite'?'Favori enregistré':value==='like'?'Dolcia apprend ce qui vous plaît':'Cette idée sera moins proposée')}
+function renderAgenda(){app.innerHTML=shell(`<section class="agenda-view"><span class="kicker">Votre temps libre</span><h2>Les moments<br>qui vous attendent.</h2><p>Réorganisez votre programme. Dolcia conserve l’ordre choisi.</p>${state.agenda.length?state.agenda.map((i,n)=>`<article class="agenda-card"><img src="${itemImage(i)}" alt=""><div><h3>${esc(i.name)}</h3><p>${new Date(i.agendaDate).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} · ${esc(i.address||state.location.name)}</p><div class="agenda-tools"><button onclick="moveAgenda(${n},-1)" ${n===0?'disabled':''}>↑ Plus tôt</button><button onclick="moveAgenda(${n},1)" ${n===state.agenda.length-1?'disabled':''}>↓ Plus tard</button></div></div><button class="icon-action" onclick="removeAgenda('${i.id}')" aria-label="Retirer">×</button></article>`).join(''):`<div class="empty-state"><h3>Votre agenda respire encore.</h3><p>Ajoutez une expérience depuis une proposition Dolcia. Elle restera ici, prête quand vous le serez.</p><button class="primary" onclick="startCompose()">Composer un moment</button></div>`}</section>`,'agenda')}
+function moveAgenda(index,direction){const next=index+direction;if(next<0||next>=state.agenda.length)return;[state.agenda[index],state.agenda[next]]=[state.agenda[next],state.agenda[index]];save();renderAgenda()}
+function removeAgenda(id){state.agenda=state.agenda.filter(x=>x.id!==id);save();renderAgenda()}
+function showToast(message){const t=document.querySelector('#toast');t.textContent=message;t.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove('show'),2400)}
 
-function toast(msg){const el=document.createElement("div"); el.textContent=msg; el.style.cssText="position:fixed;left:50%;bottom:110px;z-index:999;transform:translateX(-50%);padding:12px 18px;border-radius:999px;background:rgba(10,10,14,.95);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;box-shadow:0 18px 45px rgba(0,0,0,.45)"; document.body.appendChild(el); setTimeout(()=>el.remove(),2400);}
-function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
-function distanceKm(lat1,lon1,lat2,lon2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
-function shuffle(a){return [...a].sort(()=>Math.random()-.5);}
-renderSplash();
-
-
-
-
-/* ============================================================
-   DOLCIA PHASE 2 FINAL — GALERIE PHOTOS + ZERO RESULT PREMIUM
-   Base conservée : correctifs Claude.
-   ============================================================ */
-(function(){
-  window.DOLCIA_PHASE2_FINAL = true;
-
-  function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));}
-  function idOf(x){return x && (x.id || x.place_id || x.uid || x.name || x.title);}
-  function titleOf(x){return (x && (x.name || x.title)) || "Expérience Dolcia";}
-  function getState(){return window.state || window.S || {};}
-  function storeGet(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f));}catch(e){return f;}}
-  function storeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-
-  window.dolciaRatings = window.dolciaRatings || storeGet("dolcia_ratings",{});
-  window.dolciaPremiumAgenda = window.dolciaPremiumAgenda || storeGet("dolcia_agenda_premium",[]);
-
-  window.dolciaRate = window.dolciaRate || function(id,value){
-    if(!id)return;
-    window.dolciaRatings[id]=value;
-    storeSet("dolcia_ratings",window.dolciaRatings);
-    if(typeof toast==="function") toast(value==="love"?"Coup de cœur enregistré":value==="like"?"Dolcia apprend vos goûts":"Dolcia évitera ce type d’idée");
-  };
-
-  window.dolciaAddAgenda = window.dolciaAddAgenda || function(item){
-    if(!item)return;
-    const id=idOf(item);
-    if(!id)return;
-    if(!window.dolciaPremiumAgenda.find(x=>idOf(x)===id)){
-      window.dolciaPremiumAgenda.push({...item,addedAt:new Date().toISOString()});
-      storeSet("dolcia_agenda_premium",window.dolciaPremiumAgenda);
-    }
-    if(typeof toast==="function") toast("Ajouté à Mon Agenda Dolcia");
-  };
-
-  window.dolciaFindItem = window.dolciaFindItem || function(id){
-    const st=getState();
-    const lists=[st.items,st.places,st.events,st.program,window.dolciaPremiumAgenda].filter(Array.isArray);
-    for(const list of lists){
-      for(const raw of list){
-        const item=raw && raw.item ? raw.item : raw;
-        if(idOf(item)===id)return item;
-      }
-    }
-    return null;
-  };
-
-  window.dolciaPhotoUrls = function(item){
-    const urls=[];
-    if(!item)return urls;
-    if(item.photoUrl) urls.push(item.photoUrl);
-    if(item.image) urls.push(item.image);
-    if(item.thumbnail) urls.push(item.thumbnail);
-    if(item.photoRef) urls.push("/api/photo?ref="+encodeURIComponent(item.photoRef)+"&maxwidth=900");
-    if(Array.isArray(item.photoRefs)){
-      item.photoRefs.slice(0,4).forEach(ref=>urls.push("/api/photo?ref="+encodeURIComponent(ref)+"&maxwidth=900"));
-    }
-    if(Array.isArray(item.photos)){
-      item.photos.slice(0,4).forEach(p=>{
-        if(typeof p==="string") urls.push(p);
-        else if(p && p.photo_reference) urls.push("/api/photo?ref="+encodeURIComponent(p.photo_reference)+"&maxwidth=900");
-      });
-    }
-    return [...new Set(urls)].slice(0,4);
-  };
-
-  window.photoGalleryHTML = function(item){
-    const urls=window.dolciaPhotoUrls(item);
-    if(urls.length<=1)return "";
-    return '<div class="dolcia-photo-gallery">'+urls.map(u=>'<button type="button" style="background-image:url(\''+u+'\')" onclick="dolciaSwapMainPhoto(\''+u.replace(/'/g,"\\'")+'\')"></button>').join("")+'</div>';
-  };
-
-  window.dolciaSwapMainPhoto = function(url){
-    const main=document.querySelector(".dolcia-premium-main-photo");
-    if(main) main.style.backgroundImage="url('"+url+"')";
-  };
-
-  window.dolciaExplain = window.dolciaExplain || function(item){
-    const reasons=[];
-    const raw=JSON.stringify(item||{}).toLowerCase();
-    const d=Number(item && (item.distanceKm ?? item.distance ?? item.km));
-    if(Number.isFinite(d) && d<=2) reasons.push("très proche");
-    if(item && item.rating>=4.3) reasons.push("très bien noté");
-    if(/concert|théâtre|theatre|spectacle|brocante|braderie|marché|atelier|paddle|équitation|rando|randonnée/.test(raw)) reasons.push("lié à votre envie");
-    if(window.dolciaRatings[idOf(item)]==="love") reasons.push("proche de vos coups de cœur");
-    if(!reasons.length) reasons.push("cohérent avec votre programme");
-    return "Choisi parce que "+reasons.slice(0,3).join(", ")+".";
-  };
-
-  window.dolciaPremiumEmptyHTML = function(){
-    const st=getState();
-    const activeFree=JSON.stringify(st.answers||{}).toLowerCase().includes("free") || JSON.stringify(st.answers||{}).toLowerCase().includes("gratuit");
-    return '<section class="dolcia-empty-premium">'+
-      '<div class="dolcia-empty-eyebrow">Concierge Dolcia</div>'+
-      '<h3>Je n’ai rien trouvé de vraiment pertinent.</h3>'+
-      '<p>Plutôt que de vous afficher une mauvaise idée, Dolcia propose un repli plus utile.</p>'+
-      '<div class="dolcia-empty-actions">'+
-        '<button onclick="dolciaTryExpand()">Élargir le rayon</button>'+
-        '<button onclick="dolciaBackToVibe()">Essayer une autre ambiance</button>'+
-        (activeFree?'<button onclick="dolciaIncludePaid()">Voir aussi le payant</button>':'')+
-        '<button onclick="location.reload()">Recommencer</button>'+
-      '</div>'+
-    '</section>';
-  };
-
-  window.dolciaTryExpand = window.dolciaTryExpand || function(){
-    try{
-      const st=getState();
-      if("radiusKm" in st) st.radiusKm=Math.min(50,Number(st.radiusKm||10)+5);
-      if("radius" in st) st.radius=Math.min(50000,Number(st.radius||10000)+5000);
-      if(typeof compose==="function") compose(); else location.reload();
-    }catch(e){location.reload();}
-  };
-
-  window.dolciaBackToVibe = function(){
-    try{
-      const st=getState();
-      if(typeof go==="function") go("vibes");
-      else if(typeof renderStep==="function" && st.step!==undefined){ st.step=Math.max(0,Number(st.step||0)-1); renderStep(); }
-      else location.reload();
-    }catch(e){location.reload();}
-  };
-
-  window.dolciaIncludePaid = function(){
-    try{
-      const st=getState();
-      if(st.answers){
-        for(const k of Object.keys(st.answers)){
-          if(String(st.answers[k]).toLowerCase().includes("free") || String(st.answers[k]).toLowerCase().includes("gratuit")) st.answers[k]="food";
-        }
-      }
-      if(typeof compose==="function") compose(); else location.reload();
-    }catch(e){location.reload();}
-  };
-
-  window.dolciaOpenPremiumDetail = function(id){
-    const item=window.dolciaFindItem(id);
-    if(!item)return;
-    const urls=window.dolciaPhotoUrls(item);
-    const first=urls[0] || "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=1200&q=88";
-    let el=document.getElementById("dolciaPremiumDetail");
-    if(!el){el=document.createElement("div");el.id="dolciaPremiumDetail";document.body.appendChild(el);}
-    el.className="dolcia-premium-detail open";
-    el.innerHTML='<div class="dolcia-detail-scroll">'+
-      '<button class="dolcia-detail-close" onclick="dolciaClosePremiumDetail()">←</button>'+
-      '<div class="dolcia-premium-main-photo" style="background-image:url(\''+first+'\')"></div>'+
-      window.photoGalleryHTML(item)+
-      '<section class="dolcia-detail-card">'+
-        '<div class="dolcia-empty-eyebrow">Fiche Dolcia</div>'+
-        '<h2>'+esc(titleOf(item))+'</h2>'+
-        '<p>'+esc(window.dolciaExplain(item))+'</p>'+
-        '<p>'+esc(item.address || item.vicinity || item.location || "Adresse fournie par la source à confirmer")+'</p>'+
-        '<div class="dolcia-facts">'+
-          (item.rating?'<span>★ '+Number(item.rating).toFixed(1)+'</span>':'')+
-          (item.user_ratings_total?'<span>'+item.user_ratings_total+' avis</span>':'')+
-          (item.opening_hours?'<span>Horaires disponibles</span>':'')+
-          (item.website?'<span>Site disponible</span>':'')+
-          (item.formatted_phone_number?'<span>Téléphone disponible</span>':'')+
-        '</div>'+
-        '<div class="dolcia-rating-row">'+
-          '<button onclick="dolciaRate(\''+String(id).replace(/'/g,"\\'")+'\',\'love\')">❤️ J’adore</button>'+
-          '<button onclick="dolciaRate(\''+String(id).replace(/'/g,"\\'")+'\',\'like\')">👍 J’aime</button>'+
-          '<button onclick="dolciaRate(\''+String(id).replace(/'/g,"\\'")+'\',\'no\')">👎 Pas pour moi</button>'+
-        '</div>'+
-        '<button class="dolcia-main-cta" onclick="dolciaAddAgenda(dolciaFindItem(\''+String(id).replace(/'/g,"\\'")+'\'))">Ajouter à Mon Agenda</button>'+
-      '</section>'+
-    '</div>';
-  };
-
-  window.dolciaClosePremiumDetail=function(){
-    const el=document.getElementById("dolciaPremiumDetail");
-    if(el)el.className="dolcia-premium-detail";
-  };
-
-  // Capture jusqu'à 4 photos depuis les résultats Google sans appel supplémentaire.
-  function enrichPhotoRefs(list){
-    if(!Array.isArray(list))return list;
-    return list.map(x=>{
-      if(x && Array.isArray(x.photos) && !x.photoRefs){
-        return {...x, photoRefs:x.photos.slice(0,4).map(p=>p && p.photo_reference).filter(Boolean)};
-      }
-      return x;
-    });
-  }
-
-  function wrapListFunction(name){
-    const old=window[name];
-    if(typeof old!=="function" || old.__dolciaPhase2FinalWrapped)return;
-    const wrapped=function(){
-      const res=old.apply(this,arguments);
-      try{
-        if(Array.isArray(res))return enrichPhotoRefs(res);
-        const st=getState();
-        if(Array.isArray(st.items))st.items=enrichPhotoRefs(st.items);
-        if(Array.isArray(st.places))st.places=enrichPhotoRefs(st.places);
-      }catch(e){}
-      return res;
-    };
-    wrapped.__dolciaPhase2FinalWrapped=true;
-    window[name]=wrapped;
-  }
-  ["addPlaces","normalizeAndScore","scoreAndFilter","renderResults"].forEach(wrapListFunction);
-
-  // Remplace les messages techniques par un repli premium si un écran vide est détecté.
-  setInterval(function(){
-    try{
-      const app=document.getElementById("app");
-      if(!app)return;
-      const txt=app.innerText.toLowerCase();
-      const technical=txt.includes("vercel") || txt.includes("api key") || txt.includes("clé api") || txt.includes("variables") || txt.includes("diagnostic");
-      const empty=txt.includes("aucun résultat") || txt.includes("rien trouvé") || txt.includes("no result") || technical;
-      if(empty && !app.querySelector(".dolcia-empty-premium")){
-        const div=document.createElement("div");
-        div.innerHTML=window.dolciaPremiumEmptyHTML();
-        app.appendChild(div);
-      }
-      if(technical){
-        app.querySelectorAll("code,.diagnostic,#diagnosticBox").forEach(x=>x.style.display="none");
-      }
-    }catch(e){}
-  },1200);
-
-})();
+window.home=home;window.startCompose=startCompose;window.renderComposer=renderComposer;window.pick=pick;window.nextStep=nextStep;window.backStep=backStep;window.setDate=setDate;window.moveMonth=moveMonth;window.pickDate=pickDate;window.useLocation=useLocation;window.compose=compose;window.renderAgenda=renderAgenda;window.moveAgenda=moveAgenda;window.openDetail=openDetail;window.selectPhoto=selectPhoto;window.closeDetail=closeDetail;window.addAgenda=addAgenda;window.addAll=addAll;window.surprise=surprise;window.rate=rate;window.toggleOutdoor=toggleOutdoor;window.removeAgenda=removeAgenda;window.showToast=showToast;window.state=state;
+home();

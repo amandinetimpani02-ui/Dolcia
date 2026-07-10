@@ -1,3 +1,5 @@
+import { cached, remember } from './_cache.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -12,6 +14,13 @@ export default async function handler(req, res) {
 
   const BASE = 'https://maps.googleapis.com/maps/api/place';
   const LOC = `${lat},${lng}`;
+  const cacheKey = `places:${Number(lat).toFixed(3)}:${Number(lng).toFixed(3)}:${radius}:${type || ''}:${keyword || ''}:${mode || ''}`;
+  const hit = cached(cacheKey);
+  if (hit) {
+    res.setHeader('X-Dolcia-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
+    return res.status(200).json(hit);
+  }
 
   try {
     let url;
@@ -29,7 +38,9 @@ export default async function handler(req, res) {
     if (d.status && d.status !== 'OK' && d.status !== 'ZERO_RESULTS') {
       return res.status(200).json({ ...d, error: d.error_message || d.status });
     }
-    return res.status(200).json(d);
+    res.setHeader('X-Dolcia-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
+    return res.status(200).json(remember(cacheKey, d, 10 * 60 * 1000));
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }

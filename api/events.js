@@ -1,3 +1,5 @@
+import { cached, remember } from './_cache.js';
+
 const CATS = [
   { type: "Concert & Musique", words: ["concert", "musique", "music"] },
   { type: "Festival", words: ["festival"] },
@@ -46,6 +48,13 @@ export default async function handler(req, res) {
   const AK = process.env.OPENAGENDA_KEY;
   if (!AK) return res.status(500).json({ error: 'OPENAGENDA_KEY not configured' });
   if (!lat || !lng) return res.status(400).json({ error: 'Missing lat/lng' });
+  const cacheKey = `events:${Number(lat).toFixed(2)}:${Number(lng).toFixed(2)}:${radius}:${after || ''}:${before || ''}:${size}`;
+  const hit = cached(cacheKey);
+  if (hit) {
+    res.setHeader('X-Dolcia-Cache', 'HIT');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
+    return res.status(200).json(hit);
+  }
 
   const params = new URLSearchParams({
     key: AK,
@@ -76,7 +85,10 @@ export default async function handler(req, res) {
         image: ev.image || ev.thumbnail || null
       };
     });
-    return res.status(200).json({ ...d, events });
+    const payload = { ...d, events };
+    res.setHeader('X-Dolcia-Cache', 'MISS');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
+    return res.status(200).json(remember(cacheKey, payload, 10 * 60 * 1000));
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
