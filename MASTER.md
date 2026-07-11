@@ -25,3 +25,12 @@ Cette branche de travail est l'unique base officielle de Dolcia.
 ## Prochain niveau
 
 Le MASTER ne prétend pas encore référencer tout le loisir mondial. L'extension de la couverture passe par de nouvelles sources partenaires spécialisées : billetterie, cinéma, sport, réservation, hébergement et services de conciergerie.
+
+## Déploiement géographique
+
+1. Ville pilote : Le Touquet-Paris-Plage, rayon strict de 12 km.
+2. Territoire pilote : Côte d'Opale, rayon de 52 km.
+3. Grandes villes françaises : Lille, Paris, Lyon, Bordeaux et Marseille.
+4. Extension nationale progressive après contrôle de la qualité et des partenaires.
+
+Le budget est toujours présenté comme une enveloppe totale par personne pour la durée choisie. Pour un séjour, cette enveloppe inclut l'hébergement et déclenche une recherche d'hôtels.
