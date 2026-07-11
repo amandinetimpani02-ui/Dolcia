@@ -34,3 +34,10 @@ Le MASTER ne prétend pas encore référencer tout le loisir mondial. L'extensio
 4. Extension nationale progressive après contrôle de la qualité et des partenaires.
 
 Le budget est toujours présenté comme une enveloppe totale par personne pour la durée choisie. Pour un séjour, cette enveloppe inclut l'hébergement et déclenche une recherche d'hôtels.
+
+## Sources événementielles
+
+- Office de tourisme du Touquet pour la ville pilote.
+- DATAtourisme pour les offices de tourisme, syndicats d'initiative, agences départementales et comités régionaux français.
+- OpenAgenda pour les agendas ouverts complémentaires.
+- Partenaires Dolcia pour les événements privés validés des restaurants, hôtels, bars, commerces, clubs et associations.
