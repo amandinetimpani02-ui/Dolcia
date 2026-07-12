@@ -22,16 +22,13 @@ const FLOW = [
   {key:'who', eyebrow:'Le contexte', title:'Avec qui partagez-vous ce moment ?', sub:'Dolcia adapte ensuite les lieux et le rythme aux personnes présentes.', options:[
     ['couple','À deux','Une parenthèse complice',IMAGES.couple],['family','En famille','Pensé pour petits et grands',IMAGES.family],['friends','Entre amis','Des souvenirs à plusieurs',IMAGES.friends],['solo','Pour moi','Suivre ses propres envies',IMAGES.solo]
   ]},
-  {key:'vibes', eyebrow:'Vos envies', title:'Quel type de moment vous ferait plaisir ?', sub:'Choisissez une ou plusieurs familles. Les exemples indiquent clairement ce que Dolcia recherchera.', multi:true, options:[
-    ['fun','Fun & sensations','Parcs d’attractions, bowling, karting, laser game, escape game, VR',IMAGES.active],
-    ['family_fun','Sorties en famille','Parcs, zoos, aquariums, ateliers enfants, activités indoor',IMAGES.family],
-    ['nature','Nature & grand air','Plage, balades, jardins, accrobranche, découverte des animaux',IMAGES.outside],
-    ['sport','Sport & nautique','Paddle, voile, surf, équitation, golf, vélo, escalade',IMAGES.active],
-    ['events','Événements & culture','Concerts, spectacles, cinéma, musées, expositions, fêtes locales',IMAGES.culture],
-    ['unusual','Insolite & découverte','Visites originales, expériences atypiques, patrimoine caché',IMAGES.culture],
-    ['food','Restaurants & gourmandises','Restaurants, brunchs, salons de thé, marchés, dégustations',IMAGES.food],
-    ['wellness','Bien-être & détente','Spa, thalasso, massage, yoga, parenthèse douce',IMAGES.slow],
-    ['night','Sortir le soir','Bars, concerts, cabarets, casinos et vie nocturne',IMAGES.night]
+  {key:'vibes', eyebrow:'Votre envie maintenant', title:'Qu’avez-vous vraiment envie de vivre ?', sub:'Plusieurs choix possibles. Dolcia traduit votre humeur en activités concrètes et ajoute naturellement la soirée si votre timing le permet.', multi:true, options:[
+    ['play','Rire & se défouler','Jeux, parcs, bowling, karting, laser game, escape game',IMAGES.active],
+    ['breathe','Prendre l’air','Plage, balade, animaux, vélo, nautisme et aventure',IMAGES.outside],
+    ['create','Voir, apprendre & créer','Ateliers, spectacles, cinéma, musées et visites guidées',IMAGES.culture],
+    ['taste','Bien manger','Une vraie table, un brunch, un goûter ou une dégustation',IMAGES.food],
+    ['recharge','Me faire du bien','Spa, massage, thalasso, yoga et parenthèse calme',IMAGES.slow],
+    ['vibrate','Vibrer ensemble','Concert, fête, spectacle, casino ou ambiance nocturne',IMAGES.night]
   ]},
   {key:'budget', eyebrow:'Le budget', title:'Votre enveloppe pour ce moment', sub:'Le montant s’adapte automatiquement à la durée choisie.', options:[]}
 ];
@@ -148,15 +145,12 @@ function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if
 function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
 function queriesForVibes(){
   const selectedMap={
-    fun:['parc attractions parc à thème','bowling','laser game','escape game','karting','trampoline park','réalité virtuelle','paintball mini golf'],
-    family_fun:['parc de loisirs famille enfants','zoo aquarium ferme pédagogique','atelier enfant famille','aire de jeux activité indoor'],
-    nature:['plage balade nature jardin','accrobranche parcours aventure','réserve naturelle animaux'],
-    sport:['sports nautiques voile surf paddle kayak','équitation poney','golf vélo escalade'],
-    events:['événements festivals fêtes locales','concert spectacle théâtre cinéma','musée exposition patrimoine'],
-    unusual:['visite insolite expérience atypique','activité originale patrimoine caché'],
-    food:['restaurant','brunch salon de thé','gastronomie dégustation marché'],
-    wellness:['spa thalasso bien-être','massage yoga détente'],
-    night:['concert bar soirée','casino cabaret club']
+    play:['parc attractions parc à thème','bowling','laser game','escape game','karting','trampoline park','réalité virtuelle','paintball mini golf'],
+    breathe:['plage balade nature jardin','accrobranche parcours aventure','réserve naturelle animaux','sports nautiques voile surf paddle kayak','équitation poney','golf vélo escalade'],
+    create:['atelier créatif cours stage','concert spectacle théâtre cinéma','musée exposition patrimoine','visite guidée'],
+    taste:['restaurant','brunch salon de thé','gastronomie dégustation marché'],
+    recharge:['spa thalasso bien-être','massage yoga détente'],
+    vibrate:['concert bar soirée','casino cabaret club','festival fête locale spectacle']
   };
   const broad=[
     'restaurants cafés brunch gastronomie','parcs jardins plages réserves naturelles','animations famille enfants aire de jeux',
@@ -168,6 +162,7 @@ function queriesForVibes(){
     'casino cabaret club soirée'
   ];
   const selected=(state.answers.vibes||[]).flatMap(v=>selectedMap[v]||[]);
+  if(['day','stay'].includes(state.answers.duration))selected.push('concert spectacle soirée casino bar');
   if(state.answers.duration==='stay')selected.unshift('hôtels hébergements résidences de tourisme');
   return [...new Set([...selected,...broad])];
 }
