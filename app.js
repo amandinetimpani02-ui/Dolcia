@@ -77,7 +77,7 @@ function home(){
     ${dropCard('Ce soir seulement','Une soirée déjà composée','Table, spectacle et dernier verre — en un seul élan.',IMAGES.night,'#c9a96e')}
     ${dropCard('Plan B magique','La pluie devient une bonne idée','Dolcia réorganise votre moment avec des expériences intérieures.',IMAGES.culture,'#b8895c')}
     ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#e2cf9b')}
-  </div><button class="desire-cta" onclick="startCompose()"><span>Je ne sais pas quoi faire</span><strong>Dolcia, décide pour moi</strong><b>→</b></button></section>`);
+  </div><button class="desire-cta" onclick="startCompose()"><span>La signature Dolcia</span><strong>Compose-moi mon expérience</strong><b>→</b></button></section>`);
 }
 function moment(kicker,title,image){return `<button class="moment-card" onclick="startCompose()"><img src="${image}" alt=""><span class="moment-copy"><small>${kicker}</small><h3>${title}</h3></span></button>`}
 function dropCard(tag,title,copy,image,color){return `<button class="drop" style="--accent:${color}" onclick="startCompose()"><div class="drop-visual" style="background-image:url('${image}')"><span>${tag}</span></div><div class="drop-copy"><h3>${title}</h3><p>${copy}</p><b>Créer ce moment →</b></div></button>`}

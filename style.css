@@ -5,10 +5,10 @@
 }
 *{box-sizing:border-box}html,body,#app{margin:0;min-height:100%;background:var(--paper);color:var(--ink)}
 body{font-family:var(--sans);-webkit-font-smoothing:antialiased}button,input{font:inherit}button{border:0;cursor:pointer;color:inherit}
-button:focus-visible,input:focus-visible{outline:3px solid rgba(73,54,255,.34);outline-offset:3px}.app{min-height:100vh;padding-bottom:100px}
+button:focus-visible,input:focus-visible{outline:3px solid rgba(215,189,130,.48);outline-offset:3px}.app{min-height:100vh;padding-bottom:100px}
 .topbar{height:78px;padding:0 clamp(20px,5vw,72px);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:30}
 .brand{font-size:23px;font-weight:600;letter-spacing:-.06em}.brand i{color:var(--violet);font-family:var(--display);font-weight:500}
-.top-actions{display:flex;align-items:center;gap:10px}.location{background:rgba(255,255,255,.55);border:1px solid var(--line);padding:11px 15px;border-radius:999px;font-size:12px;font-weight:600}
+.top-actions{display:flex;align-items:center;gap:10px}.location{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);padding:11px 15px;border-radius:999px;font-size:12px;font-weight:600;backdrop-filter:blur(18px)}
 .avatar{width:42px;height:42px;border-radius:50%;background:var(--lime);color:#0a0a09;display:grid;place-items:center;font-size:12px}
 .hero{margin:0 clamp(12px,3vw,42px);min-height:calc(100vh - 112px);border-radius:34px;overflow:hidden;position:relative;background:#161611;color:#fff;box-shadow:var(--shadow)}
 .hero-photo{position:absolute;inset:0;background:url('/assets/hero-le-touquet.png') center/cover;filter:saturate(.88)}
