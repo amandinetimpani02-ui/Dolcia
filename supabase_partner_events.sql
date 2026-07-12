@@ -70,3 +70,16 @@ alter table public.partner_applications enable row level security;
 alter table public.provider_reviews enable row level security;
 alter table public.moderation_actions enable row level security;
 alter table public.notifications_outbox enable row level security;
+
+create table if not exists public.flash_offers (
+  id uuid primary key default gen_random_uuid(), partner_id uuid not null,
+  title text not null, activity_type text not null, starts_at timestamptz not null, expires_at timestamptz not null,
+  original_price numeric(10,2) not null, dolcia_price numeric(10,2) not null,
+  quantity_total integer not null check (quantity_total > 0), quantity_remaining integer not null check (quantity_remaining >= 0),
+  latitude double precision not null, longitude double precision not null, booking_url text,
+  reason text, status text not null default 'pending' check (status in ('draft','pending','approved','live','sold_out','expired','rejected')),
+  created_at timestamptz not null default now(),
+  check (dolcia_price < original_price), check (expires_at <= starts_at)
+);
+create index if not exists flash_offers_live_idx on public.flash_offers (status, expires_at, starts_at);
+alter table public.flash_offers enable row level security;
