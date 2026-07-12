@@ -35,6 +35,8 @@ Le MASTER ne prétend pas encore référencer tout le loisir mondial. L'extensio
 
 Le budget est toujours présenté comme une enveloppe totale par personne pour la durée choisie. Pour un séjour, cette enveloppe inclut l'hébergement et déclenche une recherche d'hôtels.
 
+Le rayon de la destination est une limite absolue, et non une préférence. Les résultats Google situés hors rayon sont supprimés avant le scoring. Pour la ville pilote, les adresses de Calais, Boulogne-sur-Mer et Dunkerque sont également exclues explicitement.
+
 ## Sources événementielles
 
 - Office de tourisme du Touquet pour la ville pilote.
