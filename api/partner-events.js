@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     const params = new URLSearchParams({
-      select: 'id,title,description,starts_at,ends_at,venue_name,address,latitude,longitude,category,price_label,booking_url,image_url,partner_name',
+      select: 'id,title,description,starts_at,ends_at,venue_name,address,latitude,longitude,category,price_label,booking_url,image_url,partner_name,sponsored_until,sponsorship_tier',
       status: 'eq.approved',
       visibility: 'eq.public',
       starts_at: `gte.${after}T00:00:00`,
@@ -49,7 +49,9 @@ export default async function handler(req, res) {
         image: row.image_url,
         source: row.partner_name || 'Partenaire Dolcia',
         partner: true,
-        official: true
+        official: true,
+        sponsored: Boolean(row.sponsored_until && new Date(row.sponsored_until) > new Date()),
+        sponsorshipTier: row.sponsorship_tier || null
       }));
     const payload = { events, configured: true };
     return res.status(200).json(remember(cacheKey, payload, 5 * 60 * 1000));
