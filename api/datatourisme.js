@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     if (!response.ok) return res.status(200).json({ events: [], configured: true, unavailable: true });
     const data = await response.json();
     const events = (data.objects || []).map(normalize).filter(Boolean).filter(event => {
-      if (!event.date) return true;
+      if (!event.date) return false;
       const day = event.date.slice(0, 10);
       return (!after || day >= after) && (!before || day <= before);
     });
