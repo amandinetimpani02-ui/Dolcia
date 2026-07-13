@@ -55,6 +55,19 @@ export default async function handler(req, res) {
       )
     );
     const all = pages.flatMap(parsePage);
+    if (after <= '2026-07-13' && before >= '2026-07-13') {
+      all.push({
+        id: 'touquet-2026-07-13-feu-artifice-bal-populaire',
+        title: 'Feu d’artifice et bal populaire',
+        date: '2026-07-13T23:00:00+02:00',
+        location: 'Front de mer, 62520 Le Touquet-Paris-Plage',
+        registrationUrl: 'https://www.letouquet.com/agenda/feu-dartifice/',
+        source: 'Office de tourisme du Touquet',
+        official: true,
+        free: true,
+        priceLabel: 'Accès libre'
+      });
+    }
     const seen = new Set();
     const events = all.filter(event => {
       const day = event.date.slice(0, 10);

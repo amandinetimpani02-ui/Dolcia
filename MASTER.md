@@ -8,6 +8,15 @@
 - Des ressentis précis (enfants, duo, accueil, prix, distance, découverte, à refaire) enrichissent la mémoire personnelle du concierge.
 - Si l’utilisateur change d’avis, le moteur corrige l’ancien choix au lieu de fausser son profil.
 
+## Correction du parcours temporel — 13 juillet 2026
+
+- « À partir de maintenant » compose le reste de l’après-midi et la soirée en une seule fois.
+- « Ce soir » fixe directement la soirée : Dolcia ne repose plus la question de la durée.
+- Pour une date libre, « L’après-midi + la soirée » est désormais un vrai choix.
+- Les événements officiels exceptionnels du jour restent visibles même s’ils ne correspondent pas à l’envie principale.
+- Le feu d’artifice et bal populaire du 13 juillet 2026 à 23 h dispose d’un filet de sécurité relié à la source officielle du Touquet.
+- Un budget de 0 € ne transforme jamais artificiellement une prestation payante en activité gratuite.
+
 ## Règle de confiance non négociable
 
 Dolcia vise l’exhaustivité maximale des sources, mais n’affiche que des propositions passant le contrôle qualité. Une note est toujours rattachée à sa source et à son volume d’avis. Une date, un horaire, un tarif, une disponibilité ou une adresse manquants ne sont jamais inventés : ils sont signalés comme non communiqués ou à confirmer. Une fiche dont l’existence, la date ou la localisation ne sont pas suffisamment documentées est rejetée avant classement.
