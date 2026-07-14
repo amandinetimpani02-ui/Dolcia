@@ -45,7 +45,7 @@ const DESTINATIONS = {
 
 const state = {
   view:'home', step:0, dateMode:'today', month:new Date(), dateStart:new Date(), dateEnd:new Date(),
-  location:{name:'Le Touquet-Paris-Plage',lat:50.5214,lng:1.5912}, answers:{vibes:[]}, items:[], allItems:[], program:[], alternatives:[], weather:null, radius:12000,
+  location:{name:'Le Touquet-Paris-Plage',lat:50.5214,lng:1.5912}, answers:{vibes:[]}, items:[], allItems:[], program:[], alternatives:[], majorMoments:[], majorChoice:null, broadcastVenues:[], weather:null, radius:12000,
   agenda:JSON.parse(localStorage.getItem('dolcia_agenda_v2')||'[]'),
   favorites:JSON.parse(localStorage.getItem('dolcia_favorites_v2')||'[]'),
   feedback:JSON.parse(localStorage.getItem('dolcia_feedback_v2')||'{}'),
@@ -133,6 +133,7 @@ async function compose(){
     const ticketmaster=`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
     const partners=`/api/partner-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
     const nationalTourism=`/api/datatourisme?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
+    const majorMoments=`/api/major-events?date=${iso(state.dateStart)}`;
     const placeQueries=queries.slice(0,24).map(q=>`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${state.radius}&mode=text&keyword=${encodeURIComponent(q+' '+state.location.name)}`);
     const get=async url=>{const r=await fetch(url);if(!r.ok)throw new Error('source');return r.json()};
     const weatherJob=get(weather).then(d=>{if(!d.error)state.weather=d;markLoaded('weather',d.error?'Indisponible':`${Math.round(d.main?.temp||0)}°`)}).catch(()=>markLoaded('weather','Indisponible'));
@@ -141,9 +142,11 @@ async function compose(){
     const ticketmasterJob=get(ticketmaster).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);updateLivePreview()}).catch(()=>null);
     const partnerJob=get(partners).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ partenaires`);updateLivePreview()}).catch(()=>null);
     const nationalJob=get(nationalTourism).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ offices de tourisme`);updateLivePreview()}).catch(()=>null);
+    const majorJob=get(majorMoments).then(d=>{state.majorMoments=(d.events||[]).map(event=>({...event,kind:'sport',score:100}))}).catch(()=>{state.majorMoments=[]});
     let placesFound=0;
     const placeJobs=placeQueries.map(url=>get(url).then(d=>{const found=normalizePlaces(d.results||[]);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés`);updateLivePreview()}).catch(()=>null));
-    await Promise.allSettled([weatherJob,eventJob,officialJob,ticketmasterJob,partnerJob,nationalJob,...placeJobs]);
+    await Promise.allSettled([weatherJob,eventJob,officialJob,ticketmasterJob,partnerJob,nationalJob,majorJob,...placeJobs]);
+    state.majorMoments=detectMajorMoments(state.items,state.majorMoments);
     state.allItems=scoreItems(dedupe(state.items));
     state.program=buildProgram(state.allItems);
     state.alternatives=buildAlternatives(state.allItems);
@@ -153,10 +156,14 @@ async function compose(){
 }
 function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if(el){el.textContent=text;el.classList.add('done')}}
 function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
+function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
+function majorMomentPrompt(){const moment=state.majorMoments[0];if(!moment)return'';const chosen=state.majorChoice===moment.id,date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),venues=chosen?(state.broadcastVenues.length?`<div class="broadcast-list">${state.broadcastVenues.map(venue=>`<a href="${esc(venue.sourceUrl)}" target="_blank"><b>${esc(venue.name)}</b><span>Diffusion confirmée${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</span></a>`).join('')}</div>`:'<div class="broadcast-empty"><b>Aucun lieu confirmé au Touquet pour le moment.</b><span>Dolcia ne transforme pas un bar probable en diffusion certaine. Les partenaires peuvent déclarer leur diffusion et fournir une preuve datée.</span></div>'):'';return `<section class="major-moment"><span class="kicker">Le grand rendez-vous du jour</span><div><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Événement exceptionnel')} · ${time}. Souhaitez-vous que Dolcia l’intègre à votre programme et cherche une diffusion réellement confirmée ?</p></div><div class="major-actions"><button class="primary" onclick="chooseMajorMoment('${esc(moment.id)}')">${chosen?'Actualiser les lieux':'Oui, l’intégrer'}</button><button class="secondary" onclick="dismissMajorMoment('${esc(moment.id)}')">Pas cette fois</button></div>${venues}<small>Dolcia distingue les diffusions confirmées des établissements à contacter.</small></section>`}
+async function chooseMajorMoment(id){state.majorChoice=id;const moment=state.majorMoments.find(item=>item.id===id);if(moment&&!state.agenda.some(item=>item.id===id)){state.agenda.push({id:moment.id,name:moment.title||moment.name,source:moment.source||'Source officielle',category:'night',date:moment.date,agendaDate:moment.date,agendaSlot:'Grand rendez-vous',address:'Lieu de diffusion à choisir',official:true,timeKnown:true,summary:'Dolcia recherche un lieu ayant confirmé la diffusion.',addedAt:new Date().toISOString()});save()}showToast('Vérification des lieux de diffusion…');try{const response=await fetch(`/api/broadcast-venues?event=${encodeURIComponent(id)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`),data=await response.json();state.broadcastVenues=data.venues||[]}catch(_){state.broadcastVenues=[]}renderResults()}
+function dismissMajorMoment(id){state.majorMoments=state.majorMoments.filter(item=>item.id!==id);renderResults()}
 function queriesForVibes(){
   const selectedMap={
     play:['parc attractions parc à thème','bowling','laser game','escape game','karting','trampoline park','réalité virtuelle','paintball mini golf'],
-    breathe:['plage balade nature jardin','accrobranche parcours aventure','réserve naturelle animaux','sports nautiques voile surf paddle kayak','équitation poney','golf vélo escalade'],
+    breathe:['plage balade nature jardin','accrobranche parcours aventure','réserve naturelle paysage','sports nautiques voile surf paddle kayak','golf vélo escalade'],
     create:['atelier créatif cours stage','concert spectacle théâtre cinéma','musée exposition patrimoine','visite guidée'],
     taste:['restaurant','brunch salon de thé','gastronomie dégustation marché'],
     recharge:['spa thalasso bien-être','massage yoga détente'],
@@ -180,7 +187,7 @@ function queriesForVibes(){
   return [...new Set([...selected,...broad])];
 }
 function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),placeText=`${p.name||''} ${(p.types||[]).join(' ')}`.toLowerCase(),freeAccess=/plage|beach|promenade|parc public|public park|jardin public/.test(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null}})}
-function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:e.source||'OpenAgenda',category:category(`${e.type||''} ${typeof e.title==='object'?JSON.stringify(e.title):e.title}`),address:e.address||e.location||'',lat:e.lat??e.latitude,lng:e.lng??e.longitude,date:e.date,photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free,priceLabel:e.priceLabel,official:e.official,partner:e.partner,sponsored:e.sponsored,sponsorshipTier:e.sponsorshipTier}))}
+function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:e.source||'OpenAgenda',category:category(`${e.type||''} ${typeof e.title==='object'?JSON.stringify(e.title):e.title}`),address:e.address||e.location||'',lat:e.lat??e.latitude,lng:e.lng??e.longitude,date:e.date,timeKnown:e.timeKnown!==false&&/T\d{2}:\d{2}/.test(e.date||''),photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free,priceLabel:e.priceLabel,official:e.official,partner:e.partner,sponsored:e.sponsored,sponsorshipTier:e.sponsorshipTier}))}
 function category(text=''){const t=text.toLowerCase();if(/hotel|hôtel|lodging|hébergement/.test(t))return'hotel';if(/feu d.artifice|bal populaire|concert|spectacle|soirée/.test(t))return'night';if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|art|cinema|theater|culture|expo/.test(t))return'culture';if(/spa|beauty|yoga|bien/.test(t))return'slow';if(/bar|night|music/.test(t))return'night';if(/park|parc|nature|plage|garden|forêt/.test(t))return'outside';return'active'}
 function dedupe(items){const seen=new Map();return items.filter(x=>{const name=(x.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();const date=x.date?iso(new Date(x.date)):'';const k=`${name}:${date}`;if(!name)return false;const previous=seen.get(k);if(previous){previous.sources=[...new Set([...(previous.sources||[previous.source]),x.source].filter(Boolean))];return false}x.sources=[x.source].filter(Boolean);seen.set(k,x);return true})}
 function qualityGate(item){if(!item?.name)return false;if(item.source==='Google Places')return Boolean(item.placeId&&item.address&&item.lat!=null&&item.lng!=null&&item.businessStatus!=='CLOSED_PERMANENTLY');if(item.date){const date=new Date(item.date);if(Number.isNaN(date.getTime()))return false;return Boolean(item.source&&(item.address||item.booking||item.official))}return Boolean(item.address&&item.source)}
@@ -200,13 +207,14 @@ function scoreItems(items){
     const addressText=`${i.address||''} ${i.name||''}`.toLowerCase();
     if(state.location.name==='Le Touquet-Paris-Plage'&&/\bcalais\b|\bboulogne-sur-mer\b|\bdunkerque\b/.test(addressText))return false;
     const activityText=`${i.name||''} ${i.address||''}`.toLowerCase();
+    if(/chien|chiens|canin|dog park|dog beach/.test(activityText))return false;
     if(['family','friends'].includes(who)&&/golf/.test(activityText)&&/compétition|competition|championnat|trophée|trophee|coupe/.test(activityText))return false;
     if(i.source!=='Google Places'){
       if(!i.date)return false;
       const day=iso(new Date(i.date));
       if(day<iso(state.dateStart)||day>iso(state.dateEnd))return false;
     }
-    const isOfficialHighlight=i.official&&i.date&&iso(new Date(i.date))===iso(state.dateStart);
+    const isOfficialHighlight=i.official&&i.date&&iso(new Date(i.date))===iso(state.dateStart)&&/feu d.artifice|bal populaire|fête nationale/.test(activityText);
     if(vibes.length&&!matchesIntentions(i,vibes)&&!isOfficialHighlight)return false;
     if(budget==='free')return i.free||i.price===0||i.freeAccess;
     if(budget==='budget1'&&i.price!=null)return i.price<=1;
@@ -261,10 +269,9 @@ function buildProgram(pool, excludedIds=[]){
   const used=new Set(), usedKinds=new Set(), slots=[];
   const wanted=programTemplates();
   for(const [label,categories] of wanted){
-    let candidates=available.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&(!usedKinds.has(experienceKind(item))||experienceKind(item)==='event'));
+    let candidates=available.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label)&&(!usedKinds.has(experienceKind(item))||experienceKind(item)==='event'));
     candidates.sort((a,b)=>slotScore(b,label)-slotScore(a,label));
-    const strictSlot=categories.length===1&&categories[0]==='hotel';
-    const item=candidates[0]||(strictSlot?null:available.find(value=>!used.has(value.id)));
+    const item=candidates[0];
     if(item){used.add(item.id);usedKinds.add(experienceKind(item));slots.push({label,item})}
   }
   return slots;
@@ -275,13 +282,15 @@ function experienceKind(item){const t=`${item.name||''} ${item.category||''}`.to
 function buildAlternatives(pool){
   const used=new Set();
   return programTemplates().map(([label,categories])=>{
-    let candidates=pool.filter(item=>!used.has(item.id)&&categories.includes(item.category));
+    let candidates=pool.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label));
     candidates.sort((a,b)=>slotScore(b,label)-slotScore(a,label));
     const items=candidates.slice(0,3);
     items.forEach(item=>used.add(item.id));
     return {label,items};
   }).filter(group=>group.items.length);
 }
+
+function isTimeCompatible(item,label){if(!item.date)return true;const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
 
 function programTemplates(){
   const templates={
@@ -308,7 +317,7 @@ function slotScore(item,label){
 function renderResults(){
   state.view='results';
   const criteria=criteriaLabels();
-  app.innerHTML=shell(`<section class="results-hero"><div class="results-photo" style="background-image:url('${IMAGES.hero}')"></div><div class="results-copy"><span class="kicker">Composé pour vous</span><h1>Votre moment<br>prend forme.</h1><p>${state.weather?.main?.temp?`${Math.round(state.weather.main.temp)}°, `:''}${esc(state.location.name)}. Plusieurs choix pertinents pour chaque moment, uniquement à la date et dans la destination sélectionnées.</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><button class="surprise-hero" onclick="surprise()"><span>Confiez votre temps à Dolcia</span><strong>${composeCta()}</strong><b>→</b></button></div></section><section class="program">${weatherPlan()}<div class="program-head"><div><span class="kicker">Le catalogue organisé</span><h2>${state.alternatives.length?'Choisissez ce qui vous plaît':'Une autre piste ?'}</h2></div><div class="program-actions"><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="startCompose()">Modifier mes choix</button></div></div>${state.alternatives.length?state.alternatives.map(alternativeGroup).join(''):emptyState()}${state.alternatives.length?`<div class="agenda-guidance"><strong>Vous choisissez activité par activité.</strong><span>Retrouvez uniquement vos choix dans l’onglet Agenda en bas de l’écran.</span><button onclick="renderAgenda()">Ouvrir mon agenda →</button></div>`:''}</section>`,'discover');
+  app.innerHTML=shell(`<section class="results-hero"><div class="results-photo" style="background-image:url('${IMAGES.hero}')"></div><div class="results-copy"><span class="kicker">Composé pour vous</span><h1>Votre moment<br>prend forme.</h1><p>${state.weather?.main?.temp?`${Math.round(state.weather.main.temp)}°, `:''}${esc(state.location.name)}. Plusieurs choix pertinents pour chaque moment, uniquement à la date et dans la destination sélectionnées.</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><button class="surprise-hero" onclick="surprise()"><span>Confiez votre temps à Dolcia</span><strong>${composeCta()}</strong><b>→</b></button></div></section>${majorMomentPrompt()}<section class="program">${weatherPlan()}<div class="program-head"><div><span class="kicker">Le catalogue organisé</span><h2>${state.alternatives.length?'Choisissez ce qui vous plaît':'Une autre piste ?'}</h2></div><div class="program-actions"><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="startCompose()">Modifier mes choix</button></div></div>${state.alternatives.length?state.alternatives.map(alternativeGroup).join(''):emptyState()}${state.alternatives.length?`<div class="agenda-guidance"><strong>Vous choisissez activité par activité.</strong><span>Retrouvez uniquement vos choix dans l’onglet Agenda en bas de l’écran.</span><button onclick="renderAgenda()">Ouvrir mon agenda →</button></div>`:''}</section>`,'discover');
 }
 function renderSurprise(){
   state.view='surprise';
@@ -321,7 +330,7 @@ function weatherPlan(){const condition=(state.weather?.weather?.[0]?.main||'').t
 function toggleOutdoor(){state.items=[...state.items].sort((a,b)=>(b.category==='outside')-(a.category==='outside'));renderResults()}
 function label(key){const base=FLOW.find(x=>x.key===key),s=key==='budget'?{...base,...budgetStep()}:base,v=state.answers[key];return s?.options.find(o=>o[0]===v)?.[1]}
 function criteriaLabels(){const vibeStep=FLOW.find(step=>step.key==='vibes');const vibes=(state.answers.vibes||[]).map(value=>vibeStep.options.find(option=>option[0]===value)?.[1]).filter(Boolean);return [fmt(state.dateStart),label('duration'),label('who'),label('budget'),...vibes].filter(Boolean)}
-function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>item.id===i.id),fallback=IMAGES[i.category]||IMAGES.fallback,label=i.sponsored?'Partenaire Dolcia · mis en avant':i.quality==='verified'?'Informations vérifiées':i.quality==='official-partial'?'Source officielle · détails à confirmer':esc(i.source);return `<article class="experience"><img class="exp-image" src="${itemImage(i)}" alt="" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label">${label}</span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à confirmer auprès de la source')}</p><div class="exp-meta">${i.distance!=null?`<span>${i.distance.toFixed(1)} km</span>`:''}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${i.price!=null?`<span>${i.price===0?'Gratuit confirmé':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>'}${i.isOpen===true?'<span>Ouvert actuellement</span>':''}${i.date?`<span>${new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:''}<span>${why(i)}</span></div></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir la fiche</button><button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Ajouté à mon agenda':'Ajouter à mon agenda'}</button></div></article>`}
+function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>item.id===i.id),fallback=IMAGES[i.category]||IMAGES.fallback,label=i.sponsored?'Partenaire Dolcia · mis en avant':i.quality==='verified'?'Informations vérifiées':i.quality==='official-partial'?'Source officielle · détails à confirmer':esc(i.source),price=i.free?'<span>Gratuit confirmé</span>':i.freeAccess?'<span>Accès libre · options éventuelles payantes</span>':i.price!=null?`<span>${i.price===0?'Gratuit confirmé':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>',dateMeta=i.date?`<span>${i.timeKnown===false?new Date(i.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' · horaire à confirmer':new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:'';return `<article class="experience"><img class="exp-image" src="${itemImage(i)}" alt="" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label">${label}</span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à confirmer auprès de la source')}</p><div class="exp-meta">${i.distance!=null?`<span>${i.distance.toFixed(1)} km</span>`:''}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${i.isOpen===true?'<span>Ouvert actuellement</span>':''}${dateMeta}<span>${why(i)}</span></div></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir la fiche</button><button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Ajouté à mon agenda':'Ajouter à mon agenda'}</button></div></article>`}
 function programSlot(slot,index){return `<section class="program-slot"><div class="slot-heading"><span>${slot.label}</span><button onclick="regenerateSlot(${index})">Changer cette idée ↻</button></div>${experience(slot.item,index,slot.label)}</section>`}
 function alternativeGroup(group,index){return `<section class="alternative-group"><div class="slot-heading"><span>${group.label}</span><small>${group.items.length} choix pour ce moment</small></div><div class="alternative-list">${group.items.map((item,itemIndex)=>experience(item,index*3+itemIndex,group.label)).join('')}</div></section>`}
 function why(i){if(i.source==='OpenAgenda')return'Disponible à vos dates';if(i.rating>=4.5)return'Très apprécié';return'Accordé à vos envies'}
@@ -381,5 +390,5 @@ function moveAgenda(index,direction){const next=index+direction;if(next<0||next>
 function removeAgenda(id){state.agenda=state.agenda.filter(x=>x.id!==id);save();renderAgenda()}
 function showToast(message){const t=document.querySelector('#toast');t.textContent=message;t.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove('show'),2400)}
 
-window.home=home;window.startCompose=startCompose;window.renderComposer=renderComposer;window.pick=pick;window.nextStep=nextStep;window.backStep=backStep;window.setDate=setDate;window.setDestination=setDestination;window.moveMonth=moveMonth;window.pickDate=pickDate;window.useLocation=useLocation;window.compose=compose;window.renderResults=renderResults;window.renderSurprise=renderSurprise;window.renderAgenda=renderAgenda;window.renderServices=renderServices;window.serviceInterest=serviceInterest;window.moveAgenda=moveAgenda;window.openDetail=openDetail;window.selectPhoto=selectPhoto;window.closeDetail=closeDetail;window.addAgenda=addAgenda;window.adoptSurprise=adoptSurprise;window.surprise=surprise;window.regenerateSlot=regenerateSlot;window.rate=rate;window.saveFeeling=saveFeeling;window.toggleExperienceTag=toggleExperienceTag;window.toggleOutdoor=toggleOutdoor;window.removeAgenda=removeAgenda;window.showToast=showToast;window.state=state;
+window.home=home;window.startCompose=startCompose;window.renderComposer=renderComposer;window.pick=pick;window.nextStep=nextStep;window.backStep=backStep;window.setDate=setDate;window.setDestination=setDestination;window.moveMonth=moveMonth;window.pickDate=pickDate;window.useLocation=useLocation;window.compose=compose;window.renderResults=renderResults;window.renderSurprise=renderSurprise;window.renderAgenda=renderAgenda;window.renderServices=renderServices;window.serviceInterest=serviceInterest;window.moveAgenda=moveAgenda;window.openDetail=openDetail;window.selectPhoto=selectPhoto;window.closeDetail=closeDetail;window.addAgenda=addAgenda;window.adoptSurprise=adoptSurprise;window.surprise=surprise;window.regenerateSlot=regenerateSlot;window.rate=rate;window.saveFeeling=saveFeeling;window.toggleExperienceTag=toggleExperienceTag;window.chooseMajorMoment=chooseMajorMoment;window.dismissMajorMoment=dismissMajorMoment;window.toggleOutdoor=toggleOutdoor;window.removeAgenda=removeAgenda;window.showToast=showToast;window.state=state;
 home();

@@ -17,6 +17,24 @@
 - Le feu d’artifice et bal populaire du 13 juillet 2026 à 23 h dispose d’un filet de sécurité relié à la source officielle du Touquet.
 - Un budget de 0 € ne transforme jamais artificiellement une prestation payante en activité gratuite.
 
+## Fiabilité des catégories et horaires — 13 juillet 2026
+
+- Suppression du remplissage forcé : aucun créneau n’est complété par une activité hors sujet.
+- Un événement dont la source ne donne pas l’heure n’est jamais placé artificiellement à 12 h, 21 h ou 23 h.
+- Les propositions liées aux chiens sont exclues tant que l’utilisateur n’a pas demandé un filtre « avec mon animal ».
+- Aucun filtre animal n’est activé dans cette version : cette fonction restera désactivée tant que la compatibilité des lieux ne pourra pas être garantie proprement.
+- Les messages de confirmation possèdent désormais un contraste sombre/champagne lisible.
+
+## Radar des grands rendez-vous — 14 juillet 2026
+
+- Détection quotidienne des grands rendez-vous sportifs nationaux et internationaux.
+- Détection des moments locaux et culturels exceptionnels : fête nationale, feu d’artifice, bal populaire, festival, carnaval, braderie, cérémonie et inauguration.
+- Dolcia demande à l’utilisateur s’il souhaite intégrer le rendez-vous au lieu de l’imposer.
+- Un rendez-vous accepté rejoint l’agenda à son horaire réel.
+- Les lieux de diffusion sont séparés en « diffusion confirmée » et « aucune preuve publique ».
+- Aucun bar n’est présenté comme diffuseur sur la seule base de sa catégorie Google.
+- Les partenaires disposent d’une structure de déclaration avec URL de preuve, contrôle IA, niveau de confiance, contradictions et recours humain ciblé.
+
 ## Règle de confiance non négociable
 
 Dolcia vise l’exhaustivité maximale des sources, mais n’affiche que des propositions passant le contrôle qualité. Une note est toujours rattachée à sa source et à son volume d’avis. Une date, un horaire, un tarif, une disponibilité ou une adresse manquants ne sont jamais inventés : ils sont signalés comme non communiqués ou à confirmer. Une fiche dont l’existence, la date ou la localisation ne sont pas suffisamment documentées est rejetée avant classement.

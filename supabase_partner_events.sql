@@ -83,3 +83,27 @@ create table if not exists public.flash_offers (
 );
 create index if not exists flash_offers_live_idx on public.flash_offers (status, expires_at, starts_at);
 alter table public.flash_offers enable row level security;
+
+create table if not exists public.broadcast_declarations (
+  id uuid primary key default gen_random_uuid(),
+  partner_id uuid,
+  event_key text not null,
+  event_title text not null,
+  starts_at timestamptz not null,
+  venue_name text not null,
+  address text not null,
+  latitude double precision,
+  longitude double precision,
+  source_url text not null,
+  evidence_text text,
+  declared_by_venue boolean not null default false,
+  ai_status text not null default 'pending' check (ai_status in ('pending','confirmed','probable','contradictory','rejected')),
+  ai_confidence numeric(4,3) not null default 0,
+  ai_reasons jsonb not null default '[]',
+  human_status text not null default 'not_required' check (human_status in ('not_required','to_review','approved','rejected')),
+  active boolean not null default true,
+  checked_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists broadcast_event_date_idx on public.broadcast_declarations (event_key, starts_at, ai_status, active);
+alter table public.broadcast_declarations enable row level security;

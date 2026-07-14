@@ -27,7 +27,8 @@ function parsePage(html) {
     events.push({
       id: `touquet-${isoFromFrench(match[1])}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}`,
       title,
-      date: `${isoFromFrench(match[1])}T12:00:00+02:00`,
+      date: `${isoFromFrench(match[1])}T00:00:00+02:00`,
+      timeKnown: false,
       location: 'Le Touquet-Paris-Plage',
       registrationUrl: new URL(match[2], 'https://www.letouquet.com').toString(),
       source: 'Office de tourisme du Touquet',
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
     );
     const all = pages.flatMap(parsePage);
     if (after <= '2026-07-13' && before >= '2026-07-13') {
-      all.push({
+      all.unshift({
         id: 'touquet-2026-07-13-feu-artifice-bal-populaire',
         title: 'Feu d’artifice et bal populaire',
         date: '2026-07-13T23:00:00+02:00',
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
         registrationUrl: 'https://www.letouquet.com/agenda/feu-dartifice/',
         source: 'Office de tourisme du Touquet',
         official: true,
+        timeKnown: true,
         free: true,
         priceLabel: 'Accès libre'
       });
