@@ -35,6 +35,15 @@
 - Aucun bar n’est présenté comme diffuseur sur la seule base de sa catégorie Google.
 - Les partenaires disposent d’une structure de déclaration avec URL de preuve, contrôle IA, niveau de confiance, contradictions et recours humain ciblé.
 
+## Parcours premium unifié — 14 juillet 2026
+
+- Date et créneau sont réunis sur un seul écran ; la grande page de durée redondante est supprimée du parcours.
+- Les grands rendez-vous apparaissent dès l’accueil avec une question claire.
+- Accepter un grand rendez-vous ouvre le véritable programme « Compose-moi », jamais le catalogue de propositions.
+- Le rendez-vous devient un créneau protégé ; l’avant et l’après peuvent être recomposés.
+- Les diffusions confirmées et les lieux à appeler sont visuellement et sémantiquement séparés.
+- Chaque créneau du programme peut être régénéré ou affiné avec une demande libre (« plus calme », « vue mer », « moins cher », etc.).
+
 ## Règle de confiance non négociable
 
 Dolcia vise l’exhaustivité maximale des sources, mais n’affiche que des propositions passant le contrôle qualité. Une note est toujours rattachée à sa source et à son volume d’avis. Une date, un horaire, un tarif, une disponibilité ou une adresse manquants ne sont jamais inventés : ils sont signalés comme non communiqués ou à confirmer. Une fiche dont l’existence, la date ou la localisation ne sont pas suffisamment documentées est rejetée avant classement.
