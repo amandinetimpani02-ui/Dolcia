@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (hit) return res.status(200).json(hit);
 
   try {
-    const fields = 'place_id,name,formatted_address,formatted_phone_number,international_phone_number,website,url,opening_hours,editorial_summary,rating,user_ratings_total,photos,types,business_status';
+    const fields = 'place_id,name,formatted_address,formatted_phone_number,international_phone_number,website,url,opening_hours,current_opening_hours,utc_offset_minutes,editorial_summary,rating,user_ratings_total,photos,types,business_status';
     const response = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=${fields}&language=fr&key=${key}`);
     const data = await response.json();
     if (data.status !== 'OK' || !data.result?.formatted_address) {
@@ -30,6 +30,9 @@ export default async function handler(req, res) {
       businessStatus: result.business_status || null,
       openNow: result.opening_hours?.open_now ?? null,
       hours: result.opening_hours?.weekday_text || [],
+      openingPeriods: result.current_opening_hours?.periods || result.opening_hours?.periods || [],
+      utcOffsetMinutes: result.utc_offset_minutes ?? null,
+      types: result.types || [],
       summary: result.editorial_summary?.overview || null,
       photos: (result.photos || []).slice(0, 6).map(photo => `/api/photo?ref=${encodeURIComponent(photo.photo_reference)}&maxwidth=1200`)
     };

@@ -116,15 +116,23 @@ function backStep(){if(state.step<=1){state.step=-1;renderDate()}else{state.step
 function renderDate(){
   app.innerHTML=shell(`<section class="composer moment-editor"><div class="composer-shell"><div class="composer-head"><div><span class="kicker">Un seul choix, au même endroit</span><h2>Où et quand voulez-vous sortir ?</h2></div><div class="step-count">Votre moment<div class="progress"><span style="width:25%"></span></div></div></div><p class="step-lead">Choisissez la destination, la date et le créneau sur cet écran. Dolcia ne vous reposera pas la même question ensuite.</p><div class="destination-row">${Object.entries(DESTINATIONS).map(([id,d])=>`<button class="destination-pill ${state.location.name===d.name?'active':''}" onclick="setDestination('${id}')">${d.name}</button>`).join('')}<button class="destination-pill" onclick="useLocation()">Autour de moi</button></div><div class="date-presets compact-presets">${[['now','Maintenant',`Dès ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`],['tonight','Ce soir','À partir de 18 h'],['tomorrow','Demain','À votre rythme'],['weekend','Ce week-end','Samedi + dimanche']].map(x=>`<button class="date-pill ${state.dateMode===x[0]?'active':''}" onclick="setDate('${x[0]}')"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="moment-layout">${calendar()}<aside class="time-choice-panel"><span class="kicker">Votre créneau</span><h3>Combien de temps avez-vous ?</h3>${compactTimeChoices()}</aside></div><div class="composer-actions"><button class="secondary" onclick="home()">← Accueil</button><button class="primary" onclick="confirmDate()">Continuer →</button></div></div></section>`,'compose');
 }
-function compactTimeChoices(){const choices=[['2h','2 heures'],['morning','Matinée'],['afternoon','Après-midi'],['afternoon_evening','Après-midi + soirée'],['evening','Soirée'],['day','Journée complète']];if(tripDays()>1)return`<button class="time-chip selected">Séjour de ${tripDays()} jours</button>`;return `<div class="time-chip-grid">${choices.map(([id,label])=>`<button class="time-chip ${state.answers.duration===id?'selected':''}" onclick="selectDuration('${id}')">${label}</button>`).join('')}</div>`}
+function compactTimeChoices(){
+  if(tripDays()>1)return`<button class="time-chip selected">Séjour de ${tripDays()} jours</button>`;
+  if(state.dateMode==='tonight')return`<button class="time-chip selected">Ce soir · à partir de 18 h</button>`;
+  const hour=new Date().getHours();
+  const choices=state.dateMode==='now'
+    ?[['2h','À partir de maintenant · 2 heures'],...(hour<18?[['afternoon_evening','Maintenant + la soirée']]:[['evening','Le reste de la soirée']])]
+    :[['2h','2 heures'],['morning','Matinée'],['afternoon','Après-midi'],['afternoon_evening','Après-midi + soirée'],['evening','Soirée'],['day','Journée complète']];
+  return `<div class="time-chip-grid">${choices.map(([id,label])=>`<button class="time-chip ${state.answers.duration===id?'selected':''}" onclick="selectDuration('${id}')">${label}</button>`).join('')}</div>`
+}
 function selectDuration(value){state.answers.duration=value;state.answers.budget=null;renderDate()}
 function confirmDate(){if(tripDays()>1||state.dateMode==='weekend')state.answers.duration='stay';if(!state.answers.duration)return showToast('Choisissez votre créneau sur ce même écran');state.step=1;renderComposer()}
 function setDestination(id){const d=DESTINATIONS[id];if(!d)return;state.location={name:d.name,lat:d.lat,lng:d.lng};state.radius=d.radius;renderDate()}
-function setDate(mode){const now=new Date();state.dateMode=mode;let d=new Date(now);if(mode==='now')state.answers.duration='afternoon_evening';if(mode==='tonight'){d.setHours(Math.max(18,now.getHours()),now.getMinutes(),0,0);state.answers.duration='evening'}if(mode==='tomorrow'){d.setDate(d.getDate()+1);d.setHours(9,0,0,0);state.answers.duration=null}if(mode==='weekend'){const add=(6-d.getDay()+7)%7;d.setDate(d.getDate()+add);d.setHours(9,0,0,0);state.answers.duration='stay'}state.dateStart=d;state.dateEnd=mode==='weekend'?new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,23,59):new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59);state.month=new Date(d.getFullYear(),d.getMonth(),1);renderDate()}
+function setDate(mode){const now=new Date();state.dateMode=mode;let d=new Date(now);if(mode==='now')state.answers.duration=now.getHours()>=18?'evening':'afternoon_evening';if(mode==='tonight'){d.setHours(Math.max(18,now.getHours()),now.getMinutes(),0,0);state.answers.duration='evening'}if(mode==='tomorrow'){d.setDate(d.getDate()+1);d.setHours(9,0,0,0);state.answers.duration=null}if(mode==='weekend'){const add=(6-d.getDay()+7)%7;d.setDate(d.getDate()+add);d.setHours(9,0,0,0);state.answers.duration='stay'}state.dateStart=d;state.dateEnd=mode==='weekend'?new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,23,59):new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59);state.month=new Date(d.getFullYear(),d.getMonth(),1);renderDate()}
 function calendar(){const y=state.month.getFullYear(),m=state.month.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,count=new Date(y,m+1,0).getDate();let cells='';for(let i=0;i<first;i++)cells+='<button class="cal-cell empty"></button>';for(let d=1;d<=count;d++){const date=new Date(y,m,d),selected=sameDay(date,state.dateStart)||sameDay(date,state.dateEnd),inRange=state.dateStart&&state.dateEnd&&date>state.dateStart&&date<state.dateEnd;cells+=`<button class="cal-cell ${selected?'selected':''} ${inRange?'in-range':''}" onclick="pickDate(${y},${m},${d})">${d}</button>`}const range=state.dateStart?`${fmt(state.dateStart)}${state.dateEnd&&!sameDay(state.dateStart,state.dateEnd)?` → ${fmt(state.dateEnd)} · ${tripDays()} jours`:''}`:'Choisissez une date';return `<div class="calendar"><div class="cal-head"><button onclick="moveMonth(-1)">←</button><div><b>${state.month.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</b><small>${range}</small></div><button onclick="moveMonth(1)">→</button></div><div class="cal-hint">Cliquez sur l’arrivée, puis sur le départ</div><div class="cal-days">${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cal-grid">${cells}</div></div>`}
 function moveMonth(n){state.month=new Date(state.month.getFullYear(),state.month.getMonth()+n,1);renderDate()}
 function pickDate(y,m,d){const date=new Date(y,m,d);if(state.dateMode!=='custom'||!state.dateStart||!sameDay(state.dateStart,state.dateEnd)){state.dateStart=date;state.dateEnd=date;state.dateMode='custom';state.answers.duration=null}else if(date<state.dateStart){state.dateEnd=state.dateStart;state.dateStart=date}else{state.dateEnd=date;if(!sameDay(state.dateStart,state.dateEnd))state.answers.duration='stay'}renderDate()}
-function tripDays(){if(!state.dateStart||!state.dateEnd)return 1;return Math.max(1,Math.round((state.dateEnd-state.dateStart)/86400000)+1)}
+function tripDays(){if(!state.dateStart||!state.dateEnd)return 1;const start=Date.UTC(state.dateStart.getFullYear(),state.dateStart.getMonth(),state.dateStart.getDate()),end=Date.UTC(state.dateEnd.getFullYear(),state.dateEnd.getMonth(),state.dateEnd.getDate());return Math.max(1,Math.round((end-start)/86400000)+1)}
 
 async function useLocation(){
   if(!navigator.geolocation)return showToast('La géolocalisation n’est pas disponible');
@@ -157,7 +165,9 @@ async function compose(){
     const placeJobs=placeQueries.map(url=>get(url).then(d=>{const found=normalizePlaces(d.results||[]);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés`);updateLivePreview()}).catch(()=>null));
     await Promise.allSettled([weatherJob,eventJob,officialJob,ticketmasterJob,partnerJob,nationalJob,majorJob,broadcastJob,...placeJobs]);
     state.majorMoments=detectMajorMoments(state.items,state.majorMoments);
-    state.allItems=scoreItems(dedupe(state.items));
+    const deduped=dedupe(state.items);
+    await enrichPlaceAvailability(deduped);
+    state.allItems=scoreItems(deduped);
     state.program=buildProgram(state.allItems);
     if(state.majorChoice)state.program=injectMajorMoment(state.program);
     state.alternatives=buildAlternatives(state.allItems);
@@ -200,6 +210,13 @@ function queriesForVibes(){
   return [...new Set([...selected,...broad])];
 }
 function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),placeText=`${p.name||''} ${(p.types||[]).join(' ')}`.toLowerCase(),freeAccess=/plage|beach|promenade|parc public|public park|jardin public/.test(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null}})}
+async function enrichPlaceAvailability(items){
+  const evening=['evening','afternoon_evening'].includes(state.answers.duration),priority=item=>evening&&['food','night','culture','slow','outside'].includes(item.category)?30:0;
+  const candidates=items.filter(item=>item.source==='Google Places'&&item.placeId).sort((a,b)=>priority(b)-priority(a)||(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0)).slice(0,60);
+  let cursor=0;
+  const worker=async()=>{while(cursor<candidates.length){const item=candidates[cursor++];try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(item.placeId)}`),details=await response.json();if(!details.verified)continue;item.openingPeriods=details.openingPeriods||[];item.hours=details.hours||[];item.detailsKnown=true;item.phone=details.phone||null;item.website=details.website||null;item.booking=details.website||item.booking;item.businessStatus=details.businessStatus||item.businessStatus;item.types=details.types||[];if(details.photos?.length){item.photos=details.photos;item.photo=details.photos[0]}}catch(_){item.detailsKnown=false}}};
+  await Promise.all(Array.from({length:Math.min(8,candidates.length)},worker));
+}
 function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:e.source||'OpenAgenda',category:category(`${e.type||''} ${typeof e.title==='object'?JSON.stringify(e.title):e.title}`),address:e.address||e.location||'',lat:e.lat??e.latitude,lng:e.lng??e.longitude,date:e.date,timeKnown:e.timeKnown!==false&&/T\d{2}:\d{2}/.test(e.date||''),photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free,priceLabel:e.priceLabel,official:e.official,partner:e.partner,sponsored:e.sponsored,sponsorshipTier:e.sponsorshipTier}))}
 function plainText(text=''){return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function isCivicBuilding(text=''){
@@ -238,7 +255,7 @@ function scoreItems(items){
       if(day<iso(state.dateStart)||day>iso(state.dateEnd))return false;
     }
     const isOfficialHighlight=i.official&&i.date&&iso(new Date(i.date))===iso(state.dateStart)&&/feu d.artifice|bal populaire|fête nationale/.test(activityText);
-    if(vibes.length&&!matchesIntentions(i,vibes)&&!isOfficialHighlight)return false;
+    /* Les envies ordonnent le catalogue ; elles ne doivent jamais supprimer toutes les autres possibilités pertinentes. */
     if(budget==='free')return i.free||i.price===0||i.freeAccess;
     if(budget==='budget1'&&i.price!=null)return i.price<=1;
     if(budget==='budget2'&&i.price!=null)return i.price<=2;
@@ -303,17 +320,21 @@ function buildProgram(pool, excludedIds=[]){
 function experienceKind(item){const t=`${item.name||''} ${item.category||''}`.toLowerCase();if(/golf|tennis|padel|sport/.test(t))return'sport';if(/restaurant|brunch|café|food/.test(t))return'food';if(/concert|spectacle|festival|fête|feu d.artifice|atelier|exposition/.test(t))return'event';if(/spa|massage|thalasso|yoga/.test(t))return'wellness';if(/plage|voile|foil|surf|paddle|kayak|nautique|aquatique/.test(t))return'water';if(/parc|bowling|laser|escape|karting/.test(t))return'play';return item.category||'other'}
 
 function buildAlternatives(pool){
-  const used=new Set();
   return programTemplates().map(([label,categories])=>{
-    let candidates=pool.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label));
+    let candidates=pool.filter(item=>categories.includes(item.category)&&isTimeCompatible(item,label));
     candidates.sort((a,b)=>slotScore(b,label)-slotScore(a,label));
-    const items=candidates.slice(0,3);
-    items.forEach(item=>used.add(item.id));
-    return {label,items};
+    return {label,items:candidates.slice(0,12),total:candidates.length};
   }).filter(group=>group.items.length);
 }
 
-function isTimeCompatible(item,label){if(!item.date)return true;const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
+function requiresPublishedSession(item){return /cinema|cinéma|theatre|théâtre|spectacle|visite guidee|visite guidée|atelier|cours|stage|excursion|croisiere|croisière/.test(`${item.name||''} ${(item.types||[]).join(' ')}`.toLowerCase())}
+function isOpenForSlot(item,label){
+  const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;
+  if(!item.detailsKnown||!item.openingPeriods?.length)return false;
+  const date=new Date(state.dateStart),day=date.getDay(),start=day*1440+Number(match[1])*60+Number(match[2]),end=start+75;
+  return item.openingPeriods.some(period=>{if(!period.open)return false;const open=period.open.day*1440+Number(String(period.open.time||'0000').slice(0,2))*60+Number(String(period.open.time||'0000').slice(2,4));if(!period.close)return true;let close=period.close.day*1440+Number(String(period.close.time||'0000').slice(0,2))*60+Number(String(period.close.time||'0000').slice(2,4));if(close<=open)close+=7*1440;let target=start;if(target<open&&target+7*1440>=open)target+=7*1440;return target>=open&&target+75<=close});
+}
+function isTimeCompatible(item,label){const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;if(item.source==='Google Places'){if(requiresPublishedSession(item))return false;return isOpenForSlot(item,label)}if(!item.date)return false;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
 
 function programTemplates(){
   const nights=Math.max(1,tripDays()-1);
@@ -360,7 +381,7 @@ function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>it
 function programSlot(slot,index){const protectedMoment=slot.item.id===state.majorChoice;return `<section class="program-slot"><div class="slot-heading"><span>${slot.label}</span><div class="slot-actions">${protectedMoment?'<button onclick="chooseMajorMoment(state.majorChoice)">Actualiser les lieux ↻</button>':`<button onclick="openSlotRefinement(${index})">Préciser mon envie</button><button onclick="regenerateSlot(${index})">Changer cette idée ↻</button>`}</div></div>${experience(slot.item,index,slot.label)}</section>`}
 function openSlotRefinement(index){const slot=state.program[index];if(!slot)return;document.body.insertAdjacentHTML('beforeend',`<div class="modal refine-modal" id="refineModal"><article><button class="close" onclick="document.querySelector('#refineModal')?.remove()">×</button><span class="kicker">Affiner uniquement ce moment</span><h2>Vous préférez quoi à la place ?</h2><p>Écrivez librement : « plus calme », « vue mer », « activité avec les enfants », « moins cher », « quelque chose de sportif »…</p><input id="refineInput" autocomplete="off" placeholder="Votre envie précise"><div><button class="secondary" onclick="document.querySelector('#refineModal')?.remove()">Annuler</button><button class="primary" onclick="applySlotRefinement(${index})">Chercher cette idée</button></div></article></div>`);setTimeout(()=>document.querySelector('#refineInput')?.focus(),50)}
 async function applySlotRefinement(index){const input=document.querySelector('#refineInput'),query=input?.value.trim(),slot=state.program[index];if(!query||!slot)return showToast('Précisez ce que vous souhaitez');showToast('Dolcia cherche cette nuance…');try{const response=await fetch(`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${state.radius}&mode=text&keyword=${encodeURIComponent(query+' '+state.location.name)}`),data=await response.json(),found=scoreItems(normalizePlaces(data.results||[])).filter(item=>isTimeCompatible(item,slot.label)&&!state.program.some(current=>current.item.id===item.id));if(!found.length)return showToast('Aucune adresse assez fiable pour cette précision');state.program[index]={...slot,item:found[0]};state.items=state.program.map(current=>current.item);document.querySelector('#refineModal')?.remove();renderSurprise();showToast('Ce moment a été recomposé selon votre précision')}catch(_){showToast('La recherche précise est momentanément indisponible')}}
-function alternativeGroup(group,index){return `<section class="alternative-group"><div class="slot-heading"><span>${group.label}</span><small>${group.items.length} choix pour ce moment</small></div><div class="alternative-list">${group.items.map((item,itemIndex)=>experience(item,index*3+itemIndex,group.label)).join('')}</div></section>`}
+function alternativeGroup(group,index){return `<section class="alternative-group"><div class="slot-heading"><span>${group.label}</span><small>${group.total||group.items.length} possibilités vérifiées · les meilleures en premier</small></div><div class="alternative-list">${group.items.map((item,itemIndex)=>experience(item,index*12+itemIndex,group.label)).join('')}</div></section>`}
 function why(i){if(i.source==='OpenAgenda')return'Disponible à vos dates';if(i.rating>=4.5)return'Très apprécié';return'Accordé à vos envies'}
 function composeCta(){return ({'2h':'Compose-moi 2 heures parfaites',morning:'Compose-moi ma matinée',afternoon:'Compose-moi mon après-midi',afternoon_evening:'Compose-moi la suite de ma journée',evening:'Compose-moi ma soirée',day:'Compose-moi ma journée',stay:'Compose-moi mon séjour'})[state.answers.duration]||'Compose mon moment'}
 function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Élargissons l’horizon.</h3><p>Aucune source réelle n’a répondu pour le moment. Relancez la composition ou élargissez la zone de recherche.</p><div class="empty-actions"><button class="primary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="state.step=2;renderComposer()">Changer mes envies</button></div></div>`}

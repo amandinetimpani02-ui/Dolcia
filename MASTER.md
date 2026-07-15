@@ -104,3 +104,19 @@ Le rayon de la destination est une limite absolue, et non une préférence. Les 
 - « Hôtel de ville », mairie, monument ou visite guidée sont formellement exclus des hébergements.
 - Un élément ne peut entrer dans le créneau hébergement que s'il possède des indices explicites de logement touristique.
 - Le programme d'un séjour comporte des moments pour chaque journée, et non un modèle limité arbitrairement à deux jours.
+
+# Choix temporels contextuels
+
+- Le nombre de jours est calculé sur les dates civiles, sans que l'heure courante puisse transformer aujourd'hui en faux séjour de deux jours.
+- « Ce soir » verrouille directement le créneau soirée et masque les choix matin et après-midi devenus contradictoires.
+- « Maintenant » propose uniquement des durées qui commencent réellement maintenant, jamais une matinée déjà passée.
+
+# Disponibilité et profondeur du catalogue
+
+- « Ouvert actuellement » n'est jamais utilisé comme preuve d'ouverture à un futur créneau.
+- Pour entrer dans un créneau horaire, un lieu Google doit disposer d'horaires publiés couvrant le début et au moins 75 minutes d'expérience.
+- Cinémas, spectacles, visites guidées, ateliers, cours et excursions exigent une séance ou un départ publié ; le seul horaire d'ouverture du bâtiment ne suffit pas.
+- Une avant-première ou séance spéciale peut être mise en avant uniquement comme événement daté et sourcé.
+- Les envies servent à classer les résultats, pas à supprimer toutes les autres familles de loisirs.
+- Chaque créneau conserve son propre vivier : un restaurant ouvert à 19 h et 21 h peut apparaître dans les deux créneaux.
+- Explorer affiche jusqu'à douze meilleures propositions par créneau et conserve le nombre total des possibilités vérifiées.
