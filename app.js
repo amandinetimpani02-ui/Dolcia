@@ -63,7 +63,7 @@ const save = () => {localStorage.setItem('dolcia_agenda_v2',JSON.stringify(state
 function shell(content, active='discover'){
   return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="showToast('Votre espace personnel arrive bientôt')">VD</button></div></header>${content}${nav(active)}</main>`;
 }
-function nav(active){return `<nav class="bottom-nav" aria-label="Navigation"><button class="nav-item ${active==='discover'?'active':''}" onclick="home()">Découvrir</button><button class="nav-item signature ${active==='compose'?'active':''}" onclick="openComposition()">Compose-moi</button><button class="nav-item ${active==='agenda'?'active':''}" onclick="renderAgenda()">Agenda ${state.agenda.length?`· ${state.agenda.length}`:''}</button><button class="nav-item ${active==='services'?'active':''}" onclick="renderServices()">Services</button></nav>`}
+function nav(active){return `<nav class="bottom-nav" aria-label="Navigation"><button class="nav-item ${active==='discover'?'active':''}" onclick="home()">Explorer</button><button class="nav-item signature ${active==='compose'?'active':''}" onclick="openComposition()">Mon programme</button><button class="nav-item ${active==='agenda'?'active':''}" onclick="renderAgenda()">Agenda ${state.agenda.length?`· ${state.agenda.length}`:''}</button><button class="nav-item ${active==='services'?'active':''}" onclick="renderServices()">Services</button></nav>`}
 function openComposition(){if(state.program.length)return renderSurprise();startCompose()}
 
 function home(){
@@ -99,11 +99,12 @@ function renderComposer(){
 }
 function budgetStep(){
   const duration=state.answers.duration||'2h';
+  const nights=Math.max(1,tripDays()-1),economy=Math.ceil(nights*80/50)*50,comfort=Math.ceil(nights*160/50)*50,premium=Math.ceil(nights*300/50)*50;
   const sets={
     '2h':{title:'Quel budget pour ces deux heures ?',sub:'Budget total par personne pour l’ensemble du moment.',values:[['free','0 €','Uniquement les expériences confirmées gratuites'],['budget1','Jusqu’à 25 €','Une sortie simple et accessible'],['budget2','Jusqu’à 60 €','Plus de possibilités par personne'],['flexible','Sans limite précise','Priorité à l’expérience']]},
     half:{title:'Quel budget pour cette demi-journée ?',sub:'Budget total par personne, activités et repas éventuel compris.',values:[['free','0 €','Uniquement les expériences confirmées gratuites'],['budget1','Jusqu’à 50 €','Une demi-journée accessible'],['budget2','Jusqu’à 120 €','Activités et belle table possibles'],['flexible','Sans limite précise','Priorité à l’expérience']]},
     day:{title:'Quel budget pour toute la journée ?',sub:'Budget total par personne pour le programme complet.',values:[['free','0 €','Une journée uniquement gratuite'],['budget1','Jusqu’à 80 €','Sorties et repas maîtrisés'],['budget2','Jusqu’à 200 €','Une journée très complète'],['flexible','Sans limite précise','Priorité à l’expérience']]},
-    stay:{title:'Quel budget pour tout le séjour ?',sub:'Budget total par personne, hébergement inclus. Dolcia adapte le programme au nombre de nuits.',values:[['budget1','Jusqu’à 300 €','Court séjour et hébergement accessible'],['budget2','Jusqu’à 800 €','Hôtel et expériences confortables'],['budget3','Jusqu’à 1 500 €','Séjour premium plus complet'],['flexible','Sans limite précise','Priorité aux meilleures expériences']]}
+    stay:{title:`Quel budget pour les ${tripDays()} jours ?`,sub:`Budget total par personne pour ${nights} nuit${nights>1?'s':''}, hébergement et expériences compris.`,values:[['budget1',`Jusqu’à ${economy.toLocaleString('fr-FR')} €`,`Environ 80 € par nuit et par personne, activités comprises`],['budget2',`Jusqu’à ${comfort.toLocaleString('fr-FR')} €`,`Environ 160 € par nuit et par personne`],['budget3',`Jusqu’à ${premium.toLocaleString('fr-FR')} €`,`Séjour premium calculé sur toute la durée`],['flexible','Sans limite précise','Priorité aux meilleures expériences']]}
   };
   const budgetKind=['morning','afternoon','evening'].includes(duration)?'half':duration==='afternoon_evening'?'day':duration;const set=sets[budgetKind]||sets['2h'];return {title:set.title,sub:set.sub,options:set.values.map((x,i)=>[...x,[IMAGES.outside,IMAGES.family,IMAGES.food,IMAGES.slow][i]])}
 }
@@ -200,9 +201,19 @@ function queriesForVibes(){
 }
 function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),placeText=`${p.name||''} ${(p.types||[]).join(' ')}`.toLowerCase(),freeAccess=/plage|beach|promenade|parc public|public park|jardin public/.test(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null}})}
 function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:e.source||'OpenAgenda',category:category(`${e.type||''} ${typeof e.title==='object'?JSON.stringify(e.title):e.title}`),address:e.address||e.location||'',lat:e.lat??e.latitude,lng:e.lng??e.longitude,date:e.date,timeKnown:e.timeKnown!==false&&/T\d{2}:\d{2}/.test(e.date||''),photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free,priceLabel:e.priceLabel,official:e.official,partner:e.partner,sponsored:e.sponsored,sponsorshipTier:e.sponsorshipTier}))}
-function category(text=''){const t=text.toLowerCase();if(/hotel|hôtel|lodging|hébergement/.test(t))return'hotel';if(/feu d.artifice|bal populaire|concert|spectacle|soirée/.test(t))return'night';if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|art|cinema|theater|culture|expo/.test(t))return'culture';if(/spa|beauty|yoga|bien/.test(t))return'slow';if(/bar|night|music/.test(t))return'night';if(/park|parc|nature|plage|garden|forêt/.test(t))return'outside';return'active'}
+function plainText(text=''){return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function isCivicBuilding(text=''){
+  const t=plainText(text).replace(/[_-]+/g,' ');
+  return /\b(hotel de ville|mairie|city hall|town hall|municipal building|municipal office|local government office|civic center|civic centre|rathaus|ayuntamiento|municipio|municipalidad|prefeitura|prefectura|stadhuis|gemeentehuis|radhus|raadhuis|palazzo comunale|casa comunale|comune di|camara municipal|hotel communal|maison communale)\b/.test(t);
+}
+function isLodgingText(text=''){
+  const t=plainText(text);
+  if(isCivicBuilding(t)||/visite guidee|visite de l.hotel|histoire et architecture|monument|musee/.test(t))return false;
+  return /\b(lodging|hotel|hostel|motel|resort|campground|camping|chambre d.hote|bed and breakfast|residence de tourisme|village vacances|hebergement)\b/.test(t);
+}
+function category(text=''){const t=plainText(text);if(isLodgingText(t))return'hotel';if(/feu d.artifice|bal populaire|concert|spectacle|soiree/.test(t))return'night';if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|musee|art|cinema|theater|theatre|culture|expo|visite|patrimoine|hotel de ville|mairie/.test(t))return'culture';if(/spa|beauty|yoga|bien/.test(t))return'slow';if(/bar|night|music/.test(t))return'night';if(/park|parc|nature|plage|garden|foret/.test(t))return'outside';return'active'}
 function dedupe(items){const seen=new Map();return items.filter(x=>{const name=(x.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();const date=x.date?iso(new Date(x.date)):'';const k=`${name}:${date}`;if(!name)return false;const previous=seen.get(k);if(previous){previous.sources=[...new Set([...(previous.sources||[previous.source]),x.source].filter(Boolean))];return false}x.sources=[x.source].filter(Boolean);seen.set(k,x);return true})}
-function qualityGate(item){if(!item?.name)return false;if(item.source==='Google Places')return Boolean(item.placeId&&item.address&&item.lat!=null&&item.lng!=null&&item.businessStatus!=='CLOSED_PERMANENTLY');if(item.date){const date=new Date(item.date);if(Number.isNaN(date.getTime()))return false;return Boolean(item.source&&(item.address||item.booking||item.official))}return Boolean(item.address&&item.source)}
+function qualityGate(item){if(!item?.name)return false;if(item.category==='hotel'&&!isLodgingText(`${item.name||''} ${item.address||''}`))return false;if(item.source==='Google Places')return Boolean(item.placeId&&item.address&&item.lat!=null&&item.lng!=null&&item.businessStatus!=='CLOSED_PERMANENTLY');if(item.date){const date=new Date(item.date);if(Number.isNaN(date.getTime()))return false;return Boolean(item.source&&(item.address||item.booking||item.official))}return Boolean(item.address&&item.source)}
 function qualityLevel(item){if(item.source==='Google Places'&&item.address&&item.placeId&&item.photos?.length)return'verified';if(item.official&&item.date&&item.address&&item.booking)return'verified';if(item.official&&item.date&&(item.address||item.booking))return'official-partial';return'documented'}
 function itemImage(i){return i.photo||IMAGES[i.category]||IMAGES.fallback}
 function distanceKm(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,q=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
@@ -281,7 +292,7 @@ function buildProgram(pool, excludedIds=[]){
   const used=new Set(), usedKinds=new Set(), slots=[];
   const wanted=programTemplates();
   for(const [label,categories] of wanted){
-    let candidates=available.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label)&&(!usedKinds.has(experienceKind(item))||experienceKind(item)==='event'));
+    let candidates=available.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label)&&(state.answers.duration==='stay'||!usedKinds.has(experienceKind(item))||experienceKind(item)==='event'));
     candidates.sort((a,b)=>slotScore(b,label)-slotScore(a,label));
     const item=candidates[0];
     if(item){used.add(item.id);usedKinds.add(experienceKind(item));slots.push({label,item})}
@@ -305,6 +316,7 @@ function buildAlternatives(pool){
 function isTimeCompatible(item,label){if(!item.date)return true;const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
 
 function programTemplates(){
+  const nights=Math.max(1,tripDays()-1);
   const templates={
     '2h':[['Votre moment',['active','culture','outside','slow','food','night']]],
     morning:[['09:30 · Commencer doucement',['food','outside','slow']],['11:00 · Découvrir',['active','culture','outside']]],
@@ -312,7 +324,7 @@ function programTemplates(){
     evening:[['19:00 · Ouvrir la soirée',['slow','outside','food','culture']],['21:00 · Le temps fort',['slow','outside','night','culture']],['23:00 · Prolonger',['night','outside','slow']]],
     afternoon_evening:[['16:00 · Première échappée',['active','culture','outside','slow']],['18:30 · Transition plaisir',['food','outside','culture']],['20:30 · Le temps fort',['night','culture','food','slow']],['22:30 · Prolonger si vous en avez envie',['night','food','outside']]],
     day:[['09:30 · Commencer la journée',['outside','active','culture']],['12:30 · Déjeuner',['food']],['15:00 · Activité de l’après-midi',['active','culture','slow','outside']],['19:30 · Dîner',['food']],['22:30 · Événement ou sortie du soir',['night','culture','outside']]],
-    stay:[['Votre hébergement',['hotel']],['Jour 1 · Première expérience',['outside','culture','active']],['Jour 1 · Dîner et soirée',['food','night']],['Jour 2 · Découverte',['culture','active','slow']],['Jour 2 · Temps fort',['night','outside','food']]]
+    stay:[[`Votre hébergement · ${nights} nuit${nights>1?'s':''}`,['hotel']],...Array.from({length:tripDays()},(_,index)=>[[`Jour ${index+1} · Expérience phare`,['outside','culture','active','slow']],[`Jour ${index+1} · Dîner ou soirée`,['food','night']]]).flat()]
   };
   return (templates[state.answers.duration||'2h']||templates['2h']).filter(([label])=>isFutureSlot(label));
 }

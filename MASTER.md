@@ -97,3 +97,10 @@ Le rayon de la destination est une limite absolue, et non une préférence. Les 
 - Une marge minimale de 20 minutes est conservée pour permettre à l'utilisateur de se préparer et de se déplacer.
 - Cette règle s'applique à toutes les activités et à toutes les sources, pas seulement à un exemple signalé.
 - Une activité sportive de journée ne peut pas être déplacée artificiellement dans un créneau nocturne sans horaire officiel compatible.
+
+# Séjours et hébergements
+
+- Le budget d'un séjour est recalculé selon son nombre réel de nuits ; un séjour de 18 jours représente 17 nuits.
+- « Hôtel de ville », mairie, monument ou visite guidée sont formellement exclus des hébergements.
+- Un élément ne peut entrer dans le créneau hébergement que s'il possède des indices explicites de logement touristique.
+- Le programme d'un séjour comporte des moments pour chaque journée, et non un modèle limité arbitrairement à deux jours.
