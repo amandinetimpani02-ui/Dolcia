@@ -21,6 +21,15 @@ function isLodging(item) {
   return !isCivic(text) && /\b(lodging|hotel|hostel|motel|resort|camping|campground|chambre d.hote|bed and breakfast|residence de tourisme|village vacances|hebergement)\b/.test(text);
 }
 
+function estimatedTotal(item, context) {
+  if (item.free || item.price === 0 || item.freeAccess) return { value: 0, known: true };
+  const explicit = String(item.priceLabel || '').match(/(\d+(?:[,.]\d{1,2})?)\s*€/);
+  if (explicit) return { value: Number(explicit[1].replace(',', '.')) * context.groupSize, known: true };
+  const levels = { 0: 0, 1: 15, 2: 35, 3: 70, 4: 120 };
+  if (item.price != null) return { value: (levels[Math.min(4, Number(item.price))] ?? 35) * context.groupSize, known: false };
+  return { value: 0, known: false };
+}
+
 function intentionMatch(item, intentions) {
   const text = plain(`${item.name || ''} ${item.category || ''}`);
   const rules = {
@@ -53,6 +62,10 @@ function validForContext(item, context) {
   if (context.budget === 'budget1' && item.price != null && item.price > 1) return false;
   if (context.budget === 'budget2' && item.price != null && item.price > 2) return false;
   if (context.budget === 'budget3' && item.price != null && item.price > 3) return false;
+  if (context.budget === 'custom' && context.budgetAmount != null) {
+    const estimate = estimatedTotal(item, context);
+    if (estimate.known && estimate.value > context.budgetAmount) return false;
+  }
   return true;
 }
 
@@ -86,6 +99,13 @@ function rank(item, context, memory) {
   if (context.groupDetail === 'chill' && /spa|plage|balade|restaurant|cafe|jardin/.test(text)) moment += 18;
   if (context.groupDetail === 'lively' && /bowling|karting|laser|escape|concert|bar|parc/.test(text)) moment += 18;
   if (context.duration === 'stay' && item.category === 'hotel') moment += 32;
+  if (context.budget === 'custom' && context.budgetAmount != null) {
+    const estimate = estimatedTotal(item, context);
+    const ratio = estimate.value / Math.max(1, context.budgetAmount);
+    if (estimate.known && ratio <= .35) relevance += 16;
+    else if (estimate.known && ratio <= .7) relevance += 8;
+    else if (!estimate.known) truth -= 5;
+  }
   if (memory.favorites.includes(item.id)) affinity += 20;
   if (memory.feedback[item.id] === 'like') affinity += 18;
   if (memory.feedback[item.id] === 'dislike') affinity -= 35;
@@ -115,7 +135,8 @@ export default async function handler(req, res) {
     lat: Number(context.lat), lng: Number(context.lng), radiusKm: Math.min(Math.max(Number(context.radiusKm) || 12, 1), 80),
     start: context.start, end: context.end, pilot: context.pilot === 'touquet' ? 'touquet' : 'other',
     who: String(context.who || ''), groupDetail: String(context.groupDetail || ''), childrenAges: Array.isArray(context.childrenAges) ? context.childrenAges.slice(0, 8) : [], momentSentence: String(context.momentSentence || '').slice(0, 500), duration: String(context.duration || ''), dateMode: String(context.dateMode || ''),
-    budget: String(context.budget || ''), vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
+    budget: String(context.budget || ''), budgetAmount: Number.isFinite(Number(context.budgetAmount)) ? Math.max(0, Number(context.budgetAmount)) : null,
+    groupSize: Math.min(Math.max(Number(context.groupSize) || 1, 1), 20), vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
     temperature: Number(context.temperature) || 18, weather: plain(context.weather), animal: Boolean(context.animal)
   };
   const memory = {
