@@ -309,13 +309,14 @@ function programTemplates(){
     '2h':[['Votre moment',['active','culture','outside','slow','food','night']]],
     morning:[['09:30 · Commencer doucement',['food','outside','slow']],['11:00 · Découvrir',['active','culture','outside']]],
     afternoon:[['14:00 · Explorer',['active','culture','outside']],['16:30 · Faire une pause',['slow','food','outside']]],
-    evening:[['19:00 · Ouvrir la soirée',['slow','outside','food','culture']],['21:00 · Le temps fort',['slow','outside','night','culture','active']],['23:00 · Prolonger',['night','outside','slow']]],
-    afternoon_evening:[['16:00 · Première échappée',['active','culture','outside','slow']],['18:30 · Transition plaisir',['food','outside','culture']],['20:30 · Le temps fort',['night','culture','active']],['22:30 · Prolonger si vous en avez envie',['night','food','outside']]],
+    evening:[['19:00 · Ouvrir la soirée',['slow','outside','food','culture']],['21:00 · Le temps fort',['slow','outside','night','culture']],['23:00 · Prolonger',['night','outside','slow']]],
+    afternoon_evening:[['16:00 · Première échappée',['active','culture','outside','slow']],['18:30 · Transition plaisir',['food','outside','culture']],['20:30 · Le temps fort',['night','culture','food','slow']],['22:30 · Prolonger si vous en avez envie',['night','food','outside']]],
     day:[['09:30 · Commencer la journée',['outside','active','culture']],['12:30 · Déjeuner',['food']],['15:00 · Activité de l’après-midi',['active','culture','slow','outside']],['19:30 · Dîner',['food']],['22:30 · Événement ou sortie du soir',['night','culture','outside']]],
     stay:[['Votre hébergement',['hotel']],['Jour 1 · Première expérience',['outside','culture','active']],['Jour 1 · Dîner et soirée',['food','night']],['Jour 2 · Découverte',['culture','active','slow']],['Jour 2 · Temps fort',['night','outside','food']]]
   };
-  return templates[state.answers.duration||'2h']||templates['2h'];
+  return (templates[state.answers.duration||'2h']||templates['2h']).filter(([label])=>isFutureSlot(label));
 }
+function isFutureSlot(label){if(!sameDay(new Date(state.dateStart),new Date()))return true;const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;const slot=new Date(state.dateStart);slot.setHours(Number(match[1]),Number(match[2]),0,0);const minimum=new Date(Date.now()+20*60*1000);return slot>=minimum}
 
 function slotScore(item,label){
   let score=item.score||0;

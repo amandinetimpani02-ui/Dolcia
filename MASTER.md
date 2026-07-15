@@ -91,3 +91,9 @@ Le rayon de la destination est une limite absolue, et non une préférence. Les 
 - DATAtourisme pour les offices de tourisme, syndicats d'initiative, agences départementales et comités régionaux français.
 - OpenAgenda pour les agendas ouverts complémentaires.
 - Partenaires Dolcia pour les événements privés validés des restaurants, hôtels, bars, commerces, clubs et associations.
+# Fiabilité temporelle en temps réel
+
+- Pour une sortie le jour même, aucun créneau antérieur à l'heure actuelle ne peut être proposé.
+- Une marge minimale de 20 minutes est conservée pour permettre à l'utilisateur de se préparer et de se déplacer.
+- Cette règle s'applique à toutes les activités et à toutes les sources, pas seulement à un exemple signalé.
+- Une activité sportive de journée ne peut pas être déplacée artificiellement dans un créneau nocturne sans horaire officiel compatible.
