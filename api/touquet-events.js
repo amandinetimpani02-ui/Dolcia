@@ -56,6 +56,25 @@ export default async function handler(req, res) {
       )
     );
     const all = pages.flatMap(parsePage);
+    if ((!after || after <= '2026-08-23') && (!before || before >= '2026-07-11')) {
+      all.unshift({
+        id: 'touquet-programme-festival-tout-petits-2026',
+        title: 'Festival des Tout-Petits — programme 2026',
+        date: `${after && after >= '2026-07-11' && after <= '2026-08-23' ? after : '2026-07-11'}T00:00:00+02:00`,
+        endDate: '2026-08-23T23:59:59+02:00',
+        timeKnown: false,
+        location: 'Le Touquet-Paris-Plage',
+        address: '62520 Le Touquet-Paris-Plage',
+        registrationUrl: 'https://www.letouquet.com/agenda/festival-des-tout-petits/',
+        source: 'Office de tourisme du Touquet',
+        official: true,
+        type: 'Festival familial · spectacles · ateliers · animations',
+        programId: 'festival-tout-petits-2026',
+        programTitle: 'Festival des Tout-Petits',
+        audience: 'Enfants de 0 à 12 ans et familles',
+        description: 'Six semaines de spectacles, ateliers créatifs et animations ludiques. Chaque rendez-vous conserve sa propre date, son horaire et son niveau de vérification.'
+      });
+    }
     if (after <= '2026-07-13' && before >= '2026-07-13') {
       all.unshift({
         id: 'touquet-2026-07-13-feu-artifice-bal-populaire',
