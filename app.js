@@ -439,12 +439,13 @@ function catalogSelection(){
   filters.preferred=filters.preferred||[];
   filters.lenses=filters.lenses||[];
   let items=[...state.allItems];
+  const momentOrder={confirmed:0,autonomous:1,unknown:2,'open-not-session':3,incompatible:4};
   if(filters.family!=='all')items=items.filter(item=>catalogFamily(item)===filters.family);
   if(filters.availability==='open')items=items.filter(item=>item.isOpen===true);
   if(filters.availability==='scheduled')items=items.filter(item=>item.date&&item.timeKnown!==false);
   filters.lenses.forEach(id=>{const definition=adaptiveLensDefinitions().find(lens=>lens.id===id);if(definition)items=items.filter(definition.test)});
   if(filters.query){const q=plainText(filters.query);items=items.filter(item=>plainText(`${item.name||''} ${item.address||''} ${item.category||''}`).includes(q))}
-  if(filters.sort==='recommended'&&filters.preferred.length)items.sort((a,b)=>Number(filters.preferred.includes(catalogFamily(b)))-Number(filters.preferred.includes(catalogFamily(a)))||(b.score||0)-(a.score||0));
+  if(filters.sort==='recommended')items.sort((a,b)=>(momentOrder[momentCompatibility(a)]??9)-(momentOrder[momentCompatibility(b)]??9)||(filters.preferred.length?Number(filters.preferred.includes(catalogFamily(b)))-Number(filters.preferred.includes(catalogFamily(a))):0)||(b.score||0)-(a.score||0));
   if(filters.discoveryMode)items.sort((a,b)=>Number(!filters.preferred.includes(catalogFamily(b)))-Number(!filters.preferred.includes(catalogFamily(a)))||(b.score||0)-(a.score||0));
   if(filters.sort==='distance')items.sort((a,b)=>(a.distance??999)-(b.distance??999));
   if(filters.sort==='rating')items.sort((a,b)=>(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0));
@@ -549,7 +550,12 @@ function postExperiencePanel(item){const feelings=[['unforgettable','Inoubliable
 function selectPhoto(button,url){document.querySelector('#detailHero').style.backgroundImage=`url('${url}')`;document.querySelectorAll('.photo-thumb').forEach(x=>x.classList.remove('active'));button.classList.add('active')}
 function whyDetail(i){return i.source==='OpenAgenda'?'Cette expérience a lieu pendant les dates choisies et correspond à l’ambiance recherchée.':'Cette adresse réelle correspond à vos envies, à votre destination et au rythme du moment.'}
 function closeDetail(){document.querySelector('#modal')?.remove()}
-function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;const returnTo=state.view;if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString()});save();showToast('Activité ajoutée à votre agenda')}else showToast('Cette activité est déjà dans votre agenda');closeDetail();if(returnTo==='surprise')renderSurprise();else if(returnTo==='results')renderResults()}
+async function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;const returnTo=state.view;if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
+  const compatibility=momentCompatibility(i);
+  if(compatibility==='incompatible')return showToast('Cette activité n’est pas compatible avec votre horaire');
+  if(compatibility==='open-not-session'||(compatibility==='unknown'&&requiresPublishedSession(i)))return showToast('Impossible de l’ajouter sans séance réellement confirmée');
+  if(compatibility==='unknown')return showToast('Dolcia doit encore confirmer l’horaire avant l’ajout');
+  if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});save();showToast(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda')}else showToast('Cette activité est déjà dans votre agenda');closeDetail();if(returnTo==='surprise')renderSurprise();else if(returnTo==='results')renderResults()}
 function agendaDateFor(item,slotLabel=''){if(item.date)return item.date;const date=new Date(state.dateStart);const match=slotLabel.match(/(\d{2}):(\d{2})/);if(match)date.setHours(Number(match[1]),Number(match[2]),0,0);return date.toISOString()}
 function adoptSurprise(){state.program.forEach(slot=>{if(!state.agenda.some(item=>item.id===slot.item.id))state.agenda.push({...slot.item,agendaDate:agendaDateFor(slot.item,slot.label),agendaSlot:slot.label,addedAt:new Date().toISOString(),fromSurprise:true})});state.agenda.sort((a,b)=>new Date(a.agendaDate)-new Date(b.agendaDate));save();showToast('Votre programme est ajouté à l’agenda');renderAgenda()}
 function surprise(forceNew=false){if(!state.allItems.length){state.radius=Math.min(state.radius*1.6,60000);showToast('Dolcia compose votre programme…');return compose()}if(forceNew||state.view!=='surprise'){const pool=[...state.allItems].sort(()=>Math.random()-.5);state.program=buildProgram(pool);if(state.majorChoice)state.program=injectMajorMoment(state.program);state.items=state.program.map(slot=>slot.item)}renderSurprise();showToast(forceNew?'Un nouveau programme vient d’être composé':'Votre programme est prêt')}
