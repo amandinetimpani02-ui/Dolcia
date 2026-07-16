@@ -1,0 +1,27 @@
+.catalog-shell{padding-bottom:140px}
+.catalog-search,.catalog-families{display:none!important}
+.optional-refinements{margin:18px 0 26px;border:1px solid rgba(225,196,128,.22);border-radius:22px;background:rgba(255,255,255,.018);overflow:hidden}
+.optional-refinements summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 22px;cursor:pointer;list-style:none;color:#f3ead8}
+.optional-refinements summary::-webkit-details-marker{display:none}
+.optional-refinements summary span{font-weight:600}
+.optional-refinements summary small{color:#b8ad98;font-size:.78rem}
+.optional-refinements summary:after{content:'+';width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(225,196,128,.28);border-radius:50%;color:#dec17d;flex:0 0 auto}
+.optional-refinements[open] summary:after{content:'−'}
+.optional-refinements-body{padding:0 18px 18px}
+.optional-refinements .guided-compass,.optional-refinements .catalog-preferences{margin:12px 0;background:rgba(7,8,8,.38)}
+.catalog-empty{margin:26px 0;padding:34px;border:1px solid rgba(225,196,128,.3);border-radius:24px;background:linear-gradient(135deg,rgba(225,196,128,.09),rgba(255,255,255,.018));text-align:center}
+.catalog-empty h2{margin:10px auto;max-width:660px}
+.catalog-empty p{max-width:620px;margin:0 auto 22px;color:#b8ad98}
+.catalog-empty div{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.catalog-empty button{padding:13px 18px;border-radius:999px;border:1px solid rgba(225,196,128,.3);background:#dfc47f;color:#111}
+.catalog-empty button+button{background:transparent;color:#f5efe4}
+@media(max-width:720px){
+  .catalog-shell{padding-bottom:180px}
+  .moment-brief{padding:20px 16px}
+  .moment-brief>div:last-child{display:grid;grid-template-columns:1fr}
+  .optional-refinements summary{align-items:flex-start;padding:16px}
+  .optional-refinements summary small{display:block;max-width:170px}
+  .optional-refinements-body{padding:0 10px 12px}
+  .adaptive-filters{margin-bottom:28px}
+  .bottom-nav{bottom:max(14px,env(safe-area-inset-bottom));z-index:120}
+}
