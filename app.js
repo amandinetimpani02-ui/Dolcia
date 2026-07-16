@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '18.6-fiches-progressives';
+const APP_BUILD = '18.7-brief-unique';
 
 const IMAGES = {
   hero:'/assets/hero-le-touquet.png',
