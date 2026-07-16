@@ -46,6 +46,35 @@ function intentionMatch(item, intentions) {
   return intentions.some(id => rules[id]?.test(text));
 }
 
+function groupAgreement(item, profiles = []) {
+  const people = profiles.filter(profile => profile && (profile.likes?.length || profile.avoids?.length || profile.momentNeed || profile.momentAvoid));
+  if (!people.length) return { score: 0, matched: 0, considered: 0, vetoes: 0, label: '' };
+  const text = plain(`${item.name || ''} ${item.category || ''} ${item.address || ''}`);
+  const needMap = {
+    'se retrouver': ['breathe', 'taste', 'recharge'], 's amuser': ['play', 'vibrate'], souffler: ['breathe', 'recharge'],
+    decouvrir: ['create', 'breathe'], 'etre surpris': ['play', 'create', 'vibrate']
+  };
+  let score = 0, matched = 0, vetoes = 0;
+  for (const profile of people) {
+    const likes = Array.isArray(profile.likes) ? profile.likes : [];
+    const avoids = Array.isArray(profile.avoids) ? profile.avoids : [];
+    const liked = likes.length && intentionMatch(item, likes);
+    const vetoed = avoids.length && intentionMatch(item, avoids);
+    const momentTargets = needMap[plain(profile.momentNeed)] || [];
+    const momentMatch = momentTargets.length && intentionMatch(item, momentTargets);
+    const words = plain(profile.momentAvoid).split(/\s+/).filter(word => word.length >= 5);
+    const momentConflict = words.some(word => text.includes(word));
+    if (liked) { score += 10; matched += 1; }
+    if (momentMatch) { score += 7; matched += 1; }
+    if (profile.energy === 'Douce' && ['slow', 'food', 'culture', 'outside'].includes(item.category)) score += 4;
+    if (profile.energy === 'Élevée' && ['active', 'night', 'outside'].includes(item.category)) score += 4;
+    if (vetoed || momentConflict) { score -= momentConflict ? 24 : 36; vetoes += 1; }
+  }
+  const ratio = matched / people.length;
+  const label = vetoes ? `${vetoes} réserve${vetoes > 1 ? 's' : ''} dans le groupe` : ratio >= .75 ? 'Point d’accord fort du groupe' : ratio >= .4 ? 'Équilibre compatible avec plusieurs envies' : '';
+  return { score, matched, considered: people.length, vetoes, ratio, label };
+}
+
 function validForContext(item, context) {
   if (!item?.id || !item?.name || !item?.source) return false;
   if (item.category === 'hotel' && !isLodging(item)) return false;
@@ -78,6 +107,7 @@ function rank(item, context, memory) {
   let truth = 0;
   let moment = 0;
   let affinity = 0;
+  const groupFit = groupAgreement(item, context.groupProfiles);
   if (intentionMatch(item, context.vibes)) relevance += 24;
   if (item.official) truth += 35;
   if (item.date && new Date(item.date).toDateString() === new Date(context.start).toDateString()) truth += 30;
@@ -112,15 +142,19 @@ function rank(item, context, memory) {
   if (memory.feedback[item.id] === 'like') affinity += 18;
   if (memory.feedback[item.id] === 'dislike') affinity -= 35;
   affinity += Number(memory.tasteProfile[item.category] || 0) * 4;
+  affinity += groupFit.score;
   if (item.sponsored) relevance += 0.001; // uniquement un départage à pertinence égale
   const total = relevance + truth + moment + affinity;
   const reasons = [];
   if (truth >= 30) reasons.push('information officielle ou datée');
   if (moment >= 25) reasons.push('très adapté au moment');
   if (affinity >= 15) reasons.push('proche de vos goûts');
+  if (groupFit.label && !groupFit.vetoes) reasons.push(groupFit.label.toLowerCase());
   if (distance != null && distance < 3) reasons.push('tout près');
-  return { ...item, score: total, distance, ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: reasons.slice(0, 3) } };
+  return { ...item, score: total, distance, ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: reasons.slice(0, 3), groupFit } };
 }
+
+export { groupAgreement };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -138,7 +172,7 @@ export default async function handler(req, res) {
     start: context.start, end: context.end, pilot: context.pilot === 'touquet' ? 'touquet' : 'other',
     who: String(context.who || ''), groupDetail: String(context.groupDetail || ''), childrenAges: Array.isArray(context.childrenAges) ? context.childrenAges.slice(0, 8) : [], momentSentence: String(context.momentSentence || '').slice(0, 500), duration: String(context.duration || ''), dateMode: String(context.dateMode || ''),
     budget: String(context.budget || ''), budgetAmount: Number.isFinite(Number(context.budgetAmount)) ? Math.max(0, Number(context.budgetAmount)) : null,
-    groupSize: Math.min(Math.max(Number(context.groupSize) || 1, 1), 20), vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
+    groupSize: Math.min(Math.max(Number(context.groupSize) || 1, 1), 20), groupProfiles: Array.isArray(context.groupProfiles) ? context.groupProfiles.slice(0, 20).map(profile => ({ id: String(profile.id || '').slice(0, 80), name: String(profile.name || 'Participant').slice(0, 80), kind: String(profile.kind || '').slice(0, 30), ageBand: String(profile.ageBand || '').slice(0, 30), constraint: String(profile.constraint || '').slice(0, 180), likes: Array.isArray(profile.likes) ? profile.likes.slice(0, 8).map(String) : [], avoids: Array.isArray(profile.avoids) ? profile.avoids.slice(0, 8).map(String) : [], energy: String(profile.energy || '').slice(0, 30), momentNeed: String(profile.momentNeed || '').slice(0, 60), momentAvoid: String(profile.momentAvoid || '').slice(0, 160) })) : [], vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
     temperature: Number(context.temperature) || 18, weather: plain(context.weather), animal: Boolean(context.animal),
     surface: ['explorer', 'recommendations', 'program'].includes(context.surface) ? context.surface : 'explorer', userWidenedSearch: Boolean(context.userWidenedSearch), travelMode: String(context.travelMode || 'driving')
   };
