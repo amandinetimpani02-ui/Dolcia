@@ -1,3 +1,6 @@
+import { classifyCandidate, applyAlternativeCheck } from './geo-eligibility.js';
+import { resolveTravelMinutesBatch } from './travel-matrix.js';
+
 const MAX_ITEMS = 650;
 
 function plain(value = '') {
@@ -21,6 +24,15 @@ function isLodging(item) {
   return !isCivic(text) && /\b(lodging|hotel|hostel|motel|resort|camping|campground|chambre d.hote|bed and breakfast|residence de tourisme|village vacances|hebergement)\b/.test(text);
 }
 
+function estimatedTotal(item, context) {
+  if (item.free || item.price === 0 || item.freeAccess) return { value: 0, known: true };
+  const explicit = String(item.priceLabel || '').match(/(\d+(?:[,.]\d{1,2})?)\s*€/);
+  if (explicit) return { value: Number(explicit[1].replace(',', '.')) * context.groupSize, known: true };
+  const levels = { 0: 0, 1: 15, 2: 35, 3: 70, 4: 120 };
+  if (item.price != null) return { value: (levels[Math.min(4, Number(item.price))] ?? 35) * context.groupSize, known: false };
+  return { value: 0, known: false };
+}
+
 function intentionMatch(item, intentions) {
   const text = plain(`${item.name || ''} ${item.category || ''}`);
   const rules = {
@@ -42,8 +54,7 @@ function validForContext(item, context) {
   const text = plain(`${item.name || ''} ${item.address || ''}`);
   if (!context.animal && /chien|chiens|canin|dog park|dog beach/.test(text)) return false;
   if (['family', 'friends'].includes(context.who) && /golf/.test(text) && /competition|championnat|trophee|coupe/.test(text)) return false;
-  if (item.lat != null && item.lng != null && distanceKm(context.lat, context.lng, item.lat, item.lng) > context.radiusKm) return false;
-  if (context.pilot === 'touquet' && /\bcalais\b|\bboulogne-sur-mer\b|\bdunkerque\b/.test(text)) return false;
+  if (item.lat != null && item.lng != null && item.retrievalScope !== 'signature' && distanceKm(context.lat, context.lng, item.lat, item.lng) > context.radiusKm) return false;
   if (item.source !== 'Google Places') {
     if (!item.date) return false;
     const value = new Date(item.date);
@@ -53,6 +64,10 @@ function validForContext(item, context) {
   if (context.budget === 'budget1' && item.price != null && item.price > 1) return false;
   if (context.budget === 'budget2' && item.price != null && item.price > 2) return false;
   if (context.budget === 'budget3' && item.price != null && item.price > 3) return false;
+  if (context.budget === 'custom' && context.budgetAmount != null) {
+    const estimate = estimatedTotal(item, context);
+    if (estimate.known && estimate.value > context.budgetAmount) return false;
+  }
   return true;
 }
 
@@ -86,6 +101,13 @@ function rank(item, context, memory) {
   if (context.groupDetail === 'chill' && /spa|plage|balade|restaurant|cafe|jardin/.test(text)) moment += 18;
   if (context.groupDetail === 'lively' && /bowling|karting|laser|escape|concert|bar|parc/.test(text)) moment += 18;
   if (context.duration === 'stay' && item.category === 'hotel') moment += 32;
+  if (context.budget === 'custom' && context.budgetAmount != null) {
+    const estimate = estimatedTotal(item, context);
+    const ratio = estimate.value / Math.max(1, context.budgetAmount);
+    if (estimate.known && ratio <= .35) relevance += 16;
+    else if (estimate.known && ratio <= .7) relevance += 8;
+    else if (!estimate.known) truth -= 5;
+  }
   if (memory.favorites.includes(item.id)) affinity += 20;
   if (memory.feedback[item.id] === 'like') affinity += 18;
   if (memory.feedback[item.id] === 'dislike') affinity -= 35;
@@ -115,8 +137,10 @@ export default async function handler(req, res) {
     lat: Number(context.lat), lng: Number(context.lng), radiusKm: Math.min(Math.max(Number(context.radiusKm) || 12, 1), 80),
     start: context.start, end: context.end, pilot: context.pilot === 'touquet' ? 'touquet' : 'other',
     who: String(context.who || ''), groupDetail: String(context.groupDetail || ''), childrenAges: Array.isArray(context.childrenAges) ? context.childrenAges.slice(0, 8) : [], momentSentence: String(context.momentSentence || '').slice(0, 500), duration: String(context.duration || ''), dateMode: String(context.dateMode || ''),
-    budget: String(context.budget || ''), vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
-    temperature: Number(context.temperature) || 18, weather: plain(context.weather), animal: Boolean(context.animal)
+    budget: String(context.budget || ''), budgetAmount: Number.isFinite(Number(context.budgetAmount)) ? Math.max(0, Number(context.budgetAmount)) : null,
+    groupSize: Math.min(Math.max(Number(context.groupSize) || 1, 1), 20), vibes: Array.isArray(context.vibes) ? context.vibes.slice(0, 8) : [],
+    temperature: Number(context.temperature) || 18, weather: plain(context.weather), animal: Boolean(context.animal),
+    surface: ['explorer', 'recommendations', 'program'].includes(context.surface) ? context.surface : 'explorer', userWidenedSearch: Boolean(context.userWidenedSearch), travelMode: String(context.travelMode || 'driving')
   };
   const memory = {
     favorites: Array.isArray(body.memory?.favorites) ? body.memory.favorites.slice(0, 500) : [],
@@ -126,5 +150,29 @@ export default async function handler(req, res) {
   const items = Array.isArray(body.items) ? body.items.slice(0, MAX_ITEMS) : [];
   const ranked = items.filter(item => validForContext(item, safeContext)).map(item => rank(item, safeContext, memory))
     .sort((a, b) => b.score - a.score || Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored)));
-  return res.status(200).json({ items: ranked, engine: 'dolcia-private-ranking-v1', count: ranked.length });
+  const eligibleCandidates = ranked.slice(0, 100);
+  const travelById = await resolveTravelMinutesBatch({ lat: safeContext.lat, lng: safeContext.lng }, eligibleCandidates, safeContext.travelMode);
+  const classified = [];
+  for (const item of eligibleCandidates) {
+    const result = await classifyCandidate({
+      ...item,
+      locationConfidence: item.placeId ? .95 : (item.official ? .9 : .7),
+      retrievalScope: item.retrievalScope || 'local',
+      categoryScope: item.retrievalScope === 'signature' ? 'wide' : 'narrow',
+      businessStatus: item.businessStatus,
+      openingPeriods: item.openingPeriods,
+      officialEvent: Boolean(item.official && item.date),
+      dateCompatible: true,
+      audienceCompatible: true,
+      rarityEvidence: item.rarityEvidence || null,
+      travelMinutes: travelById.get(item.id) ?? null
+    }, {
+      origin: { lat: safeContext.lat, lng: safeContext.lng }, duration: safeContext.duration, start: safeContext.start,
+      travelMode: safeContext.travelMode, surface: safeContext.surface, userWidenedSearch: safeContext.userWidenedSearch
+    }, { travelMinutes: async () => travelById.get(item.id) ?? null });
+    classified.push({ ...item, experienceKind: item.experienceKind || item.category, qualityScore: Math.round((item.rating || 0) * 20), result });
+  }
+  const eligibility = new Map(applyAlternativeCheck(classified).map(item => [item.id, item.result]));
+  const enriched = ranked.map(item => eligibility.has(item.id) ? { ...item, geoEligibility: eligibility.get(item.id) } : item);
+  return res.status(200).json({ items: enriched, engine: 'dolcia-private-ranking-v2', count: enriched.length });
 }

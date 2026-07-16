@@ -1,4 +1,6 @@
 import { cached, remember } from './_cache.js';
+import recommendationsHandler from '../server/recommendations.js';
+import flashOffersHandler from '../server/flash-offers.js';
 
 const CATS = [
   { type: "Concert & Musique", words: ["concert", "musique", "music"] },
@@ -39,6 +41,8 @@ function isFree(ev) {
 }
 
 export default async function handler(req, res) {
+  if (req.query.service === 'recommendations') return recommendationsHandler(req, res);
+  if (req.query.service === 'flash-offers') return flashOffersHandler(req, res);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

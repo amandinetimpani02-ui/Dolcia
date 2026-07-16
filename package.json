@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "vercel dev",
-    "deploy": "vercel --prod"
+    "test": "node --test test/*.test.mjs",
+    "check": "npm test && node --check app.js && node --check server/recommendations.js && node --check server/geo-eligibility.js",
+    "deploy": "npm run check && vercel --prod"
   }
 }
