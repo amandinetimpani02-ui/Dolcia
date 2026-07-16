@@ -1,5 +1,8 @@
 .catalog-shell{padding-bottom:140px}
 .catalog-search,.catalog-families{display:none!important}
+.brief-live{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:4px;color:#cbbd9e;font-size:.78rem;letter-spacing:.01em}
+.brief-live:before{content:'';width:7px;height:7px;border-radius:50%;background:#dfc47f;box-shadow:0 0 12px rgba(223,196,127,.7)}
+.moment-brief:focus-within{border-color:rgba(223,196,127,.58);box-shadow:0 18px 60px rgba(0,0,0,.22),0 0 0 1px rgba(223,196,127,.08)}
 .optional-refinements{margin:18px 0 26px;border:1px solid rgba(225,196,128,.22);border-radius:22px;background:rgba(255,255,255,.018);overflow:hidden}
 .optional-refinements summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 22px;cursor:pointer;list-style:none;color:#f3ead8}
 .optional-refinements summary::-webkit-details-marker{display:none}
