@@ -1,5 +1,6 @@
 import { classifyCandidate, applyAlternativeCheck } from './geo-eligibility.js';
 import { resolveTravelMinutesBatch } from './travel-matrix.js';
+import { foodSubcategory, foodContextualDelta, gemFairnessDelta } from './food-intelligence.js';
 
 const MAX_ITEMS = 650;
 
@@ -108,6 +109,7 @@ function rank(item, context, memory) {
   let moment = 0;
   let affinity = 0;
   const groupFit = groupAgreement(item, context.groupProfiles);
+  const foodIntelligence = foodContextualDelta(item, context, memory);
   if (intentionMatch(item, context.vibes)) relevance += 24;
   if (item.official) truth += 35;
   if (item.date && new Date(item.date).toDateString() === new Date(context.start).toDateString()) truth += 30;
@@ -142,6 +144,7 @@ function rank(item, context, memory) {
   if (memory.feedback[item.id] === 'like') affinity += 18;
   if (memory.feedback[item.id] === 'dislike') affinity -= 35;
   affinity += Number(memory.tasteProfile[item.category] || 0) * 4;
+  relevance += foodIntelligence.delta + gemFairnessDelta(item);
   affinity += groupFit.score;
   if (item.sponsored) relevance += 0.001; // uniquement un départage à pertinence égale
   const total = relevance + truth + moment + affinity;
@@ -151,7 +154,7 @@ function rank(item, context, memory) {
   if (affinity >= 15) reasons.push('proche de vos goûts');
   if (groupFit.label && !groupFit.vetoes) reasons.push(groupFit.label.toLowerCase());
   if (distance != null && distance < 3) reasons.push('tout près');
-  return { ...item, score: total, distance, ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: reasons.slice(0, 3), groupFit } };
+  return { ...item, foodSubcategory: foodSubcategory(item), score: total, distance, ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: [...reasons, ...foodIntelligence.reasons].slice(0, 3), groupFit } };
 }
 
 export { groupAgreement };
