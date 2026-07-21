@@ -59,3 +59,28 @@ test('une catégorie signature ne rend pas un trajet de 35 minutes compatible av
   assert.equal(result.premium_eligible, false);
   assert.ok(result.blocking_reasons.includes('TRAVEL_INCOMPATIBLE_WITH_DURATION'));
 });
+
+test('une activité ordinaire hors destination ne devient jamais locale grâce à la distance à vol d’oiseau', async () => {
+  const result = await classifyCandidate(candidate({
+    lat: 50.55,
+    lng: 1.61,
+    destinationLocalityMatch: false,
+    rarityEvidence: { level: 'low' }
+  }), context({ duration: 'day', surface: 'explorer' }), { travelMinutes: async () => 12 });
+  assert.equal(result.status, 'outside');
+  assert.equal(result.premium_eligible, false);
+});
+
+test('une pépite extérieure reste possible si sa rareté est prouvée et le trajet compatible', async () => {
+  const result = await classifyCandidate(candidate({
+    lat: 50.60,
+    lng: 1.65,
+    destinationLocalityMatch: false,
+    retrievalScope: 'signature',
+    categoryScope: 'wide',
+    rarityEvidence: { level: 'high', source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt: new Date().toISOString() }
+  }), context({ duration: 'day', surface: 'explorer' }), { travelMinutes: async () => 28 });
+  assert.equal(result.status, 'extended');
+  assert.equal(result.premium_eligible, true);
+  assert.ok(result.decision_codes.includes('HIGH_RARITY'));
+});

@@ -82,7 +82,10 @@ export async function classifyCandidate(candidate, context, services = {}) {
   if (rarity === 'unknown' && candidate.retrievalScope === 'signature') codes.push(C.SOURCE_EVIDENCE_MISSING);
   codes.push(context.userWidenedSearch ? C.USER_WIDENED_SEARCH : C.DEFAULT_SCOPE);
 
-  const localFit = candidate.retrievalScope !== 'signature' && distance <= Math.min(8, Math.max(3, baseBudget / 4)) && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && !blocking.length;
+  // Une faible distance à vol d'oiseau ne suffit pas : sur une baie, une rivière ou
+  // une frontière communale, le trajet réel et la destination choisie priment.
+  const localityMismatch = candidate.destinationLocalityMatch === false && distance > 2;
+  const localFit = candidate.retrievalScope !== 'signature' && !localityMismatch && distance <= Math.min(8, Math.max(3, baseBudget / 4)) && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && !blocking.length;
   let status = localFit ? 'core' : 'outside';
   if (!blocking.length && !localFit && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && (rarity === 'high' || context.userWidenedSearch)) status = 'extended';
   if (codes.includes(C.HOURS_UNKNOWN) && context.surface !== 'explorer') { blocking.push(C.HOURS_UNKNOWN); status = 'outside'; }

@@ -15,6 +15,21 @@ function distanceKm(a, b, c, d) {
   return R * 2 * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));
 }
 
+function destinationLocalityMatch(item, context) {
+  const address = plain(item.address || '');
+  const destination = plain(context.locationName || '');
+  if (!address || !destination) return null;
+  const ignored = new Set(['france', 'paris', 'plage', 'cote', 'opale', 'saint']);
+  const tokens = destination.split(/[^a-z0-9]+/).filter(token => token.length >= 4 && !ignored.has(token));
+  if (!tokens.length) return null;
+  return tokens.some(token => address.includes(token));
+}
+
+function geographyTier(item) {
+  const status = item.geoEligibility?.status;
+  return status === 'core' ? 0 : status === 'extended' ? 1 : status === 'location_unknown' ? 2 : 3;
+}
+
 function isCivic(text) {
   return /\b(hotel de ville|mairie|city hall|town hall|rathaus|ayuntamiento|stadhuis|gemeentehuis|municipal building)\b/.test(plain(text));
 }
@@ -168,7 +183,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid recommendation context' });
   }
   const safeContext = {
-    lat: Number(context.lat), lng: Number(context.lng), radiusKm: Math.min(Math.max(Number(context.radiusKm) || 12, 1), 80),
+    lat: Number(context.lat), lng: Number(context.lng), locationName: String(context.locationName || '').slice(0, 120), radiusKm: Math.min(Math.max(Number(context.radiusKm) || 12, 1), 80),
     start: context.start, end: context.end, pilot: context.pilot === 'touquet' ? 'touquet' : 'other',
     who: String(context.who || ''), groupDetail: String(context.groupDetail || ''), childrenAges: Array.isArray(context.childrenAges) ? context.childrenAges.slice(0, 8) : [], momentSentence: String(context.momentSentence || '').slice(0, 500), duration: String(context.duration || ''), dateMode: String(context.dateMode || ''),
     budget: String(context.budget || ''), budgetAmount: Number.isFinite(Number(context.budgetAmount)) ? Math.max(0, Number(context.budgetAmount)) : null,
@@ -199,6 +214,7 @@ export default async function handler(req, res) {
       dateCompatible: true,
       audienceCompatible: true,
       rarityEvidence: item.rarityEvidence || null,
+      destinationLocalityMatch: destinationLocalityMatch(item, safeContext),
       travelMinutes: travelById.get(item.id) ?? null
     }, {
       origin: { lat: safeContext.lat, lng: safeContext.lng }, duration: safeContext.duration, start: safeContext.start,
@@ -207,6 +223,7 @@ export default async function handler(req, res) {
     classified.push({ ...item, experienceKind: item.experienceKind || item.category, qualityScore: Math.round((item.rating || 0) * 20), result });
   }
   const eligibility = new Map(applyAlternativeCheck(classified).map(item => [item.id, item.result]));
-  const enriched = ranked.map(item => eligibility.has(item.id) ? { ...item, geoEligibility: eligibility.get(item.id) } : item);
+  const enriched = ranked.map(item => eligibility.has(item.id) ? { ...item, geoEligibility: eligibility.get(item.id) } : item)
+    .sort((a, b) => geographyTier(a) - geographyTier(b) || (a.geoEligibility?.travel_minutes ?? 999) - (b.geoEligibility?.travel_minutes ?? 999) || b.score - a.score || Number(Boolean(b.sponsored)) - Number(Boolean(a.sponsored)));
   return res.status(200).json({ items: enriched, engine: 'dolcia-private-ranking-v2', count: enriched.length });
 }

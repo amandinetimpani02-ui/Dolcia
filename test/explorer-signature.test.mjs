@@ -23,3 +23,9 @@ test('la recherche réagit sans bouton de validation', () => {
   assert.match(app, /function liveCatalogSearch/);
   assert.doesNotMatch(results, />Rechercher</);
 });
+
+test('Explorer exclut les lieux ordinaires hors destination', () => {
+  assert.match(results, /geoEligibility\?\.status!==['"]outside['"]/);
+  assert.doesNotMatch(results, /outsideItems\.map/);
+  assert.match(app, /Pépite locale exceptionnelle/);
+});
