@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '18.9-moment-signature';
+const APP_BUILD = '19.2-dreamscape';
 
 const IMAGES = {
   hero:'/assets/hero-le-touquet.png',
