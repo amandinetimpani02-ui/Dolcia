@@ -1,4 +1,4 @@
-import { cached, remember } from './utils.js';
+import { cached, remember } from './_cache.js';
 
 const OFFICIAL_ENRICHMENTS = [
   {

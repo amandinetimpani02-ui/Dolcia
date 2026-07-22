@@ -1,4 +1,4 @@
-import { cached, remember } from '../api/utils.js';
+import { cached, remember } from '../api/_cache.js';
 
 const round = value => Math.round(Number(value) * 1000) / 1000;
 
