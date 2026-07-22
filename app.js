@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '19.12-master-anti-regression';
+const APP_BUILD = '19.13-home-premium';
 
 const IMAGES = {
   hero:'/assets/hero-le-touquet.png',
@@ -139,7 +139,37 @@ function openConstellation(){document.querySelector('#accountSpace')?.remove();d
 function resetTaste(category){delete state.tasteProfile[category];save();openConstellation();showToast('Cette préférence a été effacée')}
 function forgetExperience(id){delete state.experienceMemories[id];delete state.experienceFeelings[id];delete state.experienceTags[id];save();openConstellation();showToast('Ce souvenir et son apprentissage contextuel ont été effacés')}
 function rememberExperience(id,reaction){const item=memoryItem(id);if(!item)return;state.experienceMemories[id]={reaction,at:new Date().toISOString(),people:state.groupParticipants.filter(person=>person.selected!==false).map(({id,name,kind})=>({id,name,kind})),who:state.answers.who||'unknown',category:item.category||'other'};save();showToast('Ce moment rejoint Notre constellation');openDetailRefresh(id)}
-async function loadHomePulse(){const today=iso(new Date());try{const [weather,official,tickets,major]=await Promise.allSettled([get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),get(`/api/touquet-events?after=${today}&before=${today}`),get(`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${today}`),get(`/api/major-events?date=${today}`)]);if(state.view!=='home')return;const w=weather.status==='fulfilled'?weather.value:null;const temp=document.querySelector('#pulseTemp'),label=document.querySelector('#pulseWeather');if(temp&&w?.main?.temp!=null)temp.textContent=`${Math.round(w.main.temp)}° au Touquet`;if(label)label.textContent=w?.weather?.[0]?.description||'Météo locale';const raw=[...(official.status==='fulfilled'?official.value.events||[]:[]),...(tickets.status==='fulfilled'?tickets.value.events||[]:[])];const events=dedupe(normalizeEvents(raw)).slice(0,3);const majorSeed=major.status==='fulfilled'?major.value.events||[]:[];state.majorMoments=detectMajorMoments(normalizeEvents(raw),majorSeed.map(event=>({...event,kind:'sport',score:100})));renderHomeMajor(state.majorMoments[0]);const list=document.querySelector('#pulseEventList');if(list)list.innerHTML=events.length?events.map(event=>`<button onclick="openHomeEvent('${esc(event.id||'')}')"><span>${event.date?new Date(event.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Aujourd’hui'}</span><strong>${esc(event.name)}</strong><b>→</b></button>`).join(''):'<p>Aucun événement officiel suffisamment documenté pour aujourd’hui. Dolcia ne fabrique rien.</p>'}catch(_){renderHomeMajor(null);const list=document.querySelector('#pulseEventList');if(list)list.innerHTML='<p>Les sources officielles sont momentanément indisponibles.</p>'}}
+async function loadHomePulse(){
+  const today=iso(new Date());
+  const list=document.querySelector('#pulseEventList');
+  const emptyPulse=()=>`<div class="pulse-empty"><span>Le champ des possibles reste ouvert</span><strong>Et si votre prochain moment commençait ici ?</strong><p>Dolcia n’affiche que les rendez-vous assez fiables. Les expériences disponibles autour de vous restent accessibles dès maintenant.</p><button onclick="startCompose()">Composer mon moment <b>→</b></button></div>`;
+  try{
+    const [weather,official,tickets,major]=await Promise.allSettled([
+      get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),
+      get(`/api/touquet-events?after=${today}&before=${today}`),
+      get(`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${today}`),
+      get(`/api/major-events?date=${today}`)
+    ]);
+    if(state.view!=='home')return;
+    const w=weather.status==='fulfilled'&&weather.value&&typeof weather.value==='object'?weather.value:null;
+    const temp=document.querySelector('#pulseTemp'),label=document.querySelector('#pulseWeather');
+    if(temp)temp.textContent=w?.main?.temp!=null?`${Math.round(w.main.temp)}° au Touquet`:'Le Touquet aujourd’hui';
+    if(label)label.textContent=w?.weather?.[0]?.description||'Votre moment, à votre rythme';
+    const officialEvents=official.status==='fulfilled'&&Array.isArray(official.value?.events)?official.value.events:[];
+    const ticketEvents=tickets.status==='fulfilled'&&Array.isArray(tickets.value?.events)?tickets.value.events:[];
+    const raw=[...officialEvents,...ticketEvents];
+    let normalized=[];
+    try{normalized=Array.isArray(raw)?normalizeEvents(raw):[]}catch(_){normalized=[]}
+    const events=dedupe(normalized).slice(0,3);
+    const majorSeed=major.status==='fulfilled'&&Array.isArray(major.value?.events)?major.value.events:[];
+    try{state.majorMoments=detectMajorMoments(normalized,majorSeed.map(event=>({...event,kind:event.kind||'event',score:Number(event.score)||100})))||[]}catch(_){state.majorMoments=[]}
+    renderHomeMajor(state.majorMoments[0]||null);
+    if(list)list.innerHTML=events.length?events.map(event=>`<button onclick="openHomeEvent('${esc(event.id||'')}')"><span>${event.date?new Date(event.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Aujourd’hui'}</span><strong>${esc(event.name)}</strong><b>→</b></button>`).join(''):emptyPulse();
+  }catch(_){
+    renderHomeMajor(null);
+    if(list)list.innerHTML=emptyPulse();
+  }
+}
 function renderHomeMajor(moment){const target=document.querySelector('#homeMajor');if(!target)return;if(!moment){target.innerHTML='';target.hidden=true;return}const date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});target.innerHTML=`<article class="home-major-card"><div><span class="kicker">Ce soir, un moment qui rassemble</span><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Grand rendez-vous')} · ${time}. Dolcia peut organiser votre soirée autour de cet événement et vérifier les lieux qui le diffusent.</p></div><div class="home-major-actions"><button class="primary" onclick="acceptHomeMajor('${esc(moment.id)}')">Oui, organiser ma soirée</button><button class="secondary" onclick="dismissHomeMajor()">Non merci</button></div></article>`}
 function acceptHomeMajor(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return startCompose();const date=new Date(moment.date);state.majorChoice=id;state.dateMode='major';state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),18,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);state.answers={duration:'evening',vibes:['vibrate']};openEclatDialogue()}
 function dismissHomeMajor(){const target=document.querySelector('#homeMajor');if(target){target.innerHTML='';target.hidden=true}}
