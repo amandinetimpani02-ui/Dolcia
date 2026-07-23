@@ -194,3 +194,18 @@ create table if not exists community_notes (
   created_at timestamptz not null default now()
 );
 create index if not exists community_notes_item_id_idx on community_notes(item_id);
+
+-- Animations personnalisées soumises par un partenaire (mode facultatif, en plus
+-- du moteur générique universel — jamais une obligation de validation par lieu).
+create table if not exists partner_animations (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid references partner_organizations(id),
+  establishment_id uuid references partner_establishments(id),
+  establishment_name text not null,
+  title text not null,
+  seconds integer not null default 60,
+  text text not null,
+  venue_type text,
+  created_at timestamptz not null default now()
+);
+create index if not exists partner_animations_establishment_idx on partner_animations(establishment_name);

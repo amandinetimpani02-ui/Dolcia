@@ -174,7 +174,8 @@ const PARTNER_TABLES = {
   organization: { table: 'partner_organizations', allowed: ['legal_name', 'siret', 'activity_type', 'territory'], required: ['legal_name', 'siret', 'activity_type'] },
   establishment: { table: 'partner_establishments', allowed: ['organization_id', 'name', 'place_type', 'address', 'postal_code', 'city', 'latitude', 'longitude', 'phone', 'website'], required: ['organization_id', 'name', 'place_type', 'address', 'city'] },
   event: { table: 'partner_events', allowed: ['organization_id', 'establishment_id', 'program_id', 'title', 'description', 'starts_at', 'ends_at', 'venue_name', 'address', 'latitude', 'longitude', 'category', 'price_label', 'booking_url', 'image_url', 'partner_name'], required: ['title', 'starts_at', 'partner_name'] },
-  program: { table: 'event_programs', allowed: ['organization_id', 'title', 'description', 'audience', 'territory', 'starts_on', 'ends_on', 'image_url', 'source_url', 'source_name', 'national_scope'], required: ['title', 'starts_on', 'ends_on', 'source_url', 'source_name'] }
+  program: { table: 'event_programs', allowed: ['organization_id', 'title', 'description', 'audience', 'territory', 'starts_on', 'ends_on', 'image_url', 'source_url', 'source_name', 'national_scope'], required: ['title', 'starts_on', 'ends_on', 'source_url', 'source_name'] },
+  animation: { table: 'partner_animations', allowed: ['organization_id', 'establishment_id', 'establishment_name', 'title', 'seconds', 'text', 'venue_type'], required: ['establishment_name', 'title', 'text'] }
 };
 // ── Paiement des paliers partenaires (Stripe Checkout) ─────
 const PARTNER_TIERS = {
@@ -282,6 +283,19 @@ async function handleCommunityNoteRead(req, res) {
     const rows = await r.json();
     return res.status(200).json({ ok: true, notes: rows.map(row => ({ note: row.note, createdAt: row.created_at })) });
   } catch (error) { return res.status(200).json({ ok: false, notes: [], error: error.message }); }
+}
+async function handlePartnerAnimationsRead(req, res) {
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return res.status(200).json({ ok: false, configured: false, animations: [] });
+  const { establishmentName } = req.query;
+  if (!establishmentName) return res.status(400).json({ ok: false, error: 'establishmentName requis' });
+  try {
+    const r = await fetch(`${url}/rest/v1/partner_animations?establishment_name=eq.${encodeURIComponent(establishmentName)}&limit=20`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!r.ok) return res.status(200).json({ ok: false, animations: [] });
+    const rows = await r.json();
+    return res.status(200).json({ ok: true, animations: rows.map(row => ({ title: row.title, seconds: row.seconds, text: row.text })) });
+  } catch (error) { return res.status(200).json({ ok: false, animations: [], error: error.message }); }
 }
 
 async function handlePartnerSubmit(req, res) {
@@ -428,6 +442,7 @@ export default async function handler(req, res) {
   // GET services
   if (service === 'touquet')      return handleTouquetEvents(req, res);
   if (service === 'community-note') return handleCommunityNoteRead(req, res);
+  if (service === 'partner-animations') return handlePartnerAnimationsRead(req, res);
   if (service === 'datatourisme') return handleDatatourisme(req, res);
   if (service === 'ticketmaster') return handleTicketmaster(req, res);
   if (service === 'partner')      return handlePartnerEvents(req, res);
