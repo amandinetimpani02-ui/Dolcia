@@ -182,6 +182,51 @@ const PARTNER_TIERS = {
   premium: { amount: 5900, label: 'Dolcia Pro — Premium (mensuel)', recurring: true },
   flash: { amount: 1500, label: 'Dolcia Pro — Coup de projecteur (72h)', recurring: false }
 };
+// ── D, l'animateur conversationnel réel (pas des règles de mots-clés) ──────
+// D peut discuter, motiver, proposer des jeux, poser des questions de relance.
+// Il ne doit JAMAIS inventer un vrai lieu, un vrai prix, un vrai horaire ou une
+// vraie disponibilité : ça reste le rôle du moteur déterministe (scoreItems,
+// buildProgram). D anime la conversation, le moteur fournit les faits.
+const D_SYSTEM_PROMPT = `Tu es D, l'animateur et concierge vivant de Dolcia, une application de loisirs premium.
+
+Ton rôle : accompagner la personne avec chaleur, comme un vrai coach/animateur (façon Pi d'Inflection) — poser des questions de relance, refléter son humeur, proposer des jeux ou des idées d'ambiance, jamais de longues listes froides.
+
+Règles absolues, jamais négociables :
+- Tu ne dois JAMAIS inventer, citer ou affirmer un vrai nom d'établissement, un prix réel, un horaire réel ou une disponibilité réelle. Ces informations viennent uniquement du vrai catalogue de Dolcia, jamais de toi.
+- Si la personne demande un lieu précis ou une réservation, réponds avec chaleur mais renvoie-la vers la recherche Dolcia ("Je vous prépare ça, un instant") plutôt que d'inventer un nom.
+- Tu peux en revanche : discuter, motiver, proposer des mini-jeux, des défis, des questions amusantes, réagir à l'humeur, faire des suggestions génériques d'ambiance (ex: "un truc calme", "un truc qui bouge").
+- Reste bref (2 à 4 phrases), chaleureux, jamais robotique, jamais de liste à puces.
+- Français uniquement, tutoiement ou vouvoiement selon ce qu'utilise la personne.`;
+
+async function handleDChat(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store');
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(200).json({ ok: false, configured: false, error: 'ANTHROPIC_API_KEY manquante' });
+  const { message, history } = req.body || {};
+  const userMessage = String(message || '').trim().slice(0, 600);
+  if (!userMessage) return res.status(400).json({ ok: false, error: 'message requis' });
+  const safeHistory = Array.isArray(history) ? history.slice(-10).map(turn => ({
+    role: turn.role === 'assistant' ? 'assistant' : 'user',
+    content: String(turn.content || '').slice(0, 600)
+  })) : [];
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 300,
+        system: D_SYSTEM_PROMPT,
+        messages: [...safeHistory, { role: 'user', content: userMessage }]
+      })
+    });
+    const data = await r.json();
+    if (!r.ok) return res.status(200).json({ ok: false, error: data?.error?.message || 'Le modèle a refusé la requête' });
+    const reply = (data.content || []).filter(block => block.type === 'text').map(block => block.text).join('\n').trim();
+    return res.status(200).json({ ok: true, reply: reply || 'Je vous écoute.' });
+  } catch (error) { return res.status(200).json({ ok: false, error: error.message }); }
+}
+
 async function handleCreateCheckout(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -205,6 +250,38 @@ async function handleCreateCheckout(req, res) {
     if (!r.ok) return res.status(200).json({ ok: false, error: data?.error?.message || 'Stripe a refusé la requête' });
     return res.status(200).json({ ok: true, url: data.url });
   } catch (error) { return res.status(200).json({ ok: false, error: error.message }); }
+}
+
+// ── Notes communautaires Dolcia (avis courts, anonymes, rattachés à un lieu réel) ──
+// Inspiré du principe Xiaohongshu : la confiance vient de vrais mots de vraies personnes,
+// pas seulement d'une moyenne d'étoiles. Toujours facultatif, jamais un avis inventé.
+async function handleCommunityNoteWrite(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store');
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return res.status(200).json({ ok: false, configured: false, error: 'Supabase non configuré' });
+  const { itemId, itemName, note, city } = req.body || {};
+  const cleanNote = String(note || '').trim().slice(0, 240);
+  if (!itemId || !itemName || !cleanNote) return res.status(400).json({ ok: false, error: 'itemId, itemName et note sont requis' });
+  if (cleanNote.length < 8) return res.status(400).json({ ok: false, error: 'Une note un peu plus détaillée aide davantage la communauté' });
+  try {
+    const r = await fetch(`${url}/rest/v1/community_notes`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ item_id: String(itemId).slice(0, 200), item_name: String(itemName).slice(0, 200), note: cleanNote, city: String(city || '').slice(0, 120) }) });
+    if (!r.ok) { const detail = await r.text().catch(() => ''); return res.status(200).json({ ok: false, error: `Supabase a refusé l'écriture (${r.status})`, detail: detail.slice(0, 300) }); }
+    const created = await r.json();
+    return res.status(200).json({ ok: true, id: created?.[0]?.id || null });
+  } catch (error) { return res.status(200).json({ ok: false, error: error.message }); }
+}
+async function handleCommunityNoteRead(req, res) {
+  res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return res.status(200).json({ ok: false, configured: false, notes: [] });
+  const { itemId } = req.query;
+  if (!itemId) return res.status(400).json({ ok: false, error: 'itemId requis' });
+  try {
+    const r = await fetch(`${url}/rest/v1/community_notes?item_id=eq.${encodeURIComponent(itemId)}&order=created_at.desc&limit=8`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!r.ok) return res.status(200).json({ ok: false, notes: [] });
+    const rows = await r.json();
+    return res.status(200).json({ ok: true, notes: rows.map(row => ({ note: row.note, createdAt: row.created_at })) });
+  } catch (error) { return res.status(200).json({ ok: false, notes: [], error: error.message }); }
 }
 
 async function handlePartnerSubmit(req, res) {
@@ -324,7 +401,9 @@ export default async function handler(req, res) {
     if (service === 'recommendations') return recommendationsHandler(req, res);
     if (service === 'flash-offers')    return flashOffersHandler(req, res);
     if (service === 'partner-submit')  return handlePartnerSubmit(req, res);
+    if (service === 'community-note')  return handleCommunityNoteWrite(req, res);
     if (service === 'create-checkout') return handleCreateCheckout(req, res);
+    if (service === 'd-chat')          return handleDChat(req, res);
     if (service === 'retrieval-plan') {
       res.setHeader('Cache-Control', 'private, no-store');
       const body = req.body || {};
@@ -348,6 +427,7 @@ export default async function handler(req, res) {
 
   // GET services
   if (service === 'touquet')      return handleTouquetEvents(req, res);
+  if (service === 'community-note') return handleCommunityNoteRead(req, res);
   if (service === 'datatourisme') return handleDatatourisme(req, res);
   if (service === 'ticketmaster') return handleTicketmaster(req, res);
   if (service === 'partner')      return handlePartnerEvents(req, res);

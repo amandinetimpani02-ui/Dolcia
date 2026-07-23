@@ -182,3 +182,15 @@ alter table public.partner_members enable row level security;
 alter table public.partner_contracts enable row level security;
 alter table public.partner_establishments enable row level security;
 alter table public.event_programs enable row level security;
+
+-- Notes communautaires Dolcia : avis courts et anonymes rattachés à un lieu réel.
+-- Jamais un avis inventé par l'IA ; toujours écrit et partagé volontairement par une personne.
+create table if not exists community_notes (
+  id uuid primary key default gen_random_uuid(),
+  item_id text not null,
+  item_name text not null,
+  note text not null,
+  city text,
+  created_at timestamptz not null default now()
+);
+create index if not exists community_notes_item_id_idx on community_notes(item_id);

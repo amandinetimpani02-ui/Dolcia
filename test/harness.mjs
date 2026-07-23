@@ -53,7 +53,7 @@ export function createSandbox(extraFields = {}) {
       setItem(k, v){ store.set(k, v); },
       removeItem(k){ store.delete(k); }
     },
-    setTimeout, clearTimeout, Date, Math, JSON, Object, Array, Map, Set,
+    setTimeout, clearTimeout, setInterval, clearInterval, Date, Math, JSON, Object, Array, Map, Set,
     Promise, RegExp, String, Number, Boolean
   };
   sandbox.window = sandbox;
