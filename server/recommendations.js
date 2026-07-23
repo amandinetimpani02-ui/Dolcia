@@ -48,6 +48,24 @@ function estimatedTotal(item, context) {
   return { value: 0, known: false };
 }
 
+function budgetBand(item, context) {
+  const estimate = estimatedTotal(item, context);
+  if (estimate.known && estimate.value === 0) return { id: 'free', estimate };
+  if (!estimate.known || context.budgetAmount == null) return { id: 'unknown', estimate };
+  const ratio = estimate.value / Math.max(1, context.budgetAmount);
+  if (ratio <= .12) return { id: 'light', estimate };
+  if (ratio <= .3) return { id: 'balanced', estimate };
+  if (ratio <= .55) return { id: 'signature', estimate };
+  return { id: 'exceptional', estimate };
+}
+
+function rarityIsProven(item) {
+  const evidence = item.rarityEvidence;
+  if (!evidence || !evidence.source || !evidence.verifiedAt) return false;
+  const age = Date.now() - new Date(evidence.verifiedAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age <= 180 * 86400000;
+}
+
 function intentionMatch(item, intentions) {
   const text = plain(`${item.name || ''} ${item.category || ''}`);
   const rules = {
@@ -122,6 +140,8 @@ function rank(item, context, memory) {
   let truth = 0;
   let moment = 0;
   let affinity = 0;
+  const spend = budgetBand(item, context);
+  const rarityProven = rarityIsProven(item);
   const groupFit = groupAgreement(item, context.groupProfiles);
   if (intentionMatch(item, context.vibes)) relevance += 24;
   if (item.official) truth += 35;
@@ -146,13 +166,13 @@ function rank(item, context, memory) {
   if (context.groupDetail === 'chill' && /spa|plage|balade|restaurant|cafe|jardin/.test(text)) moment += 18;
   if (context.groupDetail === 'lively' && /bowling|karting|laser|escape|concert|bar|parc/.test(text)) moment += 18;
   if (context.duration === 'stay' && item.category === 'hotel') moment += 32;
-  if (context.budget === 'custom' && context.budgetAmount != null) {
-    const estimate = estimatedTotal(item, context);
-    const ratio = estimate.value / Math.max(1, context.budgetAmount);
-    if (estimate.known && ratio <= .35) relevance += 16;
-    else if (estimate.known && ratio <= .7) relevance += 8;
-    else if (!estimate.known) truth -= 5;
-  }
+  if (context.budget === 'custom' && context.budgetAmount != null && !spend.estimate.known) truth -= 5;
+  /* Un gros budget n'est jamais assimilé à une envie de luxe permanent. */
+  if (spend.id === 'free' || spend.id === 'light') relevance += 3;
+  if (spend.id === 'signature' && (intentionMatch(item, context.vibes) || item.official)) relevance += 5;
+  /* Sortir de la destination doit être mérité par une preuve, jamais par la seule distance. */
+  if (distance != null && distance > 7 && !rarityProven && item.retrievalScope === 'signature') relevance -= 28;
+  if (distance != null && distance > 7 && rarityProven) relevance += 12;
   if (memory.favorites.includes(item.id)) affinity += 20;
   if (memory.feedback[item.id] === 'like') affinity += 18;
   if (memory.feedback[item.id] === 'dislike') affinity -= 35;
@@ -166,7 +186,7 @@ function rank(item, context, memory) {
   if (affinity >= 15) reasons.push('proche de vos goûts');
   if (groupFit.label && !groupFit.vetoes) reasons.push(groupFit.label.toLowerCase());
   if (distance != null && distance < 3) reasons.push('tout près');
-  return { ...item, score: total, distance, ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: reasons.slice(0, 3), groupFit } };
+  return { ...item, score: total, distance, budgetBand: spend.id, distanceMerit: distance != null && distance > 7 ? (rarityProven ? 'proven_rarity' : 'ordinary') : 'local', ranking: { confidence: truth >= 35 ? 'confirmed' : truth >= 15 ? 'probable' : 'documented', reasons: reasons.slice(0, 3), groupFit } };
 }
 
 export { groupAgreement };
