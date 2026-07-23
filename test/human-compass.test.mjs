@@ -23,8 +23,8 @@ test('une sortie éloignée doit mériter sa place', () => {
   assert.match(client, /item\.distanceMerit==='ordinary'.*score-=22/);
 });
 
-test('la version porte explicitement la boussole humaine', () => {
-  assert.match(client, /19\.15-boussole-humaine/);
+test('la version porte explicitement la conversation adaptative', () => {
+  assert.match(client, /19\.16-conversation-adaptative/);
 });
 
 test('le programme rend visible sa courbe émotionnelle sans tableau comptable', () => {
@@ -42,10 +42,18 @@ test('une activité intense appelle une respiration sauf demande sportive explic
 });
 
 test('un séjour pose une seule question décisive sur son rythme global', () => {
-  assert.match(client, /if\(duration==='stay'\)return renderStayRhythmQuestion/);
+  assert.match(client, /function stayRhythmInsight/);
+  assert.match(client, /if\(insight\.confidence>=\.8\)/);
   assert.match(client, /function renderStayRhythmQuestion/);
-  assert.match(client, /Quel rythme aimeriez-vous garder/);
+  assert.match(client, /UNE NUANCE DÉCISIVE/);
+  assert.match(client, /Surtout douceur & plage/);
   assert.match(client, /Une vraie semaine sportive/);
+});
+
+test('une intention claire ne déclenche pas un questionnaire supplémentaire', () => {
+  assert.match(client, /farniente\|plage et repos\|repos total/);
+  assert.match(client, /return\{id:'rest',confidence:\.96/);
+  assert.match(client, /return\{id:'sport',confidence:\.98/);
 });
 
 test('la charge de la veille influence la journée suivante sans enfermer le séjour', () => {
