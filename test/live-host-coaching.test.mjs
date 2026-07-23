@@ -13,13 +13,23 @@ test('markChallengeDone existe réellement et incrémente le score (bouton préc
   sandbox.closeLiveHost();
 });
 
-test('un défi passé sans succès n’ajoute aucun point', () => {
+test('un défi tenté sans réussite donne quand même des points de participation (façon Peloton : des points pour s’être présenté)', () => {
   const { sandbox } = createSandbox();
   sandbox.state.location = { name: 'Lyon' };
   sandbox.acceptAnimateTerms({ id: 'place1', name: 'Place Bellecour', category: 'active' });
   const scoreBefore = sandbox.state.liveHost.score || 0;
   sandbox.markChallengeDone(false);
-  assert.equal(sandbox.state.liveHost.score, scoreBefore, 'passer un défi ne doit ajouter aucun point');
+  assert.equal(sandbox.state.liveHost.score, scoreBefore + 5, 'la participation seule doit ajouter 5 points, jamais zéro');
+  sandbox.closeLiveHost();
+});
+
+test('un défi réussi donne plus de points qu’une simple participation (5 + 5 = 10)', () => {
+  const { sandbox } = createSandbox();
+  sandbox.state.location = { name: 'Lyon' };
+  sandbox.acceptAnimateTerms({ id: 'place1', name: 'Place Bellecour', category: 'active' });
+  const scoreBefore = sandbox.state.liveHost.score || 0;
+  sandbox.markChallengeDone(true);
+  assert.equal(sandbox.state.liveHost.score, scoreBefore + 10, 'un défi réussi doit donner 10 points au total (5 participation + 5 bonus)');
   sandbox.closeLiveHost();
 });
 
