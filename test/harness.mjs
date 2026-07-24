@@ -63,5 +63,5 @@ export function createSandbox(extraFields = {}) {
   const code = fs.readFileSync(APP_JS_PATH, 'utf8');
   vm.runInContext(code, sandbox, { filename: 'app.js' });
 
-  return { sandbox, fields, store, fakeApp, fakeToast };
+  return { sandbox, fields, store, fakeApp, fakeToast, fakeQuestion };
 }
