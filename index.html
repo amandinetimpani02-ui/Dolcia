@@ -1,21 +1,441 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#08090a">
-  <meta name="description" content="Dolcia compose des moments à vivre à partir d'expériences réelles.">
-  <title>Dolcia — Le temps libre, composé pour vous</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
-<link rel="stylesheet" href="/premium.css"><link rel="stylesheet" href="/budget.css"><link rel="stylesheet" href="/home-premium.css"><link rel="stylesheet" href="/circle.css"><link rel="stylesheet" href="/detail-progressive.css"><link rel="stylesheet" href="/explorer-v18.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#07070A" />
+<link rel="manifest" href="/manifest.json" />
+<title>Dolcia — Vos prochaines émotions commencent ici</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div id="app"></div>
-  <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js"></script>
+<main id="app">
+
+  <!-- ============ SPLASH : L'Éclat vous accueille ============ -->
+  <section id="splash" class="screen active">
+    <div class="cinema-bg" id="splashBg"></div>
+    <div class="shade"></div>
+    <header class="topbar">
+      <div class="brand">Dolcia</div>
+      <button class="ghost" id="diagBtn">Diagnostic</button>
+    </header>
+
+    <div class="hero-copy">
+      <div class="eclat" id="eclatSplash">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+      <div class="eyebrow">Le Touquet · Côte d'Opale</div>
+      <h1>Vos prochaines <em>émotions</em> commencent ici.</h1>
+      <p>Dolcia comprend votre moment, révèle ce qui existe vraiment autour de vous, compose un programme et protège votre budget — sans jamais rien inventer.</p>
+      <button class="gold-btn" id="startBtn">Parlez-moi de votre moment</button>
+    </div>
+  </section>
+
+  <!-- ============ BRIEF VIVANT : une seule porte d'entrée ============ -->
+  <section id="brief" class="screen">
+    <div class="cinema-bg dim" id="briefBg"></div>
+    <div class="shade strong"></div>
+    <header class="topbar">
+      <button class="text-back" id="briefBack">Retour</button>
+      <div class="brand small">Dolcia</div>
+      <div style="width:70px"></div>
+    </header>
+
+    <div class="brief-wrap">
+      <div class="eclat small" id="eclatBrief">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+      <div class="eyebrow">L'Éclat vous écoute</div>
+      <h2>Dites-moi ce qui vous ferait plaisir.</h2>
+
+      <div class="brief-input-row">
+        <textarea id="briefText" rows="2" placeholder="Ex. : Nous sommes quatre, deux ados, quelque chose de vivant mais pas sportif, puis bien manger face à la mer…"></textarea>
+        <button class="mic-btn" id="micBtn" title="Dicter votre envie">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+      </div>
+
+      <div class="understood" id="understoodLine"></div>
+
+      <button class="ghost-link" id="toggleRefine">Affiner (facultatif)</button>
+
+      <div class="refine-panel hidden" id="refinePanel">
+        <div class="refine-group">
+          <div class="refine-label">Quand</div>
+          <div class="chip-row" data-group="when">
+            <button class="chip" data-val="now">Maintenant</button>
+            <button class="chip" data-val="tonight">Ce soir</button>
+            <button class="chip" data-val="tomorrow">Demain</button>
+            <button class="chip" data-val="weekend">Ce week-end</button>
+            <button class="chip" data-val="stay">Séjour</button>
+          </div>
+        </div>
+        <div class="refine-group">
+          <div class="refine-label">Avec qui</div>
+          <div class="chip-row" data-group="who">
+            <button class="chip" data-val="couple">En couple</button>
+            <button class="chip" data-val="family">En famille</button>
+            <button class="chip" data-val="friends">Entre amis</button>
+            <button class="chip" data-val="solo">Solo</button>
+          </div>
+        </div>
+        <div class="refine-group">
+          <div class="refine-label">Budget</div>
+          <div class="chip-row" data-group="budget">
+            <button class="chip" data-val="free">0 €</button>
+            <button class="chip" data-val="light">Léger</button>
+            <button class="chip" data-val="comfortable">Confortable</button>
+            <button class="chip" data-val="open">Sans limite</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="gold-btn wide" id="sendBriefBtn">Confier mon moment à Dolcia</button>
+    </div>
+  </section>
+
+  <!-- ============ QUESTION DÉCISIVE : L'Éclat ne devine jamais ============ -->
+  <section id="clarify" class="screen">
+    <div class="cinema-bg dim"></div>
+    <div class="shade strong"></div>
+    <header class="topbar">
+      <button class="text-back" id="clarifySkipAll">Passer tout</button>
+      <div class="brand small">Dolcia</div>
+      <div style="width:90px"></div>
+    </header>
+    <div class="clarify-wrap">
+      <div class="eclat small" id="eclatClarify">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+      <div class="clarify-progress" id="clarifyProgress"></div>
+      <div class="eyebrow">Une seule question, celle qui compte</div>
+      <h2 id="clarifyQuestion"></h2>
+      <div class="clarify-options" id="clarifyOptions"></div>
+      <button class="ghost-link" id="clarifySkip">Passer cette question</button>
+    </div>
+  </section>
+
+  <!-- ============ LOADING ============ -->
+  <section id="loading" class="screen">
+    <div class="shade strong"></div>
+    <div class="loading-center">
+      <div class="eclat" id="eclatLoading">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+      <h2>Dolcia compose votre expérience…</h2>
+      <div class="loading-stages" id="loadingStages">
+        <div class="loading-stage" data-stage="0"><span class="stage-dot"></span>Compréhension du moment</div>
+        <div class="loading-stage" data-stage="1"><span class="stage-dot"></span>Recherche des lieux et événements réels</div>
+        <div class="loading-stage" data-stage="2"><span class="stage-dot"></span>Vérification des horaires et de la météo</div>
+        <div class="loading-stage" data-stage="3"><span class="stage-dot"></span>Composition du programme</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS : trois profondeurs ============ -->
+  <section id="results" class="screen results-screen">
+    <div class="results-scroll">
+
+      <section class="results-hero">
+        <div class="results-photo" id="resultsHeroPhoto"></div>
+        <div class="results-shade"></div>
+        <header class="topbar results">
+          <button class="text-back" id="resultsBack">Retour</button>
+          <div class="brand small">Dolcia</div>
+          <button class="ghost" id="restartResults">Recommencer</button>
+        </header>
+        <div class="results-copy">
+          <div class="eyebrow">Votre brief, compris par L'Éclat</div>
+          <h2 id="resultsTitle"></h2>
+          <p id="resultsSummary"></p>
+          <div class="criteria" id="criteriaLine"></div>
+        </div>
+      </section>
+
+      <!-- Sélecteur des trois profondeurs -->
+      <nav class="depth-tabs" id="depthTabs">
+        <button class="depth-tab active" data-depth="explore">Explorer</button>
+        <button class="depth-tab" data-depth="program">Mon programme</button>
+        <button class="depth-tab" data-depth="anime">Dolcia Anime</button>
+      </nav>
+
+      <section id="demoNotice" class="demo-notice hidden">
+        Mode démonstration — ces fiches sont des exemples de structure, pas des données réelles vérifiées. Une fois <code>/api/places</code>, <code>/api/events</code> et <code>/api/weather</code> connectés à tes clés Vercel, elles sont remplacées automatiquement.
+      </section>
+
+      <!-- EXPLORER -->
+      <section id="viewExplore" class="depth-view">
+        <section id="diagnosticBox" class="diagnostic hidden"></section>
+
+        <!-- Filtres poussés : le tri chirurgical, pas décoratif -->
+        <div class="filter-bar">
+          <button class="filter-toggle-btn" id="filterToggleBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            Filtres
+          </button>
+          <div class="filter-count" id="filterCount"></div>
+        </div>
+
+        <div class="filter-panel hidden" id="filterPanel">
+          <div class="filter-row">
+            <div class="filter-label">Rayon : <span id="filterDistLabel">15 km</span></div>
+            <input type="range" id="filterDist" min="1" max="30" value="15" class="filter-slider">
+          </div>
+          <div class="filter-row chip-row" id="filterToggles">
+            <button class="chip" data-toggle="openNow">Ouvert maintenant</button>
+            <button class="chip" data-toggle="walkable">Accessible à pied</button>
+            <button class="chip" data-toggle="freeOnly">Gratuit uniquement</button>
+            <button class="chip" data-toggle="kidsOk">Parfait avec des enfants</button>
+          </div>
+          <div class="filter-row">
+            <div class="filter-label">Trier par</div>
+            <div class="chip-row" id="filterSort">
+              <button class="chip selected" data-sort="pertinence">Pertinence</button>
+              <button class="chip" data-sort="distance">Distance</button>
+              <button class="chip" data-sort="rating">Note</button>
+              <button class="chip" data-sort="new">Nouveauté</button>
+            </div>
+          </div>
+        </div>
+
+        <section id="cardsSection" class="content-section"></section>
+      </section>
+
+      <!-- MON PROGRAMME -->
+      <section id="viewProgram" class="depth-view hidden">
+        <div class="budget-card">
+          <div>
+            <h3>Budget vivant du moment</h3>
+            <p id="budgetText">Fixé au départ, recalculé après chaque étape ajoutée.</p>
+          </div>
+          <div class="budget-ring">
+            <svg width="118" height="118" viewBox="0 0 118 118">
+              <defs>
+                <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#E8CC72"/>
+                  <stop offset="100%" stop-color="#C9A84C"/>
+                </linearGradient>
+              </defs>
+              <circle class="budget-ring-track" cx="59" cy="59" r="49"/>
+              <circle class="budget-ring-fill" id="budgetRingFill" cx="59" cy="59" r="49"/>
+            </svg>
+            <div class="budget-ring-label">
+              <div class="amount" id="budgetPercent">100%</div>
+              <div class="small">restant</div>
+            </div>
+          </div>
+        </div>
+        <section id="programSection" class="content-section"></section>
+        <div class="program-actions">
+          <button class="gold-btn" id="regenProgramBtn">Régénérer tout le programme</button>
+        </div>
+      </section>
+
+      <!-- DOLCIA ANIME -->
+      <section id="viewAnime" class="depth-view hidden">
+
+        <!-- Sous-onglets : D animateur vs Pépites locales -->
+        <nav class="anime-subtabs" id="animeSubtabs">
+          <button class="anime-subtab active" data-sub="animator">D, votre animateur</button>
+          <button class="anime-subtab" data-sub="pepites">Pépites locales</button>
+        </nav>
+
+        <!-- D animateur : le côté "Club Med", jeux et programmes autonomes -->
+        <div id="subAnimator">
+          <div class="anime-intro">
+            <div class="eyebrow">La ville devient un club sans murs</div>
+            <h3>D anime, comme un Club Med — n'importe où, gratuitement</h3>
+            <p>Quand aucune offre commerciale ne suffit, D transforme le lieu en moment à vivre — toujours identifié comme un programme Dolcia, jamais présenté comme un événement officiel.</p>
+          </div>
+          <div class="context-row" id="animeContextRow">
+            <button class="chip" data-ctx="pool">Piscine</button>
+            <button class="chip" data-ctx="beach">Plage / parc</button>
+            <button class="chip" data-ctx="city">Ville</button>
+            <button class="chip" data-ctx="home">Hébergement</button>
+          </div>
+          <section id="animeSection" class="content-section"></section>
+        </div>
+
+        <!-- Pépites locales : ateliers ultra-niches, souvent hors de la ville, pas chers -->
+        <div id="subPepites" class="hidden">
+          <div class="anime-intro">
+            <div class="eyebrow">Ce que seule une affiche révèle</div>
+            <h3>Les pépites que même les habitués ratent</h3>
+            <p>Ateliers créatifs, cirque, vitraux, fêtes de village — populaires, festifs, presque toujours pas chers, et souvent introuvables sans être du coin. Merci Dolcia de les avoir dénichés.</p>
+          </div>
+          <section id="pepitesSection" class="content-section"></section>
+        </div>
+
+      </section>
+
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="discover">Découvrir</button>
+      <button class="nav-btn central" data-tab="surprise">Surprendre</button>
+      <button class="nav-btn" data-tab="agenda">Agenda</button>
+    </nav>
+  </section>
+
+  <!-- ============ FICHE DÉTAIL ============ -->
+  <section id="detail" class="detail hidden">
+    <div class="detail-scroll">
+      <div class="detail-photo" id="detailPhoto"></div>
+      <div class="detail-gradient"></div>
+      <header class="topbar detailbar">
+        <button class="text-back" id="closeDetail">Retour</button>
+        <button class="ghost" id="detailFav">Favori</button>
+      </header>
+      <article class="detail-card">
+        <div class="confidence-badge" id="detailConfidence"></div>
+        <div class="eyebrow" id="detailSource"></div>
+        <h2 id="detailTitle"></h2>
+        <p id="detailDesc"></p>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="why-box" id="detailWhy"></div>
+        <div class="detail-ctas">
+          <button class="gold-btn" id="addAgendaBtn">Ajouter à mon agenda</button>
+          <button class="reserve-btn" id="reserveBtn">Réservation bientôt disponible</button>
+        </div>
+        <button class="outline-btn full" id="routeBtn">Voir l'itinéraire</button>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ AGENDA ============ -->
+  <section id="agenda" class="detail hidden">
+    <div class="agenda-page">
+      <header class="topbar detailbar">
+        <button class="text-back" id="closeAgenda">Retour</button>
+        <div class="brand small">Mon agenda</div>
+        <button class="ghost" id="clearAgenda">Vider</button>
+      </header>
+      <div class="agenda-head">
+        <div class="eyebrow">Agenda Dolcia</div>
+        <h2>Votre programme personnel</h2>
+        <p>Les activités que vous avez choisies, avec le budget restant recalculé à chaque ajout.</p>
+      </div>
+      <div id="agendaList"></div>
+    </div>
+  </section>
+
+  <!-- ============ ANIMATION EN DIRECT : D anime vraiment ============ -->
+  <section id="liveAnim" class="detail hidden live-anim">
+    <div class="live-bg" id="liveBg"></div>
+    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+    <header class="topbar detailbar">
+      <button class="text-back" id="closeLiveAnim">Quitter</button>
+      <button class="ghost sound-toggle" id="soundToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9v6h4l6 5V4l-6 5H4z"/><path id="soundWave" d="M17 8a6 6 0 0 1 0 8"/></svg>
+      </button>
+    </header>
+
+    <div class="live-wrap">
+      <div class="live-progress" id="liveProgress"></div>
+
+      <div class="eclat live-eclat" id="eclatLive">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+
+      <div class="live-bubble" id="liveBubble">
+        <div class="live-step-label" id="liveStepLabel"></div>
+        <p id="liveInstruction"></p>
+      </div>
+
+      <div class="live-timer" id="liveTimerWrap">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle class="live-timer-track" cx="70" cy="70" r="60"/>
+          <circle class="live-timer-fill" id="liveTimerFill" cx="70" cy="70" r="60"/>
+        </svg>
+        <div class="live-timer-label"><span id="liveTimerText">--</span></div>
+      </div>
+
+      <div class="live-countdown hidden" id="liveCountdown"></div>
+
+      <button class="clap-btn" id="clapBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 11l2-2 3 3 5-5 2 2-7 7-5-5z"/></svg>
+        Applaudir
+      </button>
+
+      <div class="live-actions">
+        <button class="outline-btn" id="livePauseBtn">Pause</button>
+        <button class="gold-btn" id="liveNextBtn">Étape suivante</button>
+      </div>
+    </div>
+
+    <!-- Écran de fin : ressenti, alimente la mémoire Dolcia -->
+    <div class="live-end hidden" id="liveEnd">
+      <canvas id="confettiCanvasEnd" class="confetti-canvas"></canvas>
+      <div class="eclat" id="eclatEnd">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+        <div class="eclat-shadow"></div>
+      </div>
+      <h2>Bravo, moment vécu !</h2>
+      <p>Comment était cette animation ? Dolcia s'en souviendra pour la prochaine fois.</p>
+      <div class="feeling-row">
+        <button class="chip" data-feeling="refaire">À refaire</button>
+        <button class="chip" data-feeling="bien">Bien pour ce moment</button>
+        <button class="chip" data-feeling="pas">Pas pour moi</button>
+      </div>
+      <button class="ghost-btn" id="liveEndClose">Retour à Dolcia Anime</button>
+    </div>
+  </section>
+
+  <!-- ============ DISCUTER AVEC D : la mascotte vivante, partout ============ -->
+  <button class="d-chat-fab hidden" id="dChatFab">
+    <div class="eclat tiny">
+      <div class="eclat-glow"></div>
+      <div class="eclat-ring"></div>
+      <div class="eclat-eyes"><span></span><span></span></div>
+    </div>
+  </button>
+
+  <div class="d-chat-drawer hidden" id="dChatDrawer">
+    <div class="d-chat-header">
+      <div class="eclat tiny">
+        <div class="eclat-glow"></div>
+        <div class="eclat-ring"></div>
+        <div class="eclat-eyes"><span></span><span></span></div>
+      </div>
+      <div class="d-chat-title">
+        <div class="d-chat-name">D</div>
+        <div class="d-chat-status" id="dChatStatus">En ligne</div>
+      </div>
+      <button class="ghost" id="dChatClose">Fermer</button>
+    </div>
+    <div class="d-chat-messages" id="dChatMessages"></div>
+    <div class="d-chat-input-row">
+      <input type="text" id="dChatInput" placeholder="Écrivez à D…" autocomplete="off">
+      <button class="d-chat-mic" id="dChatMic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button class="d-chat-send" id="dChatSend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12 L20 4 L14 20 L11 13 L4 12Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+</main>
+<script src="/app.js"></script>
 </body>
 </html>
