@@ -29,7 +29,9 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
   radial-gradient(ellipse 45% 35% at 80% 10%, rgba(232,204,114,.05), transparent 55%),
   #07070A;
   animation:ambientDrift 22s ease-in-out infinite alternate;
+  overflow:hidden;
 }
+.cinema-bg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
 @keyframes ambientDrift{
   0%{background-position:0 0, 0 0;}
   100%{background-position:4% 3%, -3% -2%;}
@@ -86,6 +88,26 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .hero-copy .gold-btn{margin-top:28px}
 .gold-btn.wide{width:100%}
 @keyframes shine{to{background-position:-220% 0}}
+
+/* ---------- CHOIX VISUEL : entrée principale, zéro effort ---------- */
+.mood-wrap{position:absolute;z-index:3;left:20px;right:20px;top:100px;bottom:calc(20px + var(--sb));display:flex;flex-direction:column;overflow:auto}
+.mood-wrap h2{font-family:var(--serif);font-size:clamp(26px,6vw,38px);font-weight:300;margin:8px 0 10px;max-width:16ch}
+.mood-sub{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:26px;max-width:34ch}
+.mood-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.mood-tile{
+  position:relative;height:150px;border-radius:22px;overflow:hidden;
+  background:#15151a;border:1px solid var(--line);
+  display:flex;align-items:flex-end;padding:16px;text-align:left;
+  box-shadow:0 16px 40px -14px rgba(0,0,0,.5);transition:transform .25s ease, border-color .25s ease;
+}
+.mood-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.mood-tile-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(7,7,10,.88));z-index:1}
+.mood-tile span{position:relative;z-index:2}
+.mood-tile:active{transform:scale(.96)}
+.mood-tile:hover{border-color:var(--line-gold)}
+.mood-tile span{font-family:var(--serif);font-size:19px;color:#fff;line-height:1.15;font-weight:400}
+.mood-tile.mood-surprise{grid-column:1/-1;height:90px;display:flex;align-items:center;justify-content:center;border-color:var(--line-gold);background:linear-gradient(160deg, rgba(201,168,76,.25), rgba(20,15,5,.9))}
+.mood-tile.mood-surprise span{color:var(--gold3);font-style:italic;font-size:18px}
 
 /* ---------- BRIEF VIVANT ---------- */
 .brief-wrap{position:absolute;z-index:3;left:24px;right:24px;top:110px;bottom:calc(24px + var(--sb));overflow:auto;text-align:center;max-width:560px;margin:0 auto}
@@ -144,7 +166,8 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .results-scroll{position:absolute;inset:0;overflow:auto;padding-bottom:calc(100px + var(--sb));scrollbar-width:none}
 .results-scroll::-webkit-scrollbar{display:none}
 .results-hero{position:relative;min-height:48vh;overflow:hidden}
-.results-photo{position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 10%, rgba(232,204,114,.09), transparent 65%), #0c0c10}
+.results-photo{position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 10%, rgba(232,204,114,.09), transparent 65%), #0c0c10;overflow:hidden}
+.results-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.6}
 .results-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,10,.15),rgba(7,7,10,.55) 55%,rgba(7,7,10,.98))}
 .results-copy{position:relative;z-index:2;padding:130px 22px 30px}
 .results-copy h2{font-family:var(--serif);font-size:clamp(32px,7vw,52px);font-weight:300;line-height:1.05}
@@ -158,8 +181,8 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .depth-tab.active{border-color:var(--line-gold);background:rgba(201,168,76,.12);color:var(--gold3)}
 .depth-view{padding:0 18px 24px}
 
-.demo-notice{margin:0 18px 20px;padding:14px 18px;border:1px dashed var(--line-gold);border-radius:16px;background:rgba(201,168,76,.05);color:var(--gold2);font-size:11.5px;line-height:1.6}
-.demo-notice code{color:var(--gold3)}
+.demo-badge{margin:0 18px 20px;padding:11px 16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--soft);font-size:11px;display:flex;align-items:center;gap:8px;width:fit-content}
+.demo-badge svg{width:14px;height:14px;flex-shrink:0;color:var(--gold2)}
 
 /* filtres poussés */
 .filter-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -209,14 +232,15 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .anime-intro{padding:10px 0 18px;text-align:center}
 .anime-intro h3{font-family:var(--serif);font-size:26px;font-weight:400;margin:8px 0 10px}
 .anime-intro p{color:var(--muted);font-size:13px;line-height:1.6;max-width:440px;margin:0 auto}
-.context-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.context-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.generate-btn{width:100%;margin-bottom:22px;text-align:center;justify-content:center;display:flex}
 
 .anime-subtabs{display:flex;gap:8px;margin-bottom:6px}
 .anime-subtab{flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 10px;font-size:11.5px;letter-spacing:.03em;color:var(--muted);background:rgba(255,255,255,.03)}
 .anime-subtab.active{border-color:var(--line-gold);background:rgba(201,168,76,.12);color:var(--gold3)}
 
 /* pépites locales — carte avec badge "hors de la ville" + duo enfant/grands-parents */
-.pepite-card{border:1px solid var(--line);border-radius:24px;padding:20px;margin-bottom:16px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));backdrop-filter:blur(14px);box-shadow:var(--glass-shadow);transition:transform .3s var(--ease), border-color .3s var(--ease)}
+.pepite-card{position:relative;border:1px solid var(--line);border-radius:24px;padding:20px;margin-bottom:16px;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));backdrop-filter:blur(14px);box-shadow:var(--glass-shadow);transition:transform .3s var(--ease), border-color .3s var(--ease)}
 .pepite-card:hover{transform:translateY(-3px);border-color:var(--line-gold)}
 .pepite-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
 .pepite-icon{width:38px;height:38px;color:var(--gold2);flex-shrink:0}
@@ -245,6 +269,7 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
   box-shadow:0 1px 0 rgba(255,255,255,.1) inset, 0 30px 70px -18px rgba(0,0,0,.65), 0 0 0 1px rgba(232,204,114,.12);
 }
 .experience-photo{position:absolute;inset:0;background:radial-gradient(circle at 30% 20%, rgba(232,204,114,.14), transparent 60%), linear-gradient(160deg,#1a1a1f,#0c0c10)}
+.experience-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .experience-shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 10%,rgba(0,0,0,.82))}
 .experience-content{position:absolute;left:0;right:0;bottom:0;padding:16px}
 .source-badge{display:inline-block;color:#0a0805;background:var(--gold2);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:900;border-radius:999px;padding:5px 9px;margin-bottom:8px}
@@ -257,6 +282,17 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .mini-btn.gold{background:var(--gold2);color:#0a0805}
 .mini-btn.dark{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.14)}
 .reserve-disabled{opacity:.5;filter:grayscale(.4)}
+
+.card-like{
+  position:absolute;top:12px;right:12px;z-index:3;width:34px;height:34px;border-radius:50%;
+  background:rgba(7,7,10,.5);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center;color:#fff;transition:transform .15s ease, color .2s ease, border-color .2s ease;
+}
+.card-like svg{width:16px;height:16px}
+.card-like.liked{color:var(--gold2);border-color:var(--line-gold)}
+.card-like:active{transform:scale(.85)}
+.card-like.liked svg{animation:likePop .35s ease}
+@keyframes likePop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
 
 .empty-state,.diagnostic{margin:0 0 20px;padding:26px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.03);text-align:center}
 .empty-state h3{font-family:var(--serif);font-size:28px;font-weight:300;margin-bottom:10px}
@@ -303,6 +339,18 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .agenda-item p{font-size:11.5px;color:var(--soft);margin-top:4px}
 .agenda-remove{margin-left:auto;color:var(--soft);font-size:11px;padding:8px}
 
+.constellation-head{margin-top:36px;margin-bottom:16px}
+.constellation-head h3{font-family:var(--serif);font-size:26px;font-weight:400;margin:8px 0 8px}
+.constellation-head p{color:var(--muted);font-size:12.5px;line-height:1.5}
+.constellation-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.constellation-tags span{border:1px solid var(--line-gold);color:var(--gold2);border-radius:999px;padding:8px 14px;font-size:11.5px;background:rgba(201,168,76,.08)}
+.constellation-list{display:flex;flex-direction:column;gap:12px}
+.constellation-item{display:flex;gap:12px;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:20px;padding:12px}
+.constellation-thumb{width:52px;height:52px;border-radius:14px;background:radial-gradient(circle at 30% 30%, rgba(232,204,114,.18), #0c0c10);flex-shrink:0}
+.constellation-item h4{font-size:13.5px;font-weight:500}
+.constellation-item p{font-size:11px;color:var(--soft);margin-top:3px}
+.constellation-note{color:var(--soft);font-size:11.5px;line-height:1.5;margin-top:14px;text-align:center}
+
 .debug-line{display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08);padding:8px 0;font-size:11.5px}
 .debug-line b{color:var(--gold2)}
 
@@ -312,19 +360,63 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
   position:absolute;inset:-15%;
   background:radial-gradient(ellipse 60% 45% at 50% 15%, rgba(232,204,114,.11), transparent 60%), #07070A;
   animation:ambientDrift 14s ease-in-out infinite alternate;
+  overflow:hidden;
 }
+
+/* néons de fête tournants — l'ambiance club, jamais criarde, toujours or/blanc */
+.party-rays{
+  position:absolute;top:50%;left:50%;width:200vmax;height:200vmax;
+  transform:translate(-50%,-50%);
+  background:conic-gradient(from 0deg,
+    transparent 0deg, rgba(232,204,114,.10) 8deg, transparent 20deg,
+    transparent 100deg, rgba(245,230,184,.08) 108deg, transparent 120deg,
+    transparent 200deg, rgba(232,204,114,.10) 208deg, transparent 220deg,
+    transparent 300deg, rgba(245,230,184,.07) 308deg, transparent 320deg);
+  animation:raySpin 18s linear infinite;
+  opacity:.6;
+}
+@keyframes raySpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.live-bg.energy-vive .party-rays{animation-duration:7s;opacity:.9}
+.live-bg.energy-calme .party-rays{opacity:.25;animation-duration:34s}
+
 .sound-toggle svg{width:18px;height:18px}
 .sound-toggle.muted #soundWave{opacity:.25}
 
-.live-wrap{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 24px 40px;text-align:center;gap:28px}
+.live-wrap{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 24px 40px;text-align:center;gap:22px}
 .live-progress{display:flex;gap:6px;position:absolute;top:96px;left:50%;transform:translateX(-50%)}
 .live-progress span{width:22px;height:3px;border-radius:99px;background:rgba(255,255,255,.14)}
 .live-progress span.done{background:var(--gold2)}
 .live-progress span.current{background:var(--gold3);box-shadow:0 0 8px rgba(232,204,114,.7)}
 
-.eclat.live-eclat{width:88px;height:88px;margin-bottom:0}
+/* jauge d'énergie du groupe — gamification façon coach, se remplit avec les applaudissements */
+.energy-meter{width:min(280px,80vw);display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
+.energy-meter-label{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.energy-meter-track{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.energy-meter-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold3));transition:width .4s var(--ease);box-shadow:0 0 10px rgba(232,204,114,.5)}
+.energy-meter-fill.maxed{animation:energyFlash .5s ease 2}
+@keyframes energyFlash{0%,100%{filter:brightness(1)}50%{filter:brightness(1.6)}}
+
+/* scène de D — bondissante, expressive, jamais statique */
+.eclat-stage{position:relative;display:flex;align-items:center;justify-content:center;height:110px}
+.eclat-3d-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:160px;pointer-events:none}
+.eclat-3d-canvas.hidden{display:none}
+.eclat.live-eclat{width:88px;height:88px;margin-bottom:0;animation:eclatFloat 6s ease-in-out infinite}
 .eclat.live-eclat.talking .eclat-ring{animation:breathe 1.1s ease-in-out infinite}
 .eclat.live-eclat.talking .eclat-glow{animation:breathe 1.1s ease-in-out infinite}
+.eclat.live-eclat.bounce-in{animation:eclatBounceIn .6s var(--ease)}
+.eclat.live-eclat.jump{animation:eclatJump .5s ease}
+@keyframes eclatBounceIn{0%{transform:scale(.4) translateY(20px);opacity:0}55%{transform:scale(1.18) translateY(-10px);opacity:1}75%{transform:scale(.94) translateY(2px)}100%{transform:scale(1) translateY(0)}}
+@keyframes eclatJump{0%{transform:translateY(0)}30%{transform:translateY(-22px) scale(1.05)}55%{transform:translateY(0) scale(.97)}75%{transform:translateY(-8px)}100%{transform:translateY(0)}}
+
+/* bulle de réaction — le banter du coach, distinct de l'instruction */
+.d-reaction{
+  position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));color:#0a0805;
+  font-size:12.5px;font-weight:800;letter-spacing:.02em;padding:8px 16px;border-radius:999px;
+  box-shadow:0 10px 26px rgba(201,168,76,.35);z-index:4;
+}
+.d-reaction.show{animation:reactionPop 1.6s var(--ease) forwards}
+@keyframes reactionPop{0%{opacity:0;transform:translateX(-50%) translateY(8px) scale(.7)}15%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.05)}25%{transform:translateX(-50%) translateY(0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-14px) scale(.9)}}
 
 .live-bubble{
   max-width:440px;padding:26px 30px;border-radius:26px;
@@ -357,7 +449,16 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 }
 @keyframes countPop{0%{transform:scale(.4);opacity:0}30%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:0}}
 
-/* bouton applaudir — participation active pendant l'animation */
+.live-quick-row{display:flex;gap:10px}
+.talk-btn{
+  display:flex;align-items:center;gap:9px;padding:14px 22px;border-radius:999px;
+  border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);
+  font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  transition:transform .15s ease, background .2s ease, border-color .2s ease;
+}
+.talk-btn svg{width:16px;height:16px}
+.talk-btn:active{transform:scale(.92)}
+.talk-btn.listening{border-color:var(--line-gold);background:rgba(232,204,114,.14);color:var(--gold2);animation:breathe 1s ease-in-out infinite}
 .clap-btn{
   display:flex;align-items:center;gap:9px;padding:14px 26px;border-radius:999px;
   border:1px solid var(--line-gold);background:rgba(232,204,114,.08);color:var(--gold2);

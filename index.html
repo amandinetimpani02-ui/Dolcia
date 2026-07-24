@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#07070A" />
 <link rel="manifest" href="/manifest.json" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="window.__THREE_FAILED__=true"></script>
 <title>Dolcia — Vos prochaines émotions commencent ici</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css" />
@@ -16,7 +17,7 @@
 
   <!-- ============ SPLASH : L'Éclat vous accueille ============ -->
   <section id="splash" class="screen active">
-    <div class="cinema-bg" id="splashBg"></div>
+    <div class="cinema-bg" id="splashBg"><img id="splashBgImg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
     <div class="shade"></div>
     <header class="topbar">
       <div class="brand">Dolcia</div>
@@ -37,7 +38,54 @@
     </div>
   </section>
 
-  <!-- ============ BRIEF VIVANT : une seule porte d'entrée ============ -->
+  <!-- ============ CHOIX VISUEL : l'entrée principale, zéro effort ============ -->
+  <section id="moodPick" class="screen">
+    <div class="cinema-bg dim"></div>
+    <div class="shade strong"></div>
+    <header class="topbar">
+      <button class="text-back" id="moodBack">Retour</button>
+      <div class="brand small">Dolcia</div>
+      <div style="width:70px"></div>
+    </header>
+    <div class="mood-wrap">
+      <div class="eyebrow">D vous écoute</div>
+      <h2>Dites-moi votre moment.</h2>
+      <p class="mood-sub">Pas une recherche à lancer — juste ce que vous vivez, là, maintenant.</p>
+      <div class="mood-grid" id="moodGrid">
+        <button class="mood-tile" data-vibe="food">
+          <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="mood-tile-shade"></div>
+          <span>Se régaler, sans réfléchir</span>
+        </button>
+        <button class="mood-tile" data-vibe="nature">
+          <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="mood-tile-shade"></div>
+          <span>Respirer, prendre l'air</span>
+        </button>
+        <button class="mood-tile" data-vibe="festive">
+          <img src="https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=800&q=80" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="mood-tile-shade"></div>
+          <span>Sortir, vivre quelque chose</span>
+        </button>
+        <button class="mood-tile" data-vibe="wellness">
+          <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="mood-tile-shade"></div>
+          <span>Décrocher complètement</span>
+        </button>
+        <button class="mood-tile" data-vibe="culture">
+          <img src="https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=800&q=80" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="mood-tile-shade"></div>
+          <span>Être surpris, découvrir</span>
+        </button>
+        <button class="mood-tile mood-surprise" data-vibe="surprise">
+          <span>Dolcia s'occupe de tout</span>
+        </button>
+      </div>
+      <button class="ghost-link" id="describeInsteadBtn">Ou décrivez avec vos mots</button>
+    </div>
+  </section>
+
+  <!-- ============ BRIEF VIVANT : optionnel, pour qui préfère écrire ============ -->
   <section id="brief" class="screen">
     <div class="cinema-bg dim" id="briefBg"></div>
     <div class="shade strong"></div>
@@ -55,7 +103,7 @@
         <div class="eclat-shadow"></div>
       </div>
       <div class="eyebrow">L'Éclat vous écoute</div>
-      <h2>Dites-moi ce qui vous ferait plaisir.</h2>
+      <h2>Racontez-moi votre moment.</h2>
 
       <div class="brief-input-row">
         <textarea id="briefText" rows="2" placeholder="Ex. : Nous sommes quatre, deux ados, quelque chose de vivant mais pas sportif, puis bien manger face à la mer…"></textarea>
@@ -152,7 +200,7 @@
     <div class="results-scroll">
 
       <section class="results-hero">
-        <div class="results-photo" id="resultsHeroPhoto"></div>
+        <div class="results-photo" id="resultsHeroPhoto"><img id="resultsHeroImg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
         <div class="results-shade"></div>
         <header class="topbar results">
           <button class="text-back" id="resultsBack">Retour</button>
@@ -174,8 +222,9 @@
         <button class="depth-tab" data-depth="anime">Dolcia Anime</button>
       </nav>
 
-      <section id="demoNotice" class="demo-notice hidden">
-        Mode démonstration — ces fiches sont des exemples de structure, pas des données réelles vérifiées. Une fois <code>/api/places</code>, <code>/api/events</code> et <code>/api/weather</code> connectés à tes clés Vercel, elles sont remplacées automatiquement.
+      <section id="demoNotice" class="demo-badge hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        Aperçu illustratif — vos vraies sorties s'afficheront ici dès la mise en ligne complète
       </section>
 
       <!-- EXPLORER -->
@@ -268,6 +317,7 @@
             <button class="chip" data-ctx="city">Ville</button>
             <button class="chip" data-ctx="home">Hébergement</button>
           </div>
+          <button class="ghost-btn generate-btn" id="generateProcBtn">Composer une animation sur mesure pour mon groupe</button>
           <section id="animeSection" class="content-section"></section>
         </div>
 
@@ -331,12 +381,21 @@
         <p>Les activités que vous avez choisies, avec le budget restant recalculé à chaque ajout.</p>
       </div>
       <div id="agendaList"></div>
+
+      <div class="constellation-head">
+        <div class="eyebrow">Notre constellation</div>
+        <h3>Ce que Dolcia a appris de vous</h3>
+        <p>Une mémoire visible et contestable — retirez ce qui ne vous correspond plus.</p>
+      </div>
+      <div id="constellationSection" class="content-section"></div>
     </div>
   </section>
 
   <!-- ============ ANIMATION EN DIRECT : D anime vraiment ============ -->
   <section id="liveAnim" class="detail hidden live-anim">
-    <div class="live-bg" id="liveBg"></div>
+    <div class="live-bg" id="liveBg">
+      <div class="party-rays"></div>
+    </div>
     <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
     <header class="topbar detailbar">
       <button class="text-back" id="closeLiveAnim">Quitter</button>
@@ -348,11 +407,20 @@
     <div class="live-wrap">
       <div class="live-progress" id="liveProgress"></div>
 
-      <div class="eclat live-eclat" id="eclatLive">
-        <div class="eclat-glow"></div>
-        <div class="eclat-ring"></div>
-        <div class="eclat-eyes"><span></span><span></span></div>
-        <div class="eclat-shadow"></div>
+      <div class="energy-meter">
+        <div class="energy-meter-label">Énergie du groupe</div>
+        <div class="energy-meter-track"><div class="energy-meter-fill" id="energyMeterFill"></div></div>
+      </div>
+
+      <div class="eclat-stage">
+        <div class="d-reaction hidden" id="dReaction"></div>
+        <canvas id="eclat3dCanvas" class="eclat-3d-canvas hidden" width="160" height="160"></canvas>
+        <div class="eclat live-eclat" id="eclatLive">
+          <div class="eclat-glow"></div>
+          <div class="eclat-ring"></div>
+          <div class="eclat-eyes"><span></span><span></span></div>
+          <div class="eclat-shadow"></div>
+        </div>
       </div>
 
       <div class="live-bubble" id="liveBubble">
@@ -370,10 +438,16 @@
 
       <div class="live-countdown hidden" id="liveCountdown"></div>
 
-      <button class="clap-btn" id="clapBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 11l2-2 3 3 5-5 2 2-7 7-5-5z"/></svg>
-        Applaudir
-      </button>
+      <div class="live-quick-row">
+        <button class="clap-btn" id="clapBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 11l2-2 3 3 5-5 2 2-7 7-5-5z"/></svg>
+          Applaudir
+        </button>
+        <button class="talk-btn" id="liveTalkBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          Parler à D
+        </button>
+      </div>
 
       <div class="live-actions">
         <button class="outline-btn" id="livePauseBtn">Pause</button>

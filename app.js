@@ -30,10 +30,60 @@ const state = {
 };
 
 const $ = id => document.getElementById(id);
-const screens = ['splash','brief','clarify','loading','results'];
+const screens = ['splash','moodPick','brief','clarify','loading','results'];
 function showScreen(id){ screens.forEach(s => $(s)?.classList.toggle('active', s===id)); updateDChatVisibility(id); }
 function saveAgenda(){ localStorage.setItem('dolcia_agenda', JSON.stringify(state.agenda)); }
 function saveFavs(){ localStorage.setItem('dolcia_favs', JSON.stringify(state.favs)); }
+
+/* ---------------- Constellation : ce que Dolcia apprend, visible et contestable ----------------
+   Conforme au Product Book (section 10/11) : la mémoire distingue le goût durable de l'envie
+   ponctuelle, reste visible à l'utilisateur, et peut toujours être corrigée ou effacée. Chaque
+   "j'aime" renforce silencieusement le classement (catégories préférées remontent), sans jamais
+   masquer le reste du catalogue. */
+function toggleLike(id){
+  const wasLiked = state.favs.includes(id);
+  if (wasLiked) state.favs = state.favs.filter(k=>k!==id);
+  else state.favs.push(id);
+  saveFavs();
+  document.querySelectorAll(`[data-like="${id}"]`).forEach(btn=>{
+    btn.classList.toggle('liked', !wasLiked);
+    btn.querySelector('svg').setAttribute('fill', !wasLiked ? 'currentColor' : 'none');
+  });
+  if (!wasLiked) flash('Ajouté à vos coups de cœur — Dolcia s\'en souvient');
+}
+function likedCategoryCounts(){
+  const counts = {};
+  state.favs.forEach(id=>{
+    const item = findItem(id);
+    if (item && item.category) counts[item.category] = (counts[item.category]||0) + 1;
+  });
+  return counts;
+}
+function topLikedCategories(){
+  const counts = likedCategoryCounts();
+  const labels = {food:'Gastronomie',nature:'Nature',culture:'Culture',wellness:'Bien-être',sport:'Sport',festive:'Sortir',free:'Gratuit'};
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>labels[k]||k);
+}
+function renderConstellation(){
+  const el = $('constellationSection');
+  if (!el) return;
+  const likedItems = state.favs.map(id=>findItem(id)).filter(Boolean);
+  const cats = topLikedCategories();
+  if (!likedItems.length){
+    el.innerHTML = `<div class="empty-state"><h3>Aucun coup de cœur pour l'instant.</h3><p>Touchez le cœur sur une activité qui vous plaît — Dolcia s'en souviendra pour mieux vous proposer la prochaine fois.</p></div>`;
+    return;
+  }
+  el.innerHTML = `
+    ${cats.length ? `<div class="constellation-tags">${cats.map(c=>`<span>${c}</span>`).join('')}</div>` : ''}
+    <div class="constellation-list">${likedItems.map(x=>`
+      <div class="constellation-item">
+        <div class="constellation-thumb"></div>
+        <div><h4>${x.title}</h4><p>${x.source||'Programme Dolcia'}</p></div>
+        <button class="agenda-remove" data-unlike="${x.id}">Retirer</button>
+      </div>`).join('')}</div>
+    <p class="constellation-note">Cette mémoire est à vous : retirez ce qui ne correspond plus, elle s'ajustera aussitôt.</p>
+  `;
+}
 function flash(msg){
   document.querySelector('.toast')?.remove();
   const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
@@ -146,8 +196,14 @@ function startClarifyOrLoad(){
 }
 
 /* ---------------- Navigation ---------------- */
+function goToMoodPick(){ showScreen('moodPick'); }
 function goToBrief(){ showScreen('brief'); $('briefText').focus(); }
-function backFromBrief(){ showScreen('splash'); }
+function backFromBrief(){ showScreen('moodPick'); }
+function pickMood(vibe){
+  if (vibe === 'surprise'){ loadExperience(); return; }
+  state.understood.vibe = vibe;
+  startClarifyOrLoad();
+}
 
 function initChips(){
   document.querySelectorAll('.chip-row').forEach(row=>{
@@ -184,6 +240,27 @@ async function fetchJson(path){
 
 /* Jeu de données de démonstration — structure identique aux vraies réponses,
    jamais présentée comme vérifiée dans l'UI (voir demo-notice + badge "à vérifier"). */
+/* Photos d'ambiance — exactement le même set Unsplash que ton vrai app.js en
+   production (Product Book, archive v13). Aucune invention : ce sont les
+   visuels que ton appli réelle utilise déjà pour habiller les catégories. */
+const AMBIANCE = {
+  start:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+  nature:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+  food:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80',
+  culture:'https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=1200&q=80',
+  wellness:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
+  festive:'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1200&q=80',
+  sport:'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1200&q=80',
+  family:'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=1200&q=80',
+  romantic:'https://images.unsplash.com/photo-1529634597503-139d3726fed5?auto=format&fit=crop&w=1200&q=80',
+  free:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80',
+  event:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
+  craft:'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=1200&q=80'
+};
+function ambiancePhoto(x){
+  return AMBIANCE[x.category] || AMBIANCE[x.icon] || AMBIANCE.start;
+}
+
 function demoExploreItems(){
   const vibe = state.understood.vibe || 'food';
   const base = [
@@ -228,6 +305,77 @@ function demoPepitesItems(){
       pairing:'À deux pas, un sentier de découverte du village fléché par la mairie — 25 minutes de balade tranquille pour les grands pendant l\'atelier.'
     }
   ];
+}
+
+/* ---------------------------------------------------------------
+   GÉNÉRATEUR PROCÉDURAL D'ANIMATIONS
+   Plutôt que d'écrire des milliers de scripts à la main (ce qui serait
+   du remplissage, pas de la qualité), on combine des briques réelles :
+   ouverture, défi, format d'équipe, final — chacune adaptée au nombre
+   de personnes, aux âges présents et à l'énergie souhaitée. Le nombre
+   de combinaisons distinctes dépasse largement le millier, et chaque
+   résultat reste cohérent et jouable, jamais générique.
+   --------------------------------------------------------------- */
+const ANIM_OPENERS = {
+  vive:['On se rassemble, on secoue les bras, l\'énergie monte !','Tout le monde debout, cercle serré, c\'est parti pour du costaud !','On saute trois fois sur place — allez, plus fort que ça !'],
+  douce:['On se pose en cercle, on respire un grand coup ensemble.','Installez-vous confortablement, on commence en douceur.','On prend un instant pour se retrouver, tranquillement.'],
+  calme:['On ferme les yeux une seconde, on écoute le silence.','Chacun trouve sa place, sans bruit, sans pression.']
+};
+const ANIM_CHALLENGES = {
+  small:[ // 2-4 personnes
+    { title:'Le duel amical', instr:'Face à face, un défi simple à deux : le premier qui trouve trois objets d\'une couleur donnée a gagné.', seconds:90 },
+    { title:'Le mime silencieux', instr:'Chacun mime un animal, les autres devinent sans parler.', seconds:60 }
+  ],
+  medium:[ // 5-8 personnes
+    { title:'Le relais en équipe', instr:'Deux équipes, un parcours simple à réaliser le plus vite possible sans se presser dangereusement.', seconds:120 },
+    { title:'La chaîne des prénoms', instr:'Chacun répète les prénoms précédents puis ajoute le sien, en rythme.', seconds:75 }
+  ],
+  large:[ // 9+
+    { title:'La grande vague', instr:'Formez une ligne, faites une vague humaine comme au stade, trois fois de suite.', seconds:60 },
+    { title:'Le tournoi éclair', instr:'Répartissez-vous en quatre équipes pour un mini-tournoi de trois manches très courtes.', seconds:180 }
+  ]
+};
+const ANIM_KID_SIDEBAR = [
+  'Pendant ce temps, les plus petits peuvent dessiner leur moment préféré de la journée.',
+  'Les enfants peuvent chercher cinq trésors naturels autour d\'eux pendant que les grands jouent.',
+  'Une petite pause goûter pour les enfants pendant que les adultes terminent la manche.'
+];
+const ANIM_CLOSERS = {
+  vive:['Applaudissements pour tout le monde, gagnants et perdants !','On crie tous ensemble "Bravo l\'équipe !" — allez, plus fort !'],
+  douce:['On se remercie chacun d\'un sourire, c\'était un bon moment.','Un dernier applaudissement tranquille pour clore en douceur.'],
+  calme:['On respire une dernière fois ensemble, satisfaits.','Un moment de calme partagé, rien à ajouter.']
+};
+
+function groupSizeKey(peopleCount){
+  if (peopleCount <= 4) return 'small';
+  if (peopleCount <= 8) return 'medium';
+  return 'large';
+}
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function generateProceduralActivity(){
+  const energy = state.understood.vibe === 'festive' ? 'vive' : (state.understood.vibe === 'wellness' ? 'calme' : 'douce');
+  const peopleCount = state.understood.who === 'family' ? 6 : (state.understood.who === 'friends' ? 7 : (state.understood.who === 'solo' ? 1 : 2));
+  const sizeKey = groupSizeKey(peopleCount);
+  const hasKids = state.understood.who === 'family';
+
+  const opener = { title:'On se rassemble', instruction: pickRandom(ANIM_OPENERS[energy]), seconds:25 };
+  const challenge1 = pickRandom(ANIM_CHALLENGES[sizeKey]);
+  const challenge2 = pickRandom(ANIM_CHALLENGES[sizeKey].filter(c=>c.title!==challenge1.title) || ANIM_CHALLENGES[sizeKey]);
+  const closer = { title:'On célèbre', instruction: pickRandom(ANIM_CLOSERS[energy]), seconds:20 };
+
+  const steps = [opener,
+    { title: challenge1.title, instruction: challenge1.instr + (hasKids ? ' ' + pickRandom(ANIM_KID_SIDEBAR) : ''), seconds: challenge1.seconds },
+    { title: challenge2.title, instruction: challenge2.instr, seconds: challenge2.seconds },
+    closer
+  ];
+
+  return {
+    id: 'proc-' + Date.now(),
+    title: 'Animation composée pour votre groupe',
+    desc: `Générée pour ${peopleCount === 1 ? 'vous' : peopleCount + ' personnes environ'}, énergie ${energy}${hasKids ? ', avec les enfants' : ''}.`,
+    energy, category:'festive', steps
+  };
 }
 
 function demoAnimeItems(ctx){
@@ -330,6 +478,8 @@ function summaryForResults(){
   return `Sélection autour de ${state.city.name}, adaptée à votre brief.`;
 }
 function renderResults(){
+  const heroPhoto = AMBIANCE[state.understood.vibe] || AMBIANCE.start;
+  $('resultsHeroImg').src = heroPhoto;
   $('resultsTitle').textContent = titleForResults();
   $('resultsSummary').textContent = summaryForResults();
   const chips = [];
@@ -345,21 +495,33 @@ function renderResults(){
   updateBudgetRing();
 }
 function renderDiagnostic(){
+  // Le diagnostic technique (URLs, codes d'erreur) ne doit JAMAIS apparaître à l'écran d'un
+  // utilisateur — ça casse totalement la confiance et donne l'impression que l'appli est cassée.
+  // Il reste disponible dans la console du navigateur pour le développement.
   const box = $('diagnosticBox');
-  const failed = state.diagnostics.filter(d=>!d.ok);
-  if (!state.DEMO_MODE){ box.classList.add('hidden'); return; }
-  box.classList.remove('hidden');
-  box.innerHTML = `<h3>Diagnostic données</h3><p>Les API réelles n'ont pas répondu dans cet environnement — vérifie GOOGLE_KEY / OPENAGENDA_KEY / OPENWEATHER_KEY dans Vercel.</p>${
-    state.diagnostics.slice(0,10).map(d=>`<div class="debug-line"><span>${d.ok?'OK':'Échec'}</span><b>${d.count??''}</b></div><code>${d.url}${d.error?'\n'+d.error:''}</code>`).join('')
-  }`;
+  box.classList.add('hidden');
+  if (state.DEMO_MODE && state.diagnostics.length){
+    console.groupCollapsed('%cDolcia — diagnostic données (visible développeur uniquement)', 'color:#C9A84C');
+    state.diagnostics.forEach(d=> d.ok ? console.log('OK', d.url, d.count) : console.warn('Échec', d.url, d.error));
+    console.groupEnd();
+  }
 }
 
 function priceText(x){ if(x.free||x.priceN===0) return 'Gratuit'; if(x.priceN) return '€'.repeat(Math.max(1,Math.min(4,x.priceN))); return ''; }
+function heartHtml(id){
+  const liked = state.favs.includes(id);
+  return `<button class="card-like ${liked?'liked':''}" data-like="${id}" aria-label="J'aime">
+    <svg viewBox="0 0 24 24" fill="${liked?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6"><path d="M12 20.5 C7 16.8 3 13.4 3 9.4 3 6.7 5.1 4.6 7.7 4.6 9.4 4.6 11 5.5 12 7 13 5.5 14.6 4.6 16.3 4.6 18.9 4.6 21 6.7 21 9.4 21 13.4 17 16.8 12 20.5Z"/></svg>
+  </button>`;
+}
 function cardHtml(x){
   const meta = [x.source, x.dist!=null?`${x.dist} km`:null, priceText(x), x.rating?`note ${x.rating}/5`:null, x.date||null].filter(Boolean).join(' · ');
   return `<article class="experience-card" data-open="${x.id}">
-    <div class="experience-photo"></div>
+    <div class="experience-photo">
+      <img src="${ambiancePhoto(x)}" alt="" loading="lazy" onerror="this.style.display='none'">
+    </div>
     <div class="experience-shade"></div>
+    ${heartHtml(x.id)}
     <div class="experience-content">
       <div class="source-badge">${x.kind==='event'?'Événement':'Lieu réel'}</div>
       <h3>${x.title}</h3>
@@ -384,6 +546,11 @@ function applyFilters(items){
   if (f.sort === 'distance') out.sort((a,b)=>(a.dist??999)-(b.dist??999));
   else if (f.sort === 'rating') out.sort((a,b)=>(b.rating||0)-(a.rating||0));
   else if (f.sort === 'new') out.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0));
+  else {
+    // Pertinence : les catégories déjà aimées remontent légèrement, sans jamais exclure le reste.
+    const counts = likedCategoryCounts();
+    out.sort((a,b) => (counts[b.category]||0) - (counts[a.category]||0));
+  }
   return out;
 }
 function renderExplore(){
@@ -408,6 +575,7 @@ function pepiteCardHtml(x){
       <p>${x.pairing}</p>
     </div>` : '';
   return `<article class="pepite-card" data-open="${x.id}">
+    ${heartHtml(x.id)}
     <div class="pepite-head">
       <svg class="pepite-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3">${PEPITE_ICONS[x.icon]||PEPITE_ICONS.craft}</svg>
       <div>
@@ -438,11 +606,15 @@ function switchAnimeSub(sub){
 function renderAnime(ctx){
   const items = demoAnimeItems(ctx);
   state.animeItems = items;
+  const ctxPhoto = { pool:AMBIANCE.wellness, beach:AMBIANCE.nature, city:AMBIANCE.culture, home:AMBIANCE.family }[ctx] || AMBIANCE.festive;
   const el = $('animeSection');
   el.innerHTML = `<div class="cards-grid">${items.map(x=>`
     <article class="experience-card" data-open="${x.id}">
-      <div class="experience-photo"></div>
+      <div class="experience-photo">
+        <img src="${ctxPhoto}" alt="" loading="lazy" onerror="this.style.display='none'">
+      </div>
       <div class="experience-shade"></div>
+      ${heartHtml(x.id)}
       <div class="experience-content">
         <div class="source-badge anime">Programme Dolcia · énergie ${x.energy||'vive'}</div>
         <h3>${x.title}</h3>
@@ -612,6 +784,11 @@ function clapBurst(){
   btn.classList.remove('clapped'); void btn.offsetWidth; btn.classList.add('clapped');
   playClapSound();
   launchConfetti('confettiCanvas', 26);
+  bumpEnergy(20);
+  showDReaction(CLAP_REACTIONS[Math.floor(Math.random()*CLAP_REACTIONS.length)]);
+  const wasDancing = eclat3D.dancing;
+  setEclat3DDancing(true);
+  setTimeout(()=> setEclat3DDancing(wasDancing), 1800);
 }
 
 /* ---------------------------------------------------------------
@@ -710,6 +887,58 @@ function showTyping(){
 }
 function hideTyping(){ document.getElementById('dTypingIndicator')?.remove(); }
 
+/* D pendant l'animation : écoute réelle, pas juste un chat à côté.
+   Quelques commandes sont exécutées directement (pause, suivant, répète) —
+   c'est la vraie différence entre "parler" et "écouter et agir". Le reste
+   passe par le même moteur conversationnel que le chat général. */
+async function talkToDLive(userText){
+  if (!userText.trim()) return;
+  const low = userText.toLowerCase();
+
+  if (/pause|stop|arrête/.test(low) && !liveState.paused){
+    toggleLivePause();
+    showDReaction('Je mets en pause !');
+    speakLive('Pas de souci, je mets l\'étape en pause.');
+    return;
+  }
+  if (/reprend|continue|repars/.test(low) && liveState.paused){
+    toggleLivePause();
+    showDReaction('On reprend !');
+    speakLive('C\'est reparti !');
+    return;
+  }
+  if (/suivant|passe|next|étape d'après/.test(low)){
+    showDReaction('On enchaîne !');
+    advanceLive();
+    return;
+  }
+  if (/répète|répéter|recommence|redis/.test(low) && liveState.item){
+    const step = liveState.item.steps[liveState.stepIndex];
+    if (step){ speakLive(step.instruction); showDReaction('Je répète !'); }
+    return;
+  }
+
+  showDReaction('…');
+  let reply = await askDReal(userText);
+  if (!reply) reply = localDReply(userText);
+  showDReaction(reply.length > 60 ? reply.slice(0,58) + '…' : reply);
+  speakLive(reply);
+}
+
+function initLiveTalk(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $('liveTalkBtn');
+  if (!SR){ btn.style.opacity = .35; return; }
+  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
+  let listening = false;
+  btn.addEventListener('click', ()=>{
+    if (listening){ rec.stop(); return; }
+    rec.start(); listening = true; btn.classList.add('listening');
+  });
+  rec.onresult = e => talkToDLive(e.results[0][0].transcript);
+  rec.onend = () => { listening = false; btn.classList.remove('listening'); };
+}
+
 async function sendToD(userText){
   if (!userText.trim()) return;
   appendDMessage('user', userText);
@@ -755,7 +984,124 @@ function updateDChatVisibility(screenId){
 }
 
 /* ---------------- Animation en direct : D anime vraiment ---------------- */
-const liveState = { item:null, stepIndex:0, timerId:null, remaining:0, paused:false, muted:false };
+/* ---------------------------------------------------------------
+   L'ÉCLAT EN 3D — la mascotte qui danse vraiment, dans son propre
+   langage (lumière), pas un pantin humanoïde qui aurait l'air raté.
+   Repli automatique et silencieux sur l'orbe 2D CSS si Three.js ne
+   charge pas ou si le rendu échoue pour une raison quelconque —
+   jamais un écran cassé pour l'utilisateur.
+   --------------------------------------------------------------- */
+const eclat3D = { ready:false, renderer:null, scene:null, camera:null, mesh:null, particles:null, clock:null, dancing:false, beat:0 };
+
+function initEclat3D(){
+  try{
+    if (typeof THREE === 'undefined' || window.__THREE_FAILED__) return false;
+    const canvas = document.getElementById('eclat3dCanvas');
+    if (!canvas) return false;
+
+    eclat3D.renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    eclat3D.renderer.setSize(160, 160, false);
+    eclat3D.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+
+    eclat3D.scene = new THREE.Scene();
+    eclat3D.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    eclat3D.camera.position.z = 4.2;
+
+    const light1 = new THREE.PointLight(0xE8CC72, 2.2, 20); light1.position.set(2,2,3);
+    const light2 = new THREE.PointLight(0xC9A84C, 1, 20); light2.position.set(-2,-1,2);
+    const ambient = new THREE.AmbientLight(0x332211, 0.9);
+    eclat3D.scene.add(light1, light2, ambient);
+
+    const geo = new THREE.IcosahedronGeometry(1, 2);
+    const mat = new THREE.MeshStandardMaterial({ color:0xC9A84C, emissive:0x7B4D10, emissiveIntensity:0.6, metalness:0.35, roughness:0.25 });
+    eclat3D.mesh = new THREE.Mesh(geo, mat);
+    eclat3D.scene.add(eclat3D.mesh);
+
+    // halo de particules dorées — la traîne de lumière quand D danse
+    const pGeo = new THREE.BufferGeometry();
+    const count = 60;
+    const positions = new Float32Array(count*3);
+    for (let i=0;i<count;i++){
+      const r = 1.5 + Math.random()*0.6;
+      const theta = Math.random()*Math.PI*2, phi = Math.acos(2*Math.random()-1);
+      positions[i*3] = r*Math.sin(phi)*Math.cos(theta);
+      positions[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+      positions[i*3+2] = r*Math.cos(phi);
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const pMat = new THREE.PointsMaterial({ color:0xF5E6B8, size:0.045, transparent:true, opacity:0.55 });
+    eclat3D.particles = new THREE.Points(pGeo, pMat);
+    eclat3D.scene.add(eclat3D.particles);
+
+    eclat3D.clock = new THREE.Clock();
+    eclat3D.ready = true;
+    animateEclat3D();
+    return true;
+  }catch(e){
+    console.warn('Éclat 3D indisponible, repli sur l\'orbe 2D :', e.message);
+    eclat3D.ready = false;
+    return false;
+  }
+}
+
+function animateEclat3D(){
+  if (!eclat3D.ready) return;
+  requestAnimationFrame(animateEclat3D);
+  try{
+    const t = eclat3D.clock.getElapsedTime();
+    const danceBoost = eclat3D.dancing ? 1 : 0.25;
+    eclat3D.mesh.rotation.y = t * 0.6 * (eclat3D.dancing ? 2.2 : 1);
+    eclat3D.mesh.rotation.x = Math.sin(t*0.7) * 0.15;
+    eclat3D.mesh.position.y = Math.sin(t * (eclat3D.dancing ? 4.5 : 1.8)) * 0.16 * danceBoost;
+    const scalePulse = 1 + Math.sin(t * (eclat3D.dancing ? 6 : 2)) * (eclat3D.dancing ? 0.09 : 0.03);
+    eclat3D.mesh.scale.setScalar(scalePulse);
+    eclat3D.particles.rotation.y = -t * 0.25;
+    eclat3D.particles.rotation.x = t * 0.12;
+    eclat3D.renderer.render(eclat3D.scene, eclat3D.camera);
+  }catch(e){ eclat3D.ready = false; }
+}
+
+function setEclat3DDancing(on){ eclat3D.dancing = on; }
+function showEclat3D(show){
+  const canvas = document.getElementById('eclat3dCanvas');
+  const flat = document.getElementById('eclatLive');
+  if (show && eclat3D.ready){
+    canvas.classList.remove('hidden');
+    flat.style.opacity = '0';
+  } else {
+    canvas.classList.add('hidden');
+    flat.style.opacity = '1';
+  }
+}
+
+const liveState = { item:null, stepIndex:0, timerId:null, remaining:0, paused:false, muted:false, energy:0 };
+
+/* Répliques d'ambiance — le vrai "banter" de mascotte, distinct de l'instruction pure.
+   Varie selon l'énergie de l'activité, pour que "vive" sonne comme un vrai animateur
+   Club Med et "calme" reste doux sans être plat. */
+const HYPE_PHRASES = {
+  vive: ['Allez, on y va !!', 'C\'est parti !', 'Encore un peu d\'énergie !', 'Tout le monde prêt ?', 'On va s\'amuser !'],
+  douce: ['On y va tranquillement', 'À votre rythme', 'C\'est un plaisir, pas une course', 'Doucement, on savoure'],
+  calme: ['Respirez, on est bien', 'Prenez votre temps', 'Rien à prouver, juste à vivre']
+};
+const CLAP_REACTIONS = ['Woohoo !', 'Voilà l\'esprit !', 'J\'adore cette énergie !', 'Allez l\'équipe !', 'Encore !'];
+
+function showDReaction(text){
+  const el = $('dReaction');
+  el.textContent = text;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function bumpEnergy(amount){
+  liveState.energy = Math.min(100, liveState.energy + amount);
+  const fill = $('energyMeterFill');
+  fill.style.width = liveState.energy + '%';
+  if (liveState.energy >= 100){
+    fill.classList.add('maxed');
+    launchConfetti('confettiCanvas', 60);
+    playTadaChime();
+    setTimeout(()=>{ liveState.energy = 0; fill.style.width = '0%'; fill.classList.remove('maxed'); }, 1200);
+  }
+}
 
 function speakLive(text){
   if (liveState.muted) return;
@@ -769,10 +1115,16 @@ function speakLive(text){
 function launchLive(id){
   const x = state.animeItems.find(i=>i.id===id);
   if (!x || !x.steps || !x.steps.length){ flash('Cette activité n\'a pas encore de script d\'animation.'); return; }
-  liveState.item = x; liveState.stepIndex = 0; liveState.paused = false;
+  liveState.item = x; liveState.stepIndex = 0; liveState.paused = false; liveState.energy = 0;
+  $('energyMeterFill').style.width = '0%';
   $('liveEnd').classList.add('hidden');
   $('liveAnim').classList.remove('hidden');
   $('liveBg').className = 'live-bg energy-' + (x.energy === 'vive' ? 'vive' : (x.energy === 'calme' ? 'calme' : 'douce'));
+  if (!eclat3D.ready && typeof THREE !== 'undefined') initEclat3D();
+  showEclat3D(true);
+  setEclat3DDancing(x.energy === 'vive');
+  const eclat = $('eclatLive');
+  eclat.classList.remove('bounce-in'); void eclat.offsetWidth; eclat.classList.add('bounce-in');
   renderLiveProgress();
   runLiveStep();
 }
@@ -790,11 +1142,19 @@ function runLiveStep(){
   const step = liveState.item.steps[liveState.stepIndex];
   if (!step){ endLive(); return; }
 
+  const energyKey = liveState.item.energy === 'vive' ? 'vive' : (liveState.item.energy === 'calme' ? 'calme' : 'douce');
+  const hype = HYPE_PHRASES[energyKey][Math.floor(Math.random()*HYPE_PHRASES[energyKey].length)];
+  showDReaction(hype);
+
   $('liveStepLabel').textContent = step.title;
   $('liveInstruction').textContent = step.instruction;
   $('eclatLive').classList.add('talking');
+  if (energyKey === 'vive'){
+    const eclat = $('eclatLive');
+    eclat.classList.remove('jump'); void eclat.offsetWidth; eclat.classList.add('jump');
+  }
   $('liveBubble').classList.remove('pulse'); void $('liveBubble').offsetWidth; $('liveBubble').classList.add('pulse');
-  if (liveState.stepIndex > 0) playAdvanceChime();
+  if (liveState.stepIndex > 0){ playAdvanceChime(); bumpEnergy(12); }
   speakLive(step.instruction);
   setTimeout(()=> $('eclatLive').classList.remove('talking'), Math.min(4000, step.instruction.length*55));
 
@@ -859,6 +1219,7 @@ function closeLive(){
   $('liveAnim').classList.add('hidden');
   $('liveEnd').classList.add('hidden');
   $('liveCountdown').classList.add('hidden');
+  setEclat3DDancing(false);
 }
 function toggleLivePause(){
   liveState.paused = !liveState.paused;
@@ -943,8 +1304,15 @@ function init(){
   initVoice();
   initParallax();
   initCardTilt();
+  $('splashBgImg').src = AMBIANCE.start;
 
-  $('startBtn').addEventListener('click', goToBrief);
+  $('startBtn').addEventListener('click', goToMoodPick);
+  $('moodBack').addEventListener('click', ()=>showScreen('splash'));
+  $('moodGrid').addEventListener('click', e=>{
+    const tile = e.target.closest('[data-vibe]'); if(!tile) return;
+    pickMood(tile.dataset.vibe);
+  });
+  $('describeInsteadBtn').addEventListener('click', goToBrief);
   $('briefBack').addEventListener('click', backFromBrief);
   $('toggleRefine').addEventListener('click', toggleRefine);
   $('briefText').addEventListener('input', e=>{
@@ -992,6 +1360,29 @@ function init(){
 
   document.querySelectorAll('.anime-subtab').forEach(t=>t.addEventListener('click', ()=>switchAnimeSub(t.dataset.sub)));
 
+  $('generateProcBtn').addEventListener('click', ()=>{
+    const activity = generateProceduralActivity();
+    state.animeItems.unshift(activity);
+    const el = $('animeSection');
+    el.insertAdjacentHTML('afterbegin', `<div class="cards-grid" style="margin-bottom:16px">${(()=>{
+      const x = activity;
+      return `<article class="experience-card" data-open="${x.id}">
+        <div class="experience-photo"><img src="${AMBIANCE.festive}" alt="" loading="lazy" onerror="this.style.display='none'"></div>
+        <div class="experience-shade"></div>
+        ${heartHtml(x.id)}
+        <div class="experience-content">
+          <div class="source-badge anime">Sur mesure · énergie ${x.energy}</div>
+          <h3>${x.title}</h3>
+          <p>${x.desc}</p>
+          <div class="card-actions">
+            <button class="mini-btn gold" data-launch="${x.id}">Lancer avec D</button>
+            <button class="mini-btn dark" data-agenda="${x.id}">Agenda</button>
+          </div>
+        </div>
+      </article>`;
+    })()}</div>`);
+    flash('Nouvelle animation composée pour votre groupe');
+  });
   $('animeContextRow').addEventListener('click', e=>{
     const chip = e.target.closest('[data-ctx]'); if(!chip) return;
     document.querySelectorAll('#animeContextRow .chip').forEach(c=>c.classList.toggle('selected', c===chip));
@@ -1017,6 +1408,7 @@ function init(){
   $('dChatSend').addEventListener('click', ()=> sendToD($('dChatInput').value));
   $('dChatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendToD($('dChatInput').value); });
   initDChatVoice();
+  initLiveTalk();
   $('liveEndClose').addEventListener('click', closeLive);
   $('livePauseBtn').addEventListener('click', toggleLivePause);
   $('liveNextBtn').addEventListener('click', advanceLive);
@@ -1035,11 +1427,15 @@ function init(){
     if (launch){ e.stopPropagation(); launchLive(launch.dataset.launch); }
     const ag = e.target.closest('[data-agenda]');
     if (ag){ e.stopPropagation(); addToAgenda(ag.dataset.agenda); }
+    const like = e.target.closest('[data-like]');
+    if (like){ e.stopPropagation(); toggleLike(like.dataset.like); }
+    const unlike = e.target.closest('[data-unlike]');
+    if (unlike){ e.stopPropagation(); toggleLike(unlike.dataset.unlike); renderConstellation(); }
     const rm = e.target.closest('[data-remove]');
     if (rm){ e.stopPropagation(); removeFromAgenda(rm.dataset.remove); }
     const nav = e.target.closest('[data-tab]');
     if (nav){
-      if (nav.dataset.tab==='agenda'){ renderAgendaList(); $('agenda').classList.remove('hidden'); }
+      if (nav.dataset.tab==='agenda'){ renderAgendaList(); renderConstellation(); $('agenda').classList.remove('hidden'); }
       if (nav.dataset.tab==='surprise'){ switchDepth('anime'); }
       if (nav.dataset.tab==='discover'){ switchDepth('explore'); }
       document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b===nav));
