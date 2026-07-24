@@ -516,6 +516,34 @@ button{font-family:inherit;border:0;cursor:pointer;background:none;color:inherit
 .d-chat-drawer.hidden, .d-chat-fab.hidden{display:none!important}
 
 .d-chat-header{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.voice-mode-toggle{margin-left:auto}
+.voice-mode-toggle.active{border-color:var(--line-gold);color:var(--gold2);background:rgba(232,204,114,.1)}
+
+/* ---------- SESSION VOCALE CONTINUE, façon Speak ---------- */
+.voice-session{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px}
+.voice-session.hidden{display:none}
+.voice-orb-zone{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px}
+.eclat.voice-eclat{width:96px;height:96px;margin:0}
+.eclat.voice-eclat.listening .eclat-ring{animation:breathe 0.8s ease-in-out infinite}
+.eclat.voice-eclat.listening .eclat-glow{animation:breathe 0.8s ease-in-out infinite;background:radial-gradient(circle, rgba(232,204,114,.35), transparent 70%)}
+.eclat.voice-eclat.talking .eclat-ring{animation:breathe 0.5s ease-in-out infinite}
+
+/* visualisation de la voix en direct — barres réactives au volume réel du micro */
+.voice-waveform{display:flex;align-items:center;justify-content:center;gap:4px;height:32px}
+.voice-waveform span{width:4px;height:6px;border-radius:99px;background:var(--gold2);transition:height .08s ease;opacity:.4}
+.voice-waveform.active span{opacity:1}
+
+.voice-status{font-size:12.5px;color:var(--muted);letter-spacing:.02em}
+.voice-transcript{font-family:var(--serif);font-style:italic;font-size:16px;color:var(--gold3);text-align:center;max-width:320px;min-height:24px;line-height:1.5}
+
+.voice-mic-btn{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(105deg,#7B4D10,var(--gold),var(--gold3),var(--gold));background-size:220%;
+  color:#0a0805;box-shadow:0 14px 34px rgba(201,168,76,.3);transition:transform .2s ease;
+}
+.voice-mic-btn svg{width:24px;height:24px}
+.voice-mic-btn.listening{animation:breathe 1s ease-in-out infinite}
+.voice-mic-btn:active{transform:scale(.92)}
 .d-chat-name{font-family:var(--serif);font-size:18px;color:var(--gold2)}
 .d-chat-status{font-size:10.5px;color:var(--green);letter-spacing:.04em}
 .d-chat-header .ghost{margin-left:auto}

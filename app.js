@@ -837,6 +837,18 @@ function localDReply(userText){
   const low = userText.toLowerCase();
   const budgetRemaining = Math.max(0, state.budgetTotal - state.budgetSpent);
 
+  if (/ennui|s'ennuie|rien à faire|je m'ennuie/.test(low))
+    return `Je comprends, ce n'est jamais agréable de s'ennuyer. Dites-moi juste si vous avez envie de bouger, de rire, ou de souffler — je m'occupe du reste.`;
+
+  if (/fatigu|épuisé|crevé|plus de force/.test(low) && !liveState.item)
+    return `Alors on ralentit le rythme. Une pause détente, ou quelque chose de tout doux à proximité ?`;
+
+  if (/triste|pas le moral|déprim|dur/.test(low))
+    return `Je suis désolée que ce soit difficile. Je ne remplace pas une vraie oreille attentive, mais si un bon bol d'air ou un moment simple peut aider, dites-le-moi.`;
+
+  if (/génial|super|trop bien|j'adore|incroyable/.test(low) && !liveState.item)
+    return `Ça me fait vraiment plaisir ! C'est exactement pour ça que j'existe.`;
+
   if (/budget|combien.*reste|argent|prix/.test(low))
     return `Il vous reste ${budgetRemaining} € sur les ${state.budgetTotal} € prévus. Je recalcule à chaque activité ajoutée — vous ne dépasserez jamais sans me le dire explicitement.`;
 
@@ -957,6 +969,124 @@ async function sendToD(userText){
   }, wait);
 }
 
+/* ---------------------------------------------------------------
+   SESSION VOCALE CONTINUE — l'esprit de Speak, appliqué à D.
+   Pas de code copié (je n'y ai jamais eu accès et ce serait interdit
+   de toute façon) — juste les mêmes qualités d'expérience : on parle,
+   D écoute vraiment (visualisation réelle du volume du micro via
+   l'API Web Audio), D répond avec chaleur, puis réécoute automatique-
+   ment sans qu'on ait à retaper sur le micro à chaque tour.
+   --------------------------------------------------------------- */
+const voiceSession = { active:false, listening:false, audioCtx:null, analyser:null, stream:null, rafId:null, recognition:null };
+
+function initVoiceSessionAudio(){
+  return new Promise((resolve)=>{
+    if (!navigator.mediaDevices?.getUserMedia){ resolve(false); return; }
+    navigator.mediaDevices.getUserMedia({ audio:true }).then(stream=>{
+      try{
+        voiceSession.stream = stream;
+        voiceSession.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = voiceSession.audioCtx.createMediaStreamSource(stream);
+        voiceSession.analyser = voiceSession.audioCtx.createAnalyser();
+        voiceSession.analyser.fftSize = 64;
+        source.connect(voiceSession.analyser);
+        resolve(true);
+      }catch(e){ resolve(false); }
+    }).catch(()=> resolve(false));
+  });
+}
+function drawWaveform(){
+  const bars = document.querySelectorAll('#voiceWaveform span');
+  if (!voiceSession.analyser){
+    voiceSession.rafId = requestAnimationFrame(drawWaveform);
+    return;
+  }
+  const data = new Uint8Array(voiceSession.analyser.frequencyBinCount);
+  voiceSession.analyser.getByteFrequencyData(data);
+  const step = Math.floor(data.length / bars.length) || 1;
+  bars.forEach((bar,i)=>{
+    const v = data[i*step] || 0;
+    bar.style.height = Math.max(6, (v/255)*30) + 'px';
+  });
+  voiceSession.rafId = requestAnimationFrame(drawWaveform);
+}
+function stopWaveform(){
+  if (voiceSession.rafId) cancelAnimationFrame(voiceSession.rafId);
+  document.querySelectorAll('#voiceWaveform span').forEach(bar=> bar.style.height = '6px');
+}
+
+async function toggleVoiceMode(){
+  const on = $('voiceSession').classList.contains('hidden');
+  $('voiceSession').classList.toggle('hidden', !on);
+  $('dChatMessages').classList.toggle('hidden', on);
+  $('dChatInputRow').classList.toggle('hidden', on);
+  $('voiceModeToggle').classList.toggle('active', on);
+  if (on){
+    const ok = await initVoiceSessionAudio();
+    if (ok){ $('voiceWaveform').classList.add('active'); drawWaveform(); }
+    voiceSession.active = true;
+  } else {
+    voiceSession.active = false;
+    stopWaveform();
+    voiceSession.stream?.getTracks().forEach(t=>t.stop());
+    voiceSession.audioCtx?.close().catch(()=>{});
+    voiceSession.analyser = null;
+  }
+}
+
+function startVoiceListening(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ $('voiceStatus').textContent = 'La dictée vocale n\'est pas disponible sur ce navigateur.'; return; }
+  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
+  voiceSession.recognition = rec;
+  voiceSession.listening = true;
+  $('eclatVoice').classList.add('listening');
+  $('voiceMicBtn').classList.add('listening');
+  $('voiceStatus').textContent = 'D vous écoute…';
+  $('voiceTranscript').textContent = '';
+
+  rec.onresult = async e => {
+    const text = e.results[0][0].transcript;
+    $('voiceTranscript').textContent = '« ' + text + ' »';
+    $('voiceStatus').textContent = 'D réfléchit…';
+    $('eclatVoice').classList.remove('listening');
+    $('eclatVoice').classList.add('talking');
+
+    let reply = await askDReal(text);
+    if (!reply) reply = localDReply(text);
+
+    $('voiceStatus').textContent = 'D vous répond';
+    $('voiceTranscript').textContent = reply;
+    appendDMessage('user', text);
+    appendDMessage('d', reply);
+
+    if (window.speechSynthesis){
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(reply);
+      u.lang = 'fr-FR'; u.rate = 0.98; u.pitch = 1.05;
+      u.onend = () => {
+        $('eclatVoice').classList.remove('talking');
+        // Conversation continue, comme sur Speak : D réécoute automatiquement.
+        if (voiceSession.active) setTimeout(()=>{ $('voiceStatus').textContent = 'Touchez le micro pour continuer'; }, 200);
+      };
+      window.speechSynthesis.speak(u);
+    } else {
+      $('eclatVoice').classList.remove('talking');
+    }
+  };
+  rec.onerror = () => {
+    voiceSession.listening = false;
+    $('eclatVoice').classList.remove('listening');
+    $('voiceMicBtn').classList.remove('listening');
+    $('voiceStatus').textContent = 'Je n\'ai pas bien entendu — touchez pour réessayer.';
+  };
+  rec.onend = () => {
+    voiceSession.listening = false;
+    $('voiceMicBtn').classList.remove('listening');
+  };
+  rec.start();
+}
+
 function openDChat(){
   dChat.open = true;
   $('dChatDrawer').classList.remove('hidden');
@@ -970,6 +1100,7 @@ function closeDChat(){
   dChat.open = false;
   $('dChatDrawer').classList.add('hidden');
   $('dChatFab').classList.remove('hidden');
+  if (voiceSession.active) toggleVoiceMode();
 }
 function updateDChatVisibility(screenId){
   const fab = $('dChatFab');
@@ -1407,6 +1538,8 @@ function init(){
   $('dChatClose').addEventListener('click', closeDChat);
   $('dChatSend').addEventListener('click', ()=> sendToD($('dChatInput').value));
   $('dChatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendToD($('dChatInput').value); });
+  $('voiceModeToggle').addEventListener('click', toggleVoiceMode);
+  $('voiceMicBtn').addEventListener('click', ()=>{ if(!voiceSession.listening) startVoiceListening(); });
   initDChatVoice();
   initLiveTalk();
   $('liveEndClose').addEventListener('click', closeLive);

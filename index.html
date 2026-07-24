@@ -495,10 +495,31 @@
         <div class="d-chat-name">D</div>
         <div class="d-chat-status" id="dChatStatus">En ligne</div>
       </div>
+      <button class="ghost voice-mode-toggle" id="voiceModeToggle">Voix</button>
       <button class="ghost" id="dChatClose">Fermer</button>
     </div>
+
+    <!-- Mode conversation vocale continue, façon Speak — l'orbe au centre, on parle, D répond -->
+    <div class="voice-session hidden" id="voiceSession">
+      <div class="voice-orb-zone">
+        <div class="eclat voice-eclat" id="eclatVoice">
+          <div class="eclat-glow"></div>
+          <div class="eclat-ring"></div>
+          <div class="eclat-eyes"><span></span><span></span></div>
+        </div>
+        <div class="voice-waveform" id="voiceWaveform">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="voice-status" id="voiceStatus">Touchez le micro pour parler à D</div>
+      <p class="voice-transcript" id="voiceTranscript"></p>
+      <button class="voice-mic-btn" id="voiceMicBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+    </div>
+
     <div class="d-chat-messages" id="dChatMessages"></div>
-    <div class="d-chat-input-row">
+    <div class="d-chat-input-row" id="dChatInputRow">
       <input type="text" id="dChatInput" placeholder="Écrivez à D…" autocomplete="off">
       <button class="d-chat-mic" id="dChatMic">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
