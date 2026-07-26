@@ -169,3 +169,62 @@ body:before{
 @media(prefers-reduced-motion:reduce){
   .experience .exp-image,.d-coach-actions>button{transition:none!important}
 }
+
+/* D vivant : une présence prestigieuse, expressive sans devenir un personnage enfantin. */
+.eclat-d.d-companion{isolation:isolate;overflow:visible;animation:dCompanionBreathe 4.8s ease-in-out infinite}
+.eclat-d.d-companion>b{position:relative;z-index:2;font:inherit;color:inherit}
+.eclat-d.d-companion>.d-star{right:7px;top:5px;z-index:4}
+.eclat-d.d-companion .d-face{position:absolute;z-index:3;inset:0;pointer-events:none}
+.eclat-d.d-companion .d-face>i{position:absolute;top:34%;width:3px;height:4px;border-radius:50%;background:#1c160d;box-shadow:none;animation:dCompanionBlink 6.4s infinite}
+.eclat-d.d-companion .d-face>i:first-child{left:24%}
+.eclat-d.d-companion .d-face>i:nth-child(2){right:24%}
+.eclat-d.d-companion .d-face>em{position:absolute;left:50%;bottom:20%;width:12%;height:6%;border-bottom:1.5px solid rgba(24,18,9,.78);border-radius:0 0 50% 50%;transform:translateX(-50%)}
+.eclat-d.d-companion:after{content:"";position:absolute;z-index:-1;inset:-13px;border:1px solid rgba(232,201,126,.18);border-radius:50%;animation:dCompanionAura 4.8s ease-in-out infinite}
+.eclat-d.d-companion.decision{width:58px;height:58px;font-size:37px;flex:0 0 auto}
+@keyframes dCompanionBreathe{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-2px);filter:brightness(1.08)}}
+@keyframes dCompanionAura{0%,100%{transform:scale(.9);opacity:.22}50%{transform:scale(1.08);opacity:.62}}
+@keyframes dCompanionBlink{0%,45%,49%,100%{transform:scaleY(1)}47%{transform:scaleY(.12)}}
+
+/* Les moments charnières : D explique, propose, l'utilisateur tranche. */
+.d-decision{position:relative;display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(280px,1.15fr);gap:22px;align-items:center;margin:14px 0 34px;padding:24px 26px;border:1px solid rgba(222,193,126,.34);border-radius:26px;background:radial-gradient(circle at 8% 20%,rgba(226,191,106,.13),transparent 28%),linear-gradient(135deg,rgba(18,22,21,.96),rgba(7,9,9,.93));box-shadow:0 24px 70px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.045)}
+.d-decision-copy small{display:block;margin-bottom:7px;color:#d9bd79;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+.d-decision-copy strong{display:block;color:#f6efe2;font:500 clamp(24px,2.6vw,36px)/1 var(--display)}
+.d-decision-copy p{max-width:600px;margin:10px 0 0;color:#a9a398;font-size:11px;line-height:1.55}
+.d-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.d-decision-options button{min-height:54px;padding:11px 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(255,255,255,.045);color:#eee7dc;text-align:left;font-size:11px;transition:.22s ease}
+.d-decision-options button:hover{transform:translateY(-2px);border-color:#dfc27d;background:linear-gradient(120deg,rgba(230,198,120,.22),rgba(255,255,255,.05));color:#fff}
+@media(max-width:820px){.d-decision{grid-template-columns:auto 1fr}.d-decision-options{grid-column:1/-1}}
+@media(max-width:540px){.d-decision{gap:15px;padding:20px 17px;border-radius:22px}.d-decision-options{grid-template-columns:1fr}.eclat-d.d-companion.decision{width:49px;height:49px;font-size:31px}}
+@media(prefers-reduced-motion:reduce){.eclat-d.d-companion,.eclat-d.d-companion:after,.eclat-d.d-companion .d-face>i{animation:none!important}}
+/* v20.5 — la vérité du moment, lisible comme une Live Activity */
+.moment-truth{
+  width:min(1190px,calc(100% - 32px));margin:92px auto 18px;padding:14px 16px;
+  display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:18px;
+  border:1px solid rgba(219,184,108,.28);border-radius:24px;
+  background:linear-gradient(115deg,rgba(27,25,21,.96),rgba(11,12,12,.94));
+  box-shadow:0 24px 70px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05);
+  color:#f7f1e5;position:relative;z-index:3
+}
+.moment-truth-main{padding-right:18px;border-right:1px solid rgba(255,255,255,.1)}
+.moment-truth-main span{display:block;color:#c8a75e;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.moment-truth-main strong{display:block;margin-top:4px;font:600 20px/1.05 var(--serif,Georgia,serif)}
+.moment-truth-facts{display:flex;gap:8px;min-width:0;flex-wrap:wrap}
+.moment-truth-facts b{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.055);font-size:12px;font-weight:600;white-space:nowrap}
+.moment-truth-live{display:flex;align-items:center;gap:8px;color:#aaa49a;font-size:11px;max-width:245px}
+.moment-truth-live i{width:7px;height:7px;border-radius:50%;background:#67d39b;box-shadow:0 0 0 5px rgba(103,211,155,.1);flex:0 0 auto}
+.moment-truth-live.changed{color:#f5deb0}.moment-truth-live.changed i{background:#e8bd61;box-shadow:0 0 0 5px rgba(232,189,97,.12)}
+.moment-truth-decide{border:0;border-radius:16px;padding:12px 16px;background:linear-gradient(135deg,#f0d790,#cfa853);color:#17130c;font-weight:800;white-space:nowrap}
+.exp-label{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap}
+.exp-label small{color:#b6aa95;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.trust-badge{font-style:normal!important;border-radius:999px;padding:5px 9px!important;font-size:10px!important;font-weight:800!important;letter-spacing:.04em!important;text-transform:none!important}
+.trust-badge.confirmed{color:#a7edc5!important;background:rgba(65,178,113,.13)!important}
+.trust-badge.compatible{color:#f3d68e!important;background:rgba(219,177,79,.12)!important}
+.trust-badge.check{color:#c8c3ba!important;background:rgba(255,255,255,.07)!important}
+.clear-actions{gap:7px!important;flex-wrap:wrap}.clear-actions button{min-width:auto!important}
+
+@media(max-width:800px){
+  .moment-truth{margin-top:76px;grid-template-columns:1fr auto;gap:11px;padding:13px;border-radius:20px}
+  .moment-truth-main{border:0;padding:0}.moment-truth-facts{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+  .moment-truth-facts b:last-child{grid-column:1/-1}.moment-truth-live{grid-column:1/-1;max-width:none}
+  .moment-truth-decide{grid-column:2;grid-row:1}
+}

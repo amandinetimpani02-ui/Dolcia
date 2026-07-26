@@ -9,12 +9,15 @@ test('un budget confortable ne force jamais un week-end uniformément luxueux', 
   assert.match(server, /Un gros budget n'est jamais assimilé à une envie de luxe permanent/);
   assert.doesNotMatch(client, /if\(i\.free\|\|i\.price===0\)score-=12/);
   assert.match(client, /function programBalanceScore/);
-  assert.match(client, /previousBand.*free','light'/s);
+  assert.match(client, /diningChoice=state\.programPreferences\.dining/);
 });
 
-test('le programme alterne les intensités budgétaires', () => {
-  assert.match(client, /signature','exceptional'.*signature','exceptional'.*score-=24/s);
-  assert.match(client, /signature','exceptional'.*free','light'.*score\+=20/s);
+test('le programme ne décide jamais seul d’alterner les niveaux de prix', () => {
+  assert.doesNotMatch(client, /includes\(previousBand\).*score\+=20/);
+  assert.doesNotMatch(client, /includes\(previousBand\).*score-=24/);
+  assert.match(client, /diningChoice==='signature'/);
+  assert.match(client, /diningChoice==='light'/);
+  assert.match(client, /diningChoice==='budget'/);
 });
 
 test('une sortie éloignée doit mériter sa place', () => {
@@ -23,22 +26,23 @@ test('une sortie éloignée doit mériter sa place', () => {
   assert.match(client, /item\.distanceMerit==='ordinary'.*score-=22/);
 });
 
-test('la version porte explicitement la conversation adaptative', () => {
-  assert.match(client, /20\.3-d-coach-vivant/);
+test('la version porte explicitement la vérité du moment', () => {
+  assert.match(client, /20\.5-verite-du-moment/);
 });
 
 test('le programme rend visible sa courbe émotionnelle sans tableau comptable', () => {
   assert.match(client, /function programArcPanel/);
   assert.match(client, /La courbe de votre moment/);
   assert.match(client, /L’inattendu maîtrisé/);
-  assert.match(client, /Un budget confortable ne vous enferme jamais dans le luxe/);
+  assert.match(client, /Elle ne choisit jamais le rythme à votre place/);
 });
 
-test('une activité intense appelle une respiration sauf demande sportive explicite', () => {
+test('une activité intense déclenche un choix et non une respiration imposée', () => {
   assert.match(client, /function experienceEnergy/);
-  assert.match(client, /previousEnergy==='high'.*energy==='soft'.*score\+=24/s);
-  assert.match(client, /previousEnergy==='high'.*energy==='high'.*score-=32/s);
-  assert.match(client, /function wantsSustainedEnergy/);
+  assert.doesNotMatch(client, /previousEnergy==='high'.*score/s);
+  assert.match(client, /On continue sport \+\+\+/);
+  assert.match(client, /On change d’énergie/);
+  assert.match(client, /On ralentit vraiment/);
 });
 
 test('un séjour pose une seule question décisive sur son rythme global', () => {
@@ -56,13 +60,12 @@ test('une intention claire ne déclenche pas un questionnaire supplémentaire', 
   assert.match(client, /return\{id:'sport',confidence:\.98/);
 });
 
-test('la charge de la veille influence la journée suivante sans enfermer le séjour', () => {
+test('la charge de la veille est observable mais ne décide pas à la place du groupe', () => {
   assert.match(client, /function programDayNumber/);
   assert.match(client, /dayLoads=new Map/);
   assert.match(client, /previousDayLoad/);
-  assert.match(client, /tiredYesterday/);
-  assert.match(client, /energy==='soft'.*score\+=.*30/s);
-  assert.match(client, /energy==='high'.*score-=.*34/s);
+  assert.doesNotMatch(client, /tiredYesterday/);
+  assert.match(client, /state\.programPreferences\.energy/);
 });
 
 test('les besoins de récupération de chaque participant comptent dans le rythme', () => {

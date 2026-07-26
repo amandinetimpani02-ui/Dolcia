@@ -12,9 +12,9 @@ test('la sélection éditoriale garde le catalogue complet accessible', () => {
 });
 
 test('les signaux de décision reposent sur des faits vérifiables', () => {
-  assert.match(app, /Horaire officiel/);
-  assert.match(app, /Compatible avec votre créneau/);
-  assert.match(app, /À vérifier avant de partir/);
+  assert.match(app, /'Confirmé'/);
+  assert.match(app, /'Compatible'/);
+  assert.match(app, /'À vérifier'/);
   assert.doesNotMatch(app, /plus que [0-9]+ places/i);
 });
 

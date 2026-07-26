@@ -21,5 +21,5 @@ test('renderResults cannot expose a first-load zero catalogue', () => {
 
 test('Explorer stays in catalogue mode after loading', () => {
   assert.match(app, /explorerOnly\?renderResults\(\)/);
-  assert.match(app, /const APP_BUILD = '20\.3-d-coach-vivant'/);
+  assert.match(app, /const APP_BUILD = '20\.5-verite-du-moment'/);
 });
