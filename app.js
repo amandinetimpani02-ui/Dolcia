@@ -1,1578 +1,1350 @@
-/* ============================================================
-   DOLCIA v20 — app.js
-   Architecture : conserve le contrat api existant (LOCAL_API / PROD_API,
-   /api/places, /api/events, /api/weather). Si les vraies API répondent
-   (une fois déployé sur Vercel avec GOOGLE_KEY / OPENAGENDA_KEY /
-   OPENWEATHER_KEY configurées), elles remplacent automatiquement les
-   données de démonstration ci-dessous. Aucune donnée démo n'est jamais
-   affichée comme "vérifiée" à l'utilisateur — voir DEMO_MODE.
-   ============================================================ */
+const app = document.querySelector('#app');
+const APP_BUILD = '20.3-d-coach-vivant';
+// Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
+// correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
+// vit jamais ici.
+const VAPID_PUBLIC_KEY='BDV_C0Bk-svwZf6nDMrcnGEIFhaPR76rxiIbjo55u5atHGxzP5HLsdu_OLe2KiaEBi0B6TT3U3xl5Hs2qHWZlOo';
 
-const LOCAL_API = '/api';
-const PROD_API = 'https://dolcia.vercel.app/api';
+const IMAGES = {
+  hero:'/assets/hero-le-touquet.png',
+  couple:'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1000&q=85',
+  family:'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1000&q=85',
+  friends:'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1000&q=85',
+  solo:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1000&q=85',
+  slow:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=85',
+  culture:'https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=1000&q=85',
+  food:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1000&q=85',
+  outside:'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=85',
+  night:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1000&q=85',
+  active:'https://images.unsplash.com/photo-1530137073520-4ea6e2f10a48?auto=format&fit=crop&w=1000&q=85',
+  fallback:'https://images.unsplash.com/photo-1499696010180-025ef6e1a8f9?auto=format&fit=crop&w=1000&q=85'
+};
+
+const FLOW = [
+  {key:'duration', eyebrow:'Le moment de la journée', title:'Quand et combien de temps êtes-vous disponible ?', sub:'Dolcia cherchera uniquement des expériences compatibles avec ce créneau.', options:[
+    ['2h','Environ 2 heures','Un moment court, à l’heure de votre choix',IMAGES.food],['morning','La matinée','Du petit-déjeuner jusqu’à midi',IMAGES.outside],['afternoon','L’après-midi','De midi jusqu’en fin de journée',IMAGES.slow],['afternoon_evening','L’après-midi + la soirée','Une seule composition, de l’après-midi jusqu’à la nuit',IMAGES.night],['evening','La soirée','À partir de 18 heures',IMAGES.night],['day','La journée complète','Du matin au soir',IMAGES.family],['stay','Plusieurs jours','Hébergement et programme jour par jour',IMAGES.culture]
+  ]},
+  {key:'who', eyebrow:'Le contexte', title:'Avec qui partagez-vous ce moment ?', sub:'Dolcia adapte ensuite les lieux et le rythme aux personnes présentes.', options:[
+    ['couple','En amoureux','Une parenthèse complice',IMAGES.couple],['family','En famille','Pensé pour petits et grands',IMAGES.family],['friends','Entre amis','Des souvenirs à plusieurs',IMAGES.friends],['colleagues','Entre collègues','Sortir du cadre ensemble',IMAGES.friends],['solo','Pour moi','Suivre ses propres envies',IMAGES.solo]
+  ]},
+  {key:'vibes', eyebrow:'Votre humeur ou votre envie', title:'Qu’est-ce qui vous ferait vraiment du bien maintenant ?', sub:'Choisissez tout ce qui vous ressemble à cet instant. Dolcia fera la différence entre vous détendre, bien manger, bouger, découvrir ou vibrer.', multi:true, options:[
+    ['play','Rire & se défouler','Jeux, parcs, bowling, karting, laser game, escape game',IMAGES.active],
+    ['breathe','Prendre l’air','Plage, balade, animaux, vélo, nautisme et aventure',IMAGES.outside],
+    ['create','Voir, apprendre & créer','Ateliers, spectacles, cinéma, musées et visites guidées',IMAGES.culture],
+    ['taste','Bien manger','Une vraie table, un brunch, un goûter ou une dégustation',IMAGES.food],
+    ['recharge','Me faire du bien','Spa, massage, thalasso, yoga et parenthèse calme',IMAGES.slow],
+    ['vibrate','Vibrer ensemble','Concert, fête, spectacle, casino ou ambiance nocturne',IMAGES.night]
+  ]},
+  {key:'budget', eyebrow:'Le budget', title:'Votre enveloppe pour ce moment', sub:'Le montant s’adapte automatiquement à la durée choisie.', options:[]}
+];
+
+const DESTINATIONS = {
+  touquet:{name:'Le Touquet-Paris-Plage',lat:50.5214,lng:1.5912,radius:12000},
+  opale:{name:'Côte d’Opale',lat:50.7275,lng:1.6063,radius:52000},
+  lille:{name:'Lille',lat:50.6292,lng:3.0573,radius:22000},
+  paris:{name:'Paris',lat:48.8566,lng:2.3522,radius:25000},
+  lyon:{name:'Lyon',lat:45.764,lng:4.8357,radius:24000},
+  bordeaux:{name:'Bordeaux',lat:44.8378,lng:-0.5792,radius:26000},
+  marseille:{name:'Marseille',lat:43.2965,lng:5.3698,radius:30000}
+};
 
 const state = {
-  city: { name: 'Le Touquet-Paris-Plage', lat: 50.5214, lng: 1.5912 },
-  brief: { text: '', when: null, who: null, budget: null },
-  understood: {},
-  items: [],
-  animeItems: [],
-  pepitesItems: [],
-  agenda: JSON.parse(localStorage.getItem('dolcia_agenda') || '[]'),
-  favs: JSON.parse(localStorage.getItem('dolcia_favs') || '[]'),
-  budgetTotal: 120,
-  budgetSpent: 0,
-  diagnostics: [],
-  currentDepth: 'explore',
-  current: null,
-  DEMO_MODE: false,
-  filters: { maxDist:15, openNow:false, walkable:false, freeOnly:false, kidsOk:false, sort:'pertinence' }
+  view:'home', step:0, dateMode:'today', month:new Date(), dateStart:new Date(), dateEnd:new Date(),
+  location:{name:'Le Touquet-Paris-Plage',lat:50.5214,lng:1.5912}, answers:{vibes:[]}, items:[], allItems:[], program:[], alternatives:[], majorMoments:[], majorChoice:null, broadcastVenues:[], weather:null, radius:12000,
+  agenda:JSON.parse(localStorage.getItem('dolcia_agenda_v2')||'[]'),
+  favorites:JSON.parse(localStorage.getItem('dolcia_favorites_v2')||'[]'),
+  feedback:JSON.parse(localStorage.getItem('dolcia_feedback_v2')||'{}'),
+  feedbackContext:JSON.parse(localStorage.getItem('dolcia_feedback_context_v1')||'{}'),
+  experienceFeelings:JSON.parse(localStorage.getItem('dolcia_experience_feelings_v1')||'{}'),
+  experienceTags:JSON.parse(localStorage.getItem('dolcia_experience_tags_v1')||'{}'),
+  experienceMemories:JSON.parse(localStorage.getItem('dolcia_experience_memories_v1')||'{}'),
+  tasteProfile:JSON.parse(localStorage.getItem('dolcia_taste_profile_v2')||'{}')
 };
+state.budgetPlan=JSON.parse(localStorage.getItem('dolcia_budget_plan_v1')||'{"amount":null,"margin":0,"includesStay":true,"includesMeals":true,"includesTransport":false}');
+state.groupParticipants=JSON.parse(localStorage.getItem('dolcia_group_participants_v1')||'[{"id":"me","name":"Moi","role":"organizer","kind":"account"}]');
+state.circleProfiles=JSON.parse(localStorage.getItem('dolcia_circle_profiles_v1')||'[]');
+state.ownerSensitivity=JSON.parse(localStorage.getItem('dolcia_owner_sensitivity_v1')||'{}');
+if(!state.circleProfiles.some(person=>person.id==='me'))state.circleProfiles.unshift({id:'me',name:'Moi',kind:'account',relationship:'Mon profil',...state.ownerSensitivity});
+state.groupParticipants=state.groupParticipants.map(person=>({...person,selected:person.selected!==false}));
+state.agendaProposals=JSON.parse(localStorage.getItem('dolcia_agenda_proposals_v1')||'[]');
+state.flashOffers=[];
+state.flashAlertsEnabled=Boolean(localStorage.getItem('dolcia_flash_alerts_endpoint'));
+state.reservations=JSON.parse(localStorage.getItem('dolcia_reservations_v1')||'[]');
+state.passWallet=JSON.parse(localStorage.getItem('dolcia_pass_wallet_v1')||'{"status":"inactive","title":"","holder":"","rights":[],"privileges":[],"updatedAt":null}');
+state.animateHistory=JSON.parse(localStorage.getItem('dolcia_animate_history_v1')||'[]');
 
-const $ = id => document.getElementById(id);
-const screens = ['splash','moodPick','brief','clarify','loading','results'];
-function showScreen(id){ screens.forEach(s => $(s)?.classList.toggle('active', s===id)); updateDChatVisibility(id); }
-function saveAgenda(){ localStorage.setItem('dolcia_agenda', JSON.stringify(state.agenda)); }
-function saveFavs(){ localStorage.setItem('dolcia_favs', JSON.stringify(state.favs)); }
+const esc = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+const iso = d => {const date=new Date(d);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`};
+const sameDay = (a,b) => a&&b&&a.toDateString()===b.toDateString();
+const save = () => {localStorage.setItem('dolcia_agenda_v2',JSON.stringify(state.agenda));localStorage.setItem('dolcia_favorites_v2',JSON.stringify(state.favorites));localStorage.setItem('dolcia_feedback_v2',JSON.stringify(state.feedback));localStorage.setItem('dolcia_feedback_context_v1',JSON.stringify(state.feedbackContext));localStorage.setItem('dolcia_experience_feelings_v1',JSON.stringify(state.experienceFeelings));localStorage.setItem('dolcia_experience_tags_v1',JSON.stringify(state.experienceTags));localStorage.setItem('dolcia_experience_memories_v1',JSON.stringify(state.experienceMemories));localStorage.setItem('dolcia_taste_profile_v2',JSON.stringify(state.tasteProfile));localStorage.setItem('dolcia_group_participants_v1',JSON.stringify(state.groupParticipants));localStorage.setItem('dolcia_circle_profiles_v1',JSON.stringify(state.circleProfiles));localStorage.setItem('dolcia_owner_sensitivity_v1',JSON.stringify(state.ownerSensitivity));localStorage.setItem('dolcia_agenda_proposals_v1',JSON.stringify(state.agendaProposals));localStorage.setItem('dolcia_budget_plan_v1',JSON.stringify(state.budgetPlan));localStorage.setItem('dolcia_reservations_v1',JSON.stringify(state.reservations));localStorage.setItem('dolcia_pass_wallet_v1',JSON.stringify(state.passWallet));localStorage.setItem('dolcia_animate_history_v1',JSON.stringify(state.animateHistory))};
 
-/* ---------------- Constellation : ce que Dolcia apprend, visible et contestable ----------------
-   Conforme au Product Book (section 10/11) : la mémoire distingue le goût durable de l'envie
-   ponctuelle, reste visible à l'utilisateur, et peut toujours être corrigée ou effacée. Chaque
-   "j'aime" renforce silencieusement le classement (catégories préférées remontent), sans jamais
-   masquer le reste du catalogue. */
-function toggleLike(id){
-  const wasLiked = state.favs.includes(id);
-  if (wasLiked) state.favs = state.favs.filter(k=>k!==id);
-  else state.favs.push(id);
-  saveFavs();
-  document.querySelectorAll(`[data-like="${id}"]`).forEach(btn=>{
-    btn.classList.toggle('liked', !wasLiked);
-    btn.querySelector('svg').setAttribute('fill', !wasLiked ? 'currentColor' : 'none');
-  });
-  if (!wasLiked) flash('Ajouté à vos coups de cœur — Dolcia s\'en souvient');
+function shell(content, active='discover'){
+  return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="openAccount()">VD</button></div></header>${content}${nav(active)}</main>`;
 }
-function likedCategoryCounts(){
-  const counts = {};
-  state.favs.forEach(id=>{
-    const item = findItem(id);
-    if (item && item.category) counts[item.category] = (counts[item.category]||0) + 1;
-  });
-  return counts;
-}
-function topLikedCategories(){
-  const counts = likedCategoryCounts();
-  const labels = {food:'Gastronomie',nature:'Nature',culture:'Culture',wellness:'Bien-être',sport:'Sport',festive:'Sortir',free:'Gratuit'};
-  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>labels[k]||k);
-}
-function renderConstellation(){
-  const el = $('constellationSection');
-  if (!el) return;
-  const likedItems = state.favs.map(id=>findItem(id)).filter(Boolean);
-  const cats = topLikedCategories();
-  if (!likedItems.length){
-    el.innerHTML = `<div class="empty-state"><h3>Aucun coup de cœur pour l'instant.</h3><p>Touchez le cœur sur une activité qui vous plaît — Dolcia s'en souviendra pour mieux vous proposer la prochaine fois.</p></div>`;
-    return;
-  }
-  el.innerHTML = `
-    ${cats.length ? `<div class="constellation-tags">${cats.map(c=>`<span>${c}</span>`).join('')}</div>` : ''}
-    <div class="constellation-list">${likedItems.map(x=>`
-      <div class="constellation-item">
-        <div class="constellation-thumb"></div>
-        <div><h4>${x.title}</h4><p>${x.source||'Programme Dolcia'}</p></div>
-        <button class="agenda-remove" data-unlike="${x.id}">Retirer</button>
-      </div>`).join('')}</div>
-    <p class="constellation-note">Cette mémoire est à vous : retirez ce qui ne correspond plus, elle s'ajustera aussitôt.</p>
-  `;
-}
-function flash(msg){
-  document.querySelector('.toast')?.remove();
-  const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
-  document.body.appendChild(t); setTimeout(()=>t.remove(),2400);
-}
+function nav(active){return `<nav class="bottom-nav essential-nav" aria-label="Navigation principale"><button class="nav-item ${active==='discover'?'active':''}" onclick="home()"><span>⌁</span>Explorer</button><button class="nav-item signature ${active==='compose'||active==='agenda'||active==='pass'?'active':''}" onclick="openMyMoment()"><b>D<i>✦</i></b><span>Mon moment${state.agenda.length?` · ${state.agenda.length}`:''}</span></button><button class="nav-item ${active==='services'?'active':''}" onclick="openMeHub()"><span>◯</span>Moi</button></nav>`}
+function openMyMoment(){openDCoach()}
+function openMeHub(){document.querySelector('#meHub')?.remove();const hasPass=state.passWallet.status==='active'||state.reservations.some(r=>r.status!=='cancelled'),amount=state.budgetPlan.amount;document.body.insertAdjacentHTML('beforeend',`<div class="modal me-hub" id="meHub"><article><button class="close" onclick="document.querySelector('#meHub')?.remove()">×</button><span class="kicker">Tout ce qui vous appartient</span><h2>Moi.</h2><p>Trois accès seulement. Dolcia conserve toute la richesse derrière eux.</p><div class="me-hub-grid"><button onclick="document.querySelector('#meHub')?.remove();openAccount()"><span>01</span><b>Mon profil & mon cercle</b><small>Mes proches, nos goûts et notre constellation</small></button><button onclick="document.querySelector('#meHub')?.remove();openBudgetEditor()"><span>02</span><b>Budget & tout compris</b><small>${amount==null?'Définir une enveloppe pour le groupe':`${amount.toLocaleString('fr-FR')} € prévus pour ce moment`}</small></button>${hasPass?`<button onclick="document.querySelector('#meHub')?.remove();renderPass()"><span>03</span><b>Mon Pass Dolcia</b><small>Prestations réservées et déjà comprises</small></button>`:`<button onclick="document.querySelector('#meHub')?.remove();renderAgenda()"><span>03</span><b>Mes moments</b><small>Programme, réservations et propositions du groupe</small></button>`}</div><aside class="inclusive-whisper"><b>Dolcia Tout Compris</b><span>Dans les destinations partenaires, repas, activités et avantages rejoindront automatiquement le Pass — jamais avant d’être réellement disponibles.</span></aside></article></div>`)}
+function openComposition(){if(state.program.length)return renderSurprise();startCompose()}
 
-/* ---------------- Brief vivant : compréhension légère du texte libre ----------------
-   Ceci est un analyseur local simple (mots-clés) qui simule la compréhension de L'Éclat
-   pendant la saisie. En production, cette étape est confiée au moteur IA serveur
-   décrit dans le Product Book (section 39 / 28 : classification structurée, jamais
-   d'invention de fait). */
-const KEYWORDS = {
-  who: { couple:['couple','deux','amoureux'], family:['famille','enfant','ado','fille','fils'], friends:['amis','copains','bande'], solo:['seul','solo','moi-même'] },
-  when: { now:['maintenant','tout de suite'], tonight:['ce soir','soirée'], tomorrow:['demain'], weekend:['week-end','weekend'], stay:['séjour','jours','semaine'] },
-  vibe: { food:['manger','restaurant','gastro','dîner','déjeuner'], nature:['plage','balade','nature','marche','dune'], culture:['expo','musée','concert','théâtre'], wellness:['spa','détente','calme','bien-être'], sport:['sport','vélo','actif'], festive:['sortir','bar','soirée','fête'], free:['gratuit','sans payer'] },
-  budget: { free:['gratuit','sans budget','0 €','0€'], light:['petit budget','pas cher'], comfortable:['budget confortable'], open:['sans limite','peu importe le prix'] }
-};
-function analyzeBrief(text){
-  const low = text.toLowerCase();
-  const found = {};
-  for (const dim in KEYWORDS){
-    for (const key in KEYWORDS[dim]){
-      if (KEYWORDS[dim][key].some(w => low.includes(w))){ found[dim] = key; break; }
-    }
-  }
-  return found;
-}
-function renderUnderstood(){
-  const parts = [];
-  if (state.understood.who) parts.push({couple:'en couple',family:'en famille',friends:'entre amis',solo:'en solo'}[state.understood.who]);
-  if (state.understood.when) parts.push({now:'maintenant',tonight:'ce soir',tomorrow:'demain',weekend:'ce week-end',stay:'pour un séjour'}[state.understood.when]);
-  if (state.understood.vibe) parts.push('envie de ' + {food:'gastronomie',nature:'nature',culture:'culture',wellness:'bien-être',sport:'sport',festive:'sortir',free:'gratuit'}[state.understood.vibe]);
-  if (state.brief.budget) parts.push('budget ' + {free:'0 €',light:'léger',comfortable:'confortable',open:'sans limite'}[state.brief.budget]);
-  $('understoodLine').textContent = parts.length ? ('Compris : ' + parts.join(' · ')) : '';
-}
-
-/* ---------------------------------------------------------------
-   MOTEUR DE QUESTIONS DÉCISIVES
-   Principe non négociable du Product Book (section 39) : L'Éclat pose
-   au maximum trois questions, uniquement celles qui changent réellement
-   la proposition, jamais une déjà répondue. Si D devine au lieu de
-   demander, les propositions sont fausses et l'appli ne sert à rien —
-   donc ce moteur bloque le passage à "Explorer/Programme/Anime" tant
-   que les dimensions décisives manquent, sauf refus explicite (Passer).
-   --------------------------------------------------------------- */
-const CLARIFY_QUESTIONS = [
-  {
-    id:'who', dim:'who',
-    condition: () => !state.understood.who,
-    text:'Vous êtes combien, et avec qui ?',
-    options:[['couple','En couple'],['family','En famille, avec enfants'],['friends','Entre amis'],['solo','Solo']]
-  },
-  {
-    id:'vibe', dim:'vibe',
-    condition: () => !state.understood.vibe,
-    text:'Là, tout de suite : retrouver de l\'énergie, ou décrocher complètement ?',
-    options:[['festive','Retrouver de l\'énergie'],['wellness','Décrocher, calme'],['nature','Prendre l\'air'],['food','Se faire plaisir à table']]
-  },
-  {
-    id:'budget', dim:'budget',
-    condition: () => !state.brief.budget,
-    text:'Quel budget pour ce moment, pour ne jamais le dépasser ?',
-    options:[['free','0 €'],['light','Léger'],['comfortable','Confortable'],['open','Sans limite']]
-  },
-  {
-    id:'when', dim:'when',
-    condition: () => !state.understood.when,
-    text:'C\'est pour quand ?',
-    options:[['now','Maintenant'],['tonight','Ce soir'],['tomorrow','Demain'],['weekend','Ce week-end']]
-  }
-];
-
-function buildClarifyQueue(){
-  // Jamais plus de trois questions — on garde les plus décisives en premier (qui > vibe > budget > quand).
-  state.clarifyQueue = CLARIFY_QUESTIONS.filter(q => q.condition()).slice(0,3);
-  state.clarifyIndex = 0;
-}
-function renderClarifyStep(){
-  const total = state.clarifyQueue.length;
-  const q = state.clarifyQueue[state.clarifyIndex];
-  if (!q){ loadExperience(); return; }
-  $('clarifyQuestion').textContent = q.text;
-  $('clarifyProgress').innerHTML = Array.from({length: total}).map((_,i)=>{
-    const cls = i < state.clarifyIndex ? 'done' : (i === state.clarifyIndex ? 'current' : '');
-    return `<span class="${cls}"></span>`;
-  }).join('');
-  $('clarifyOptions').innerHTML = q.options.map(([val,label])=>
-    `<button class="chip-big" data-clarify-val="${val}">${label}</button>`
-  ).join('');
-}
-function answerClarify(val){
-  const q = state.clarifyQueue[state.clarifyIndex];
-  if (!q) return;
-  if (q.dim === 'budget') state.brief.budget = val;
-  else state.understood[q.dim] = val;
-  renderUnderstood();
-  advanceClarify();
-}
-function skipClarify(){ advanceClarify(); }
-function skipAllClarify(){ state.clarifyIndex = state.clarifyQueue.length; loadExperience(); }
-function advanceClarify(){
-  state.clarifyIndex++;
-  if (state.clarifyIndex >= state.clarifyQueue.length) loadExperience();
-  else { showScreen('clarify'); renderClarifyStep(); }
-}
-function startClarifyOrLoad(){
-  buildClarifyQueue();
-  if (state.clarifyQueue.length){ showScreen('clarify'); renderClarifyStep(); }
-  else loadExperience();
-}
-
-/* ---------------- Navigation ---------------- */
-function goToMoodPick(){ showScreen('moodPick'); }
-function goToBrief(){ showScreen('brief'); $('briefText').focus(); }
-function backFromBrief(){ showScreen('moodPick'); }
-function pickMood(vibe){
-  if (vibe === 'surprise'){ loadExperience(); return; }
-  state.understood.vibe = vibe;
-  startClarifyOrLoad();
-}
-
-function initChips(){
-  document.querySelectorAll('.chip-row').forEach(row=>{
-    row.addEventListener('click', e=>{
-      const chip = e.target.closest('.chip'); if(!chip) return;
-      const group = row.dataset.group;
-      row.querySelectorAll('.chip').forEach(c=>c.classList.toggle('selected', c===chip && !c.classList.contains('selected')));
-      const selected = row.querySelector('.chip.selected');
-      state.brief[group] = selected ? selected.dataset.val : null;
-      if (group !== 'budget') state.understood[group] = state.brief[group];
-      renderUnderstood();
-    });
-  });
-}
-
-function toggleRefine(){ $('refinePanel').classList.toggle('hidden'); }
-
-/* ---------------- API + fallback démo ---------------- */
-function apiBases(){ return [LOCAL_API, PROD_API]; }
-async function fetchJson(path){
-  let lastErr = null;
-  for (const base of apiBases()){
-    try{
-      const r = await fetch(base+path);
-      const text = await r.text();
-      let d = {}; try{ d = JSON.parse(text); }catch{ d = { raw:text }; }
-      if(!r.ok) throw new Error(`${base}${path} -> ${r.status} ${d.error||''}`);
-      state.diagnostics.push({ok:true,url:base+path,count:d.results?.length||d.events?.length||0});
-      return d;
-    }catch(e){ lastErr = e; state.diagnostics.push({ok:false,url:base+path,error:e.message}); }
-  }
-  throw lastErr || new Error('API indisponible');
-}
-
-/* Jeu de données de démonstration — structure identique aux vraies réponses,
-   jamais présentée comme vérifiée dans l'UI (voir demo-notice + badge "à vérifier"). */
-/* Photos d'ambiance — exactement le même set Unsplash que ton vrai app.js en
-   production (Product Book, archive v13). Aucune invention : ce sont les
-   visuels que ton appli réelle utilise déjà pour habiller les catégories. */
-const AMBIANCE = {
-  start:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-  nature:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
-  food:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=80',
-  culture:'https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=1200&q=80',
-  wellness:'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80',
-  festive:'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?auto=format&fit=crop&w=1200&q=80',
-  sport:'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=1200&q=80',
-  family:'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=crop&w=1200&q=80',
-  romantic:'https://images.unsplash.com/photo-1529634597503-139d3726fed5?auto=format&fit=crop&w=1200&q=80',
-  free:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80',
-  event:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80',
-  craft:'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=1200&q=80'
-};
-function ambiancePhoto(x){
-  return AMBIANCE[x.category] || AMBIANCE[x.icon] || AMBIANCE.start;
-}
-
-function demoExploreItems(){
-  const vibe = state.understood.vibe || 'food';
-  const base = [
-    { id:'d1', kind:'place', title:'Table face à la dune', category:'food', desc:'Cuisine de la mer, terrasse abritée, vue sur les dunes.', rating:4.6, reviews:212, priceN:3, dist:1.2, open:true, forKids:true, isNew:false, source:'Exemple — Google Places', confidence:'check' },
-    { id:'d2', kind:'place', title:'Balade des trois estuaires', category:'nature', desc:'Sentier côtier entre plage et forêt domaniale.', rating:4.8, reviews:340, priceN:0, free:true, dist:2.4, open:true, forKids:true, isNew:false, source:'Exemple — Google Places', confidence:'check' },
-    { id:'d3', kind:'event', title:'Marché artisanal du soir', category:'culture', desc:'Créateurs locaux, musique live, en centre-ville.', rating:null, reviews:0, priceN:0, free:true, dist:0.6, open:true, forKids:true, isNew:true, date:'ce soir 18h30', source:'Exemple — OpenAgenda', confidence:'check' },
-    { id:'d4', kind:'place', title:'Spa face à la mer', category:'wellness', desc:'Piscine chauffée, hammam, soins sur réservation.', rating:4.7, reviews:180, priceN:3, dist:0.8, open:true, forKids:false, isNew:false, source:'Exemple — Google Places', confidence:'check' },
-    { id:'d5', kind:'place', title:'Escape game des corsaires', category:'sport', desc:'Énigmes en équipe, 6 joueurs max, 60 minutes.', rating:4.5, reviews:96, priceN:2, dist:1.6, open:true, forKids:true, isNew:true, source:'Exemple — Google Places', confidence:'check' },
-    { id:'d6', kind:'event', title:'Concert acoustique de plage', category:'festive', desc:'Scène ouverte au coucher du soleil.', rating:null, reviews:0, priceN:0, free:true, dist:1.9, open:true, forKids:false, isNew:false, date:'ce soir 20h', source:'Exemple — OpenAgenda', confidence:'check' },
-  ];
-  return base.sort((a,b)=> (a.category===vibe?-1:0) - (b.category===vibe?-1:0));
-}
-/* Pépites locales — le pilier 2 de l'ADN Dolcia : des activités ultra-niches,
-   festives, populaires et peu chères, souvent hors de la ville de séjour et
-   introuvables sans être du coin (affiche locale, bouche-à-oreille). Quand
-   l'activité est un atelier enfant, Dolcia propose systématiquement un duo :
-   une découverte du village pour les grands pendant ce temps-là. */
-function demoPepitesItems(){
-  return [
-    {
-      id:'p1', title:'Atelier vitraux du Vieux Moulin', icon:'craft',
-      desc:'Un maître-verrier de village ouvre son atelier deux après-midi par semaine — connu uniquement par une affiche à l\'entrée du bourg.',
-      distanceKm:14, price:'8 € l\'enfant', forKids:true,
-      pairing:'Pendant l\'atelier (1h30), les grands peuvent flâner au marché couvert du village à 4 minutes à pied — brocante le même jour.'
-    },
-    {
-      id:'p2', title:'Après-midi cirque en plein champ', icon:'circus',
-      desc:'Troupe locale, initiation jonglage et fil bas, ambiance bon enfant, entrée à prix libre — repérée sur le panneau d\'affichage de la mairie.',
-      distanceKm:19, price:'Prix libre', forKids:true,
-      pairing:'À 6 minutes, une chapelle romane ouverte au public avec un banc à l\'ombre — parfait pour les grands-parents pendant que les enfants s\'essaient au trapèze.'
-    },
-    {
-      id:'p3', title:'Fête de la moule-frites du quartier', icon:'party',
-      desc:'Kermesse populaire annuelle, musique locale, petite restauration à prix serré — jamais référencée nulle part, seulement sur les lampadaires du quartier.',
-      distanceKm:0.8, price:'À partir de 9 €', forKids:false,
-      pairing:null
-    },
-    {
-      id:'p4', title:'Atelier poterie du potier de Camiers', icon:'craft',
-      desc:'Un artisan potier ouvre son four à bois un samedi sur deux, initiation tournage pour petits et grands — connu du village, jamais mis en avant ailleurs.',
-      distanceKm:11, price:'12 € par personne', forKids:true,
-      pairing:'À deux pas, un sentier de découverte du village fléché par la mairie — 25 minutes de balade tranquille pour les grands pendant l\'atelier.'
-    }
-  ];
-}
-
-/* ---------------------------------------------------------------
-   GÉNÉRATEUR PROCÉDURAL D'ANIMATIONS
-   Plutôt que d'écrire des milliers de scripts à la main (ce qui serait
-   du remplissage, pas de la qualité), on combine des briques réelles :
-   ouverture, défi, format d'équipe, final — chacune adaptée au nombre
-   de personnes, aux âges présents et à l'énergie souhaitée. Le nombre
-   de combinaisons distinctes dépasse largement le millier, et chaque
-   résultat reste cohérent et jouable, jamais générique.
-   --------------------------------------------------------------- */
-const ANIM_OPENERS = {
-  vive:['On se rassemble, on secoue les bras, l\'énergie monte !','Tout le monde debout, cercle serré, c\'est parti pour du costaud !','On saute trois fois sur place — allez, plus fort que ça !'],
-  douce:['On se pose en cercle, on respire un grand coup ensemble.','Installez-vous confortablement, on commence en douceur.','On prend un instant pour se retrouver, tranquillement.'],
-  calme:['On ferme les yeux une seconde, on écoute le silence.','Chacun trouve sa place, sans bruit, sans pression.']
-};
-const ANIM_CHALLENGES = {
-  small:[ // 2-4 personnes
-    { title:'Le duel amical', instr:'Face à face, un défi simple à deux : le premier qui trouve trois objets d\'une couleur donnée a gagné.', seconds:90 },
-    { title:'Le mime silencieux', instr:'Chacun mime un animal, les autres devinent sans parler.', seconds:60 }
-  ],
-  medium:[ // 5-8 personnes
-    { title:'Le relais en équipe', instr:'Deux équipes, un parcours simple à réaliser le plus vite possible sans se presser dangereusement.', seconds:120 },
-    { title:'La chaîne des prénoms', instr:'Chacun répète les prénoms précédents puis ajoute le sien, en rythme.', seconds:75 }
-  ],
-  large:[ // 9+
-    { title:'La grande vague', instr:'Formez une ligne, faites une vague humaine comme au stade, trois fois de suite.', seconds:60 },
-    { title:'Le tournoi éclair', instr:'Répartissez-vous en quatre équipes pour un mini-tournoi de trois manches très courtes.', seconds:180 }
-  ]
-};
-const ANIM_KID_SIDEBAR = [
-  'Pendant ce temps, les plus petits peuvent dessiner leur moment préféré de la journée.',
-  'Les enfants peuvent chercher cinq trésors naturels autour d\'eux pendant que les grands jouent.',
-  'Une petite pause goûter pour les enfants pendant que les adultes terminent la manche.'
-];
-const ANIM_CLOSERS = {
-  vive:['Applaudissements pour tout le monde, gagnants et perdants !','On crie tous ensemble "Bravo l\'équipe !" — allez, plus fort !'],
-  douce:['On se remercie chacun d\'un sourire, c\'était un bon moment.','Un dernier applaudissement tranquille pour clore en douceur.'],
-  calme:['On respire une dernière fois ensemble, satisfaits.','Un moment de calme partagé, rien à ajouter.']
-};
-
-function groupSizeKey(peopleCount){
-  if (peopleCount <= 4) return 'small';
-  if (peopleCount <= 8) return 'medium';
-  return 'large';
-}
-function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-function generateProceduralActivity(){
-  const energy = state.understood.vibe === 'festive' ? 'vive' : (state.understood.vibe === 'wellness' ? 'calme' : 'douce');
-  const peopleCount = state.understood.who === 'family' ? 6 : (state.understood.who === 'friends' ? 7 : (state.understood.who === 'solo' ? 1 : 2));
-  const sizeKey = groupSizeKey(peopleCount);
-  const hasKids = state.understood.who === 'family';
-
-  const opener = { title:'On se rassemble', instruction: pickRandom(ANIM_OPENERS[energy]), seconds:25 };
-  const challenge1 = pickRandom(ANIM_CHALLENGES[sizeKey]);
-  const challenge2 = pickRandom(ANIM_CHALLENGES[sizeKey].filter(c=>c.title!==challenge1.title) || ANIM_CHALLENGES[sizeKey]);
-  const closer = { title:'On célèbre', instruction: pickRandom(ANIM_CLOSERS[energy]), seconds:20 };
-
-  const steps = [opener,
-    { title: challenge1.title, instruction: challenge1.instr + (hasKids ? ' ' + pickRandom(ANIM_KID_SIDEBAR) : ''), seconds: challenge1.seconds },
-    { title: challenge2.title, instruction: challenge2.instr, seconds: challenge2.seconds },
-    closer
-  ];
-
+function dCoachContext(){
+  const people=currentGroupSize(),budget=state.budgetPlan.amount;
+  const when=state.answers.duration?({
+    '2h':'Environ 2 heures',morning:'La matinée',afternoon:'L’après-midi',
+    afternoon_evening:'Après-midi + soirée',evening:'La soirée',
+    day:'La journée',stay:'Le séjour'
+  }[state.answers.duration]||'Votre moment'):'Moment à préciser';
+  const who=state.answers.who?({solo:'Pour moi',couple:'À deux',family:'En famille',friends:'Entre amis',colleagues:'Entre collègues'}[state.answers.who]||`${people} personnes`):`${people} personne${people>1?'s':''}`;
   return {
-    id: 'proc-' + Date.now(),
-    title: 'Animation composée pour votre groupe',
-    desc: `Générée pour ${peopleCount === 1 ? 'vous' : peopleCount + ' personnes environ'}, énergie ${energy}${hasKids ? ', avec les enfants' : ''}.`,
-    energy, category:'festive', steps
+    when,
+    who,
+    budget:budget==null?'Budget encore libre':`${budget.toLocaleString('fr-FR')} € pour le groupe`,
+    hasProgram:Boolean(state.program.length||state.agenda.length),
+    sentence:state.answers.momentSentence||''
   };
 }
+function openDCoach(){
+  stopLiveConversation();
+  document.querySelector('#dCoach')?.remove();
+  const context=dCoachContext();
+  const title=context.hasProgram?'Je garde le fil. Que voulez-vous ajuster ?':'Que voulez-vous que je prenne en charge ?';
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal d-coach" id="dCoach">
+    <div class="d-coach-scene" aria-hidden="true"></div>
+    <article>
+      <button class="close" onclick="closeDCoach()" aria-label="Fermer">×</button>
+      <header><span class="eclat-d large">D<i>✦</i></span><div><small>Dolcia · coach & animateur</small><strong>Je connais déjà votre moment.</strong></div></header>
+      <div class="d-coach-known"><span>${esc(context.when)}</span><span>${esc(context.who)}</span><span>${esc(context.budget)}</span></div>
+      <section class="d-coach-dialogue">
+        <p class="d-coach-voice">« ${context.sentence?`J’ai bien retenu : ${esc(context.sentence)}`:'Dites-moi simplement ce dont vous avez besoin. Je ne vous ferai pas recommencer.'} »</p>
+        <h2>${title}</h2>
+        <p class="d-coach-hint">Cliquez un choix ci-dessous, ou dites-le-moi directement — les deux marchent aussi bien, à vous de voir.</p>
+        <div class="d-coach-actions">
+          <button onclick="dCoachChoose('choose')"><b>01</b><span><strong>Choisissez pour moi</strong><small>Des idées justes ou un programme complet</small></span><i>→</i></button>
+          <button onclick="dCoachChoose('animate')"><b>02</b><span><strong>Animez ce moment</strong><small>Jeux, défis, détente ou séance guidée</small></span><i>→</i></button>
+          <button onclick="dCoachChoose('adjust')"><b>03</b><span><strong>Réajustez mon rythme</strong><small>Plus doux, plus vivant, plus proche ou moins cher</small></span><i>→</i></button>
+          <button onclick="dCoachChoose('budget')"><b>04</b><span><strong>Protégez mon budget</strong><small>Équilibrer sans appauvrir l’expérience</small></span><i>→</i></button>
+        </div>
+        <div class="d-coach-free">
+          <input id="dCoachInput" value="${esc(context.sentence)}" placeholder="Ex. Les enfants s’ennuient, animez-nous 30 minutes…">
+          <button class="d-coach-send" onclick="askDCoach()">Confier à Dolcia</button>
+          <button class="d-coach-mic" onclick="startDCoachVoice()" aria-label="Parler à Dolcia"><span></span></button>
+        </div>
+        <button class="d-coach-live-voice" onclick="toggleLiveConversation('dcoach')" aria-pressed="false"><i></i><span>Parler en direct avec Dolcia</span></button>
+        <div class="d-coach-status" id="dCoachStatus" aria-live="polite"><i></i><span>Prête à écouter, par écrit ou à voix haute.</span></div>
+      </section>
+    </article>
+  </div>`);
+  setTimeout(()=>document.querySelector('#dCoachInput')?.focus(),180);
+}
+function closeDCoach(){stopLiveConversation();document.querySelector('#dCoach')?.remove()}
+function dCoachChoose(mode){
+  if(mode==='animate'){closeDCoach();return openDolciaAnimate()}
+  if(mode==='budget'){closeDCoach();return openBudgetEditor()}
+  if(mode==='adjust')return renderDCoachAdjustments();
+  closeDCoach();
+  if(state.program.length)return renderSurprise();
+  openEclatDialogue();
+}
+function renderDCoachAdjustments(){
+  const target=document.querySelector('.d-coach-dialogue');if(!target)return;
+  target.innerHTML=`<button class="d-coach-back" onclick="openDCoach()">← Revenir</button><p class="d-coach-voice">« Je change la couleur du moment, pas tout ce que vous m’avez déjà confié. »</p><h2>Quel réglage ferait vraiment la différence ?</h2><div class="d-coach-tuning">
+    <button onclick="applyDCoachAdjustment('soft')"><span>Respirer davantage</span><small>Un rythme plus doux, sans rendre le moment vide</small></button>
+    <button onclick="applyDCoachAdjustment('alive')"><span>Plus de vie</span><small>Un temps fort supplémentaire, sans tout transformer en sport</small></button>
+    <button onclick="applyDCoachAdjustment('near')"><span>Rester tout près</span><small>La destination d’abord ; une escapade seulement si elle le mérite</small></button>
+    <button onclick="applyDCoachAdjustment('budget')"><span>Dépenser plus justement</span><small>Alterner signatures, plaisirs simples et gratuit vérifié</small></button>
+    <button onclick="applyDCoachAdjustment('weather')"><span>Activer le plan B</span><small>Réorganiser selon la météo et les horaires fiables</small></button>
+    <button onclick="applyDCoachAdjustment('surprise')"><span>Un inattendu maîtrisé</span><small>Quelque chose que vous n’auriez pas pensé à chercher</small></button>
+  </div>`;
+}
+function dCoachAdjustmentSentence(kind){
+  return {
+    soft:'Je veux un rythme plus doux et respirable, avec une vraie variété.',
+    alive:'Je veux plus de vie et un temps fort, sans enchaîner uniquement des activités intenses.',
+    near:`Je veux rester dans ${state.location.name}. Ne sortir de la destination que pour une pépite exceptionnelle, rare et réellement pertinente.`,
+    budget:'Je veux mieux équilibrer mon budget : alternez plaisir signature, expériences simples et gratuit confirmé.',
+    weather:'Réorganisez selon la météo et gardez uniquement des horaires réellement compatibles.',
+    surprise:'Ajoutez un inattendu maîtrisé, cohérent avec le groupe, le moment et toutes nos contraintes.'
+  }[kind]||'Rééquilibrez ce moment sans perdre ce qui nous ressemble.';
+}
+async function applyDCoachAdjustment(kind){
+  const sentence=dCoachAdjustmentSentence(kind);
+  state.answers.momentSentence=[state.answers.momentSentence,sentence].filter(Boolean).join(' ');
+  if(kind==='near')state.radius=Math.min(state.radius,12000);
+  save();setDCoachStatus('Je rééquilibre le rythme, les distances et le budget…',true);
+  await new Promise(resolve=>setTimeout(resolve,420));
+  closeDCoach();
+  if(state.allItems.length)return refreshRecommendations();
+  compose();
+}
+function setDCoachStatus(message,active=false){
+  const status=document.querySelector('#dCoachStatus');if(!status)return;
+  status.classList.toggle('active',active);status.querySelector('span').textContent=message;
+}
+function askDCoach(){
+  const input=document.querySelector('#dCoachInput'),value=input?.value.trim();if(!value)return showToast('Dites-moi ce que vous voulez que Dolcia prenne en charge');
+  state.answers.momentSentence=value;save();
+  const text=plainText(value);
+  setDCoachStatus('Je comprends votre demande et je choisis la prochaine action utile…',true);
+  setTimeout(()=>{
+    if(/anime|jeu|occuper|defi|coach|séance|seance/.test(text)){closeDCoach();openDolciaAnimate()}
+    else if(/budget|moins cher|économ|econom|gratuit|dépens|depens/.test(text)){closeDCoach();openBudgetEditor()}
+    else if(/plus doux|plus vivant|plus proche|rééquilibr|reequilibr|plan b|météo|meteo/.test(text)){renderDCoachAdjustments()}
+    else {closeDCoach();state.program.length?refreshRecommendations():compose()}
+  },520);
+}
+function startDCoachVoice(){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition)return showToast('La voix n’est pas disponible sur ce navigateur. Vous pouvez écrire exactement la même chose.');
+  const recognition=new Recognition(),button=document.querySelector('.d-coach-mic');
+  recognition.lang='fr-FR';recognition.interimResults=true;
+  recognition.onstart=()=>{button?.classList.add('listening');setDCoachStatus('Je vous écoute. Parlez naturellement…',true)};
+  recognition.onresult=event=>{const transcript=Array.from(event.results).map(result=>result[0].transcript).join('');const input=document.querySelector('#dCoachInput');if(input)input.value=transcript};
+  recognition.onerror=()=>setDCoachStatus('Je n’ai pas bien entendu. Réessayez ou écrivez-moi.',false);
+  recognition.onend=()=>{button?.classList.remove('listening');const value=document.querySelector('#dCoachInput')?.value.trim();if(value)askDCoach();else setDCoachStatus('Prête à vous écouter.',false)};
+  recognition.start();
+}
 
-function demoAnimeItems(ctx){
-  const sets = {
-    pool: [{
-      id:'a1', title:'Parcours d\'eau parent-enfant',
-      desc:'Défis coopératifs doux, adaptés aux enfants sachant nager, surveillance adulte constante requise.',
-      energy:'douce',
-      steps:[
-        { title:'On se rassemble', instruction:'Tout le monde dans l\'eau, en cercle. On respire, on secoue les bras — c\'est parti pour un vrai moment d\'équipe.', seconds:20 },
-        { title:'Le pont flottant', instruction:'Par deux, formez un pont avec vos bras : un passe dessous en battant des pieds. On inverse après.', seconds:60 },
-        { title:'La ronde des bulles', instruction:'Tout le monde en cercle, une main sur l\'épaule du voisin. Inspirez fort, plongez trois secondes, on souffle les bulles ensemble !', seconds:45 },
-        { title:'Le grand final', instruction:'Applaudissements dans l\'eau, le plus fort possible ! Qui a fait le plus grand splash ?', seconds:20 }
-      ]
-    }],
-    beach: [
-      { id:'a2', title:'Chasse photo des dunes', desc:'Cinq indices à retrouver le long du sentier côtier, en équipe.', energy:'vive',
-        steps:[
-          { title:'Briefing d\'équipe', instruction:'Formez deux équipes. Chacune reçoit la même liste : un coquillage spiralé, une trace d\'oiseau, un oyat qui plie dans le vent, un bois flotté, et vous cinq en photo au sommet de la dune.', seconds:30 },
-          { title:'C\'est parti !', instruction:'Vous avez 8 minutes. Premier retour ici avec les 5 photos gagne le droit de choisir le prochain jeu.', seconds:480 },
-          { title:'On compte les points', instruction:'Chaque équipe montre ses photos. Un point par indice trouvé, deux points si la photo fait rire tout le monde.', seconds:60 }
-        ]
-      },
-      { id:'a3', title:'Olympiades de plage', desc:'Trois épreuves simples adaptées à l\'énergie du groupe.', energy:'vive',
-        steps:[
-          { title:'Échauffement', instruction:'Tout le monde debout, on s\'étire, on saute sur place dix fois. L\'énergie monte !', seconds:30 },
-          { title:'Épreuve 1 — Le relais crabe', instruction:'En équipe, traversez 15 mètres en marchant comme un crabe, à quatre pattes de côté. Le premier relais qui arrive marque le point.', seconds:90 },
-          { title:'Épreuve 2 — Le lancer de précision', instruction:'Un cercle est dessiné dans le sable. Chacun lance trois coquillages, le plus près du centre gagne.', seconds:120 },
-          { title:'Podium', instruction:'On applaudit tout le monde, vainqueurs et perdants. Photo de groupe pour immortaliser !', seconds:30 }
-        ]
+// Conversation voix-à-voix réelle, façon Speak : Dolcia commence à parler dès la première phrase
+// générée par le flux serveur, sans attendre la réponse complète — et peut être interrompue en
+// direct si la personne se remet à parler pendant qu'elle parle (barge-in). Le routage d'action
+// (choisir/animer/ajuster/budget) est évalué instantanément côté client sur ce que la personne
+// vient de dire, sans attendre le réseau. Séparé de startDCoachVoice/speakAnimateStep pour ne
+// jamais toucher la dictée simple ni la narration scriptée déjà testées.
+const liveConversation={active:false,mode:null,messages:[],recognition:null,watcher:null,reader:null,audio:null,speaking:false,speechQueue:[],pendingAction:null,turnId:0};
+function liveConversationSupported(){return Boolean((window.SpeechRecognition||window.webkitSpeechRecognition)&&'speechSynthesis'in window)}
+function liveButton(mode){return mode==='animate'?document.querySelector('.animate-live-voice'):document.querySelector('.d-coach-live-voice')}
+function buildLiveContext(mode){
+  if(mode==='animate'){
+    const session=state.activeAnimate;
+    return{session:session?{currentStepText:`${animateCoachLine(session)} ${animateStepText(session)}`}:null};
+  }
+  const context=dCoachContext();
+  return{who:context.who,when:context.when,budget:context.budget,sentence:context.sentence};
+}
+function setLiveStatus(mode,text){
+  if(mode==='animate'){const line=document.querySelector('#animateLive .animate-coach-line');if(line)line.textContent=`« ${text} »`;return}
+  setDCoachStatus(text,true);
+}
+// Même détection d'intention que askDCoach, mais évaluée sans attendre le réseau : dès que la
+// personne a parlé, on sait déjà où naviguer une fois que Dolcia aura fini sa phrase.
+function liveActionFromText(text){
+  const t=plainText(text||'');
+  if(/anime|jeu|occuper|defi|coach|séance|seance/.test(t))return'animate';
+  if(/budget|moins cher|économ|econom|gratuit|dépens|depens/.test(t))return'budget';
+  if(/plus doux|plus vivant|plus proche|rééquilibr|reequilibr|plan b|météo|meteo/.test(t))return'adjust';
+  return'none';
+}
+function stopLiveConversation(){
+  const mode=liveConversation.mode;
+  liveConversation.active=false;liveConversation.speaking=false;liveConversation.speechQueue=[];liveConversation.pendingAction=null;
+  liveConversation.turnId++;
+  try{liveConversation.recognition?.abort?.()}catch{}
+  try{liveConversation.watcher?.abort?.()}catch{}
+  try{liveConversation.reader?.cancel?.()}catch{}
+  try{liveConversation.audio?.pause?.()}catch{}
+  liveConversation.recognition=null;liveConversation.watcher=null;liveConversation.reader=null;liveConversation.audio=null;
+  liveConversation.messages=[];liveConversation.mode=null;
+  if('speechSynthesis'in window)window.speechSynthesis.cancel();
+  liveButton(mode)?.classList.remove('listening','thinking','speaking');
+  liveButton(mode)?.setAttribute('aria-pressed','false');
+}
+function stopBargeInWatcher(){try{liveConversation.watcher?.abort?.()}catch{}liveConversation.watcher=null}
+function queueSpeech(mode,text){if(text&&text.trim()){liveConversation.speechQueue.push(text.trim());drainSpeechQueue(mode)}}
+// Voix neuronale ElevenLabs si configurée côté serveur, repli silencieux et automatique sur la
+// synthèse du navigateur sinon — jamais de blocage, jamais d'erreur visible pour la personne.
+function speakBrowserFallback(text,onDone){
+  if(!('speechSynthesis'in window))return onDone();
+  window.speechSynthesis.cancel();
+  const voice=new SpeechSynthesisUtterance(text);
+  voice.lang='fr-FR';voice.rate=.98;voice.pitch=1.02;
+  voice.onend=onDone;voice.onerror=onDone;
+  window.speechSynthesis.speak(voice);
+}
+// Repli si MediaSource est absent ou ne supporte pas audio/mpeg (certaines versions de Safari) :
+// attend le fichier entier avant de jouer. Fonctionne toujours, juste moins rapide au démarrage.
+function playPremiumVoiceBuffered(text,onDone){
+  fetch('/api/events?service=speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})})
+    .then(response=>{if(!response.ok)throw new Error('unavailable');return response.blob()})
+    .then(blob=>{
+      const url=URL.createObjectURL(blob),audio=new Audio(url);
+      liveConversation.audio=audio;
+      const cleanup=()=>{URL.revokeObjectURL(url);if(liveConversation.audio===audio)liveConversation.audio=null};
+      audio.onended=()=>{cleanup();onDone()};
+      audio.onerror=()=>{cleanup();speakBrowserFallback(text,onDone)};
+      audio.play().catch(()=>{cleanup();speakBrowserFallback(text,onDone)});
+    })
+    .catch(()=>speakBrowserFallback(text,onDone));
+}
+// Lecture en flux réel : la voix commence dès les premiers octets reçus plutôt que d'attendre le
+// fichier audio complet — c'est ce qui rapproche vraiment le délai de réaction de celui de Speak,
+// plus que n'importe quelle réécriture de dialogue. Repli en cascade si MediaSource n'est pas
+// utilisable sur l'appareil (certains Safari iOS anciens).
+function playPremiumVoice(text,onDone){
+  if(!('MediaSource'in window)||!window.MediaSource.isTypeSupported?.('audio/mpeg'))return playPremiumVoiceBuffered(text,onDone);
+  let settled=false;
+  const finish=(fn)=>{if(settled)return;settled=true;fn()};
+  const mediaSource=new MediaSource(),audio=new Audio();
+  liveConversation.audio=audio;
+  const objectUrl=URL.createObjectURL(mediaSource);
+  audio.src=objectUrl;
+  const cleanup=()=>{try{URL.revokeObjectURL(objectUrl)}catch{}if(liveConversation.audio===audio)liveConversation.audio=null};
+  audio.onended=()=>finish(()=>{cleanup();onDone()});
+  audio.onerror=()=>finish(()=>{cleanup();playPremiumVoiceBuffered(text,onDone)});
+  mediaSource.addEventListener('sourceopen',async()=>{
+    let sourceBuffer;
+    try{sourceBuffer=mediaSource.addSourceBuffer('audio/mpeg')}catch{return finish(()=>{cleanup();playPremiumVoiceBuffered(text,onDone)})}
+    try{
+      const response=await fetch('/api/events?service=speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+      if(!response.ok||!response.body)throw new Error('unavailable');
+      const reader=response.body.getReader();
+      let startedPlaying=false;
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        if(settled)return;
+        await new Promise(resolve=>{sourceBuffer.addEventListener('updateend',resolve,{once:true});sourceBuffer.appendBuffer(value)});
+        if(!startedPlaying){startedPlaying=true;audio.play().catch(()=>{})}
       }
-    ],
-    city: [{ id:'a4', title:'Enquête familiale en centre-ville', desc:'Une intrigue légère à résoudre en marchant, sans application externe.', energy:'douce',
-      steps:[
-        { title:'Le mystère commence', instruction:'Un objet a disparu de la place du marché. Trois indices sont cachés dans les rues alentour. À vous de mener l\'enquête !', seconds:30 },
-        { title:'Indice 1', instruction:'Cherchez la fontaine la plus proche : un mot y est gravé. Notez la première lettre.', seconds:180 },
-        { title:'Indice 2', instruction:'Trouvez la boutique avec la façade la plus colorée. Comptez ses fenêtres.', seconds:180 },
-        { title:'Résolution', instruction:'Assemblez vos indices. Qui a résolu le mystère en premier ?', seconds:60 }
-      ]
-    }],
-    home: [{ id:'a5', title:'Jeux de voyage du soir', desc:'Retour au calme progressif, adapté à l\'hébergement.', energy:'calme',
-      steps:[
-        { title:'On se pose', instruction:'Chacun s\'installe confortablement. On va jouer à "Je pars en voyage et j\'emmène..." en ajoutant un objet à chaque tour.', seconds:180 },
-        { title:'Respiration du soir', instruction:'Fermez les yeux, respirez lentement. Chacun raconte son moment préféré de la journée en une phrase.', seconds:120 }
-      ]
-    }]
-  };
-  return sets[ctx] || sets.beach;
-}
-
-function runLoadingStages(){
-  const stages = document.querySelectorAll('.loading-stage');
-  stages.forEach(s=>s.classList.remove('active','done'));
-  return new Promise(resolve=>{
-    let i = 0;
-    const tick = () => {
-      if (i > 0) stages[i-1]?.classList.replace('active','done');
-      if (i >= stages.length){ resolve(); return; }
-      stages[i].classList.add('active');
-      i++;
-      setTimeout(tick, 480);
-    };
-    tick();
+      if(!settled&&mediaSource.readyState==='open')mediaSource.endOfStream();
+    }catch{
+      finish(()=>{cleanup();playPremiumVoiceBuffered(text,onDone)});
+    }
   });
 }
-
-async function loadExperience(){
-  showScreen('loading');
-  state.items = []; state.diagnostics = []; state.DEMO_MODE = false;
-  const { lat, lng } = state.city;
-  const stagesPromise = runLoadingStages();
+function drainSpeechQueue(mode){
+  if(liveConversation.speaking||!liveConversation.speechQueue.length)return;
+  liveConversation.speaking=true;
+  const text=liveConversation.speechQueue.shift(),button=liveButton(mode);
+  button?.classList.remove('thinking','listening');button?.classList.add('speaking');
+  setLiveStatus(mode,text);
+  const finish=()=>{
+    liveConversation.speaking=false;stopBargeInWatcher();
+    if(!liveConversation.active)return;
+    if(liveConversation.speechQueue.length)return drainSpeechQueue(mode);
+    button?.classList.remove('speaking');
+    finishLiveTurn(mode);
+  };
+  playPremiumVoice(text,finish);
+  startBargeInWatcher(mode);
+}
+// Barge-in : pendant que Dolcia parle, un second micro discret écoute en parallèle. Si la personne
+// se remet à parler, Dolcia s'arrête net et laisse la main — comme une vraie conversation.
+// Limite connue : sans contrôle fin de l'écho microphone (non exposé par l'API Web Speech), une
+// voix qui sort par haut-parleur peut, rarement, se redéclencher elle-même ; un court délai avant
+// d'activer l'écoute limite ce risque sans le supprimer entièrement.
+function startBargeInWatcher(mode){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition||liveConversation.watcher)return;
+  setTimeout(()=>{
+    if(!liveConversation.active||!liveConversation.speaking||liveConversation.watcher)return;
+    try{
+      const watcher=new Recognition();
+      liveConversation.watcher=watcher;
+      watcher.lang='fr-FR';watcher.interimResults=true;watcher.continuous=true;
+      watcher.onresult=event=>{
+        const transcript=event.results[event.results.length-1]?.[0]?.transcript.trim();
+        if(!transcript||transcript.length<3||!liveConversation.active)return;
+        liveConversation.turnId++;
+        try{liveConversation.reader?.cancel?.()}catch{}
+        try{liveConversation.audio?.pause?.()}catch{}
+        liveConversation.audio=null;
+        window.speechSynthesis.cancel();
+        liveConversation.speechQueue=[];liveConversation.speaking=false;
+        stopBargeInWatcher();
+        liveButton(mode)?.classList.remove('speaking');
+        listenOnce(mode);
+      };
+      watcher.onerror=()=>{};
+      watcher.onend=()=>{if(liveConversation.watcher===watcher)liveConversation.watcher=null};
+      watcher.start();
+    }catch{liveConversation.watcher=null}
+  },420);
+}
+function finishLiveTurn(mode){
+  if(!liveConversation.active)return;
+  const action=liveConversation.pendingAction;liveConversation.pendingAction=null;
+  if(action&&action!=='none'&&mode==='dcoach'){stopLiveConversation();return dCoachChoose(action)}
+  listenOnce(mode);
+}
+function listenOnce(mode){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition)return stopLiveConversation();
+  const recognition=new Recognition();
+  liveConversation.recognition=recognition;
+  recognition.lang='fr-FR';recognition.interimResults=false;
+  const button=liveButton(mode);
+  recognition.onstart=()=>{button?.classList.remove('thinking','speaking');button?.classList.add('listening');setLiveStatus(mode,'Je vous écoute…')};
+  recognition.onresult=event=>{const transcript=event.results[0]?.[0]?.transcript.trim();if(transcript)sendLiveTurn(mode,transcript)};
+  recognition.onerror=()=>{if(liveConversation.active){button?.classList.remove('listening');setLiveStatus(mode,'Je n’ai pas bien entendu. Reparlez quand vous voulez.')}};
+  recognition.onend=()=>{if(liveConversation.active)button?.classList.remove('listening')};
+  try{recognition.start()}catch{stopLiveConversation()}
+}
+async function sendLiveTurn(mode,userText){
+  const turnId=++liveConversation.turnId;
+  liveConversation.messages.push({role:'user',content:userText});
+  liveConversation.pendingAction=liveActionFromText(userText);
+  const button=liveButton(mode);
+  button?.classList.remove('listening');button?.classList.add('thinking');
+  setLiveStatus(mode,'Je réfléchis…');
+  let full='',pending='';
   try{
-    const results = await Promise.all([
-      fetchJson(`/places?lat=${lat}&lng=${lng}&radius=8000&type=restaurant`),
-      fetchJson(`/events?lat=${lat}&lng=${lng}&radius=15&size=40`)
-    ]);
-    const places = (results[0].results||[]);
-    const events = (results[1].events||[]);
-    if (!places.length && !events.length) throw new Error('Aucune donnée réelle retournée');
-    // normalisation minimale — à enrichir selon le vrai schéma Google/OpenAgenda
-    state.items = [...places, ...events];
+    const response=await fetch('/api/events?service=coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,stream:true,messages:liveConversation.messages,context:buildLiveContext(mode)})});
+    if(liveConversation.turnId!==turnId)return;
+    if(!response.ok||!response.body){button?.classList.remove('thinking');setLiveStatus(mode,'Je n’ai pas pu répondre. Réessayez ou écrivez-moi.');liveConversation.pendingAction=null;listenOnce(mode);return}
+    const reader=response.body.getReader();liveConversation.reader=reader;
+    const decoder=new TextDecoder();let buffer='';
+    const sentenceEnd=/^([\s\S]*?[.!?…])(\s+)/;
+    while(true){
+      const{done,value}=await reader.read();
+      if(liveConversation.turnId!==turnId)return;
+      if(done)break;
+      buffer+=decoder.decode(value,{stream:true});
+      const parts=buffer.split('\n\n');buffer=parts.pop();
+      for(const part of parts){
+        const line=part.split('\n').find(l=>l.startsWith('data:'));if(!line)continue;
+        const payload=line.slice(5).trim();if(!payload)continue;
+        let event;try{event=JSON.parse(payload)}catch{continue}
+        if(event.error){button?.classList.remove('thinking');setLiveStatus(mode,'Je n’ai pas pu répondre. Réessayez ou écrivez-moi.');liveConversation.pendingAction=null;listenOnce(mode);return}
+        if(event.t){
+          full+=event.t;pending+=event.t;
+          let match;
+          while((match=sentenceEnd.exec(pending))){queueSpeech(mode,match[1]);pending=pending.slice(match[0].length)}
+          if(pending.length>70){
+            const commaBreak=/^([\s\S]{20,90}?,)(\s+)/.exec(pending);
+            if(commaBreak){queueSpeech(mode,commaBreak[1]);pending=pending.slice(commaBreak[0].length)}
+          }
+        }
+      }
+    }
+    if(pending.trim())queueSpeech(mode,pending.trim());
+    if(!full.trim()){button?.classList.remove('thinking');setLiveStatus(mode,'Je n’ai pas pu répondre. Réessayez ou écrivez-moi.');liveConversation.pendingAction=null;listenOnce(mode);return}
+    liveConversation.messages.push({role:'assistant',content:full.trim()});
+    if(!liveConversation.speaking&&!liveConversation.speechQueue.length)finishLiveTurn(mode);
   }catch(e){
-    state.DEMO_MODE = true;
-    state.items = demoExploreItems();
+    if(liveConversation.turnId!==turnId)return;
+    button?.classList.remove('thinking');
+    setLiveStatus(mode,'La connexion a été interrompue. Réessayez.');
+    liveConversation.pendingAction=null;
   }
-  state.animeItems = demoAnimeItems('beach');
-  state.pepitesItems = demoPepitesItems();
-  await stagesPromise;
-  renderResults();
-  showScreen('results');
+}
+function toggleLiveConversation(mode){
+  const button=liveButton(mode);
+  if(liveConversation.active&&liveConversation.mode===mode)return stopLiveConversation();
+  if(!liveConversationSupported())return showToast('La conversation vocale n’est pas disponible sur ce navigateur. Vous pouvez écrire exactement la même chose.');
+  stopLiveConversation();
+  liveConversation.active=true;liveConversation.mode=mode;liveConversation.messages=[];liveConversation.speechQueue=[];liveConversation.pendingAction=null;
+  button?.setAttribute('aria-pressed','true');
+  listenOnce(mode);
 }
 
-/* ---------------- Rendu résultats ---------------- */
-function titleForResults(){
-  if (state.understood.when === 'stay') return 'Votre séjour se compose.';
-  if (state.understood.when === 'tonight') return 'Votre soirée se dessine.';
-  return 'Voici ce que Dolcia a imaginé pour vous.';
+function retiredHomeArchive(){
+  state.view='home';
+  setTimeout(mountHomeConcierge,0);
+  app.innerHTML=shell(`<section class="hero"><div class="hero-photo"></div><div class="hero-copy"><span class="kicker">Chaque instant mérite une expérience</span><h1>Vos prochaines émotions<br><em>commencent ici.</em></h1><p>Parlez à L’Éclat. En quelques mots, Dolcia comprend votre moment et transforme un choix immense en expérience faite pour vous.</p><div class="hero-cta"><button class="primary" onclick="openEclatDialogue()"><b>D ✦</b>&nbsp; Dolcia vous écoute <span class="arrow">→</span></button><button class="round-action" onclick="renderResults()" aria-label="Explorer librement toutes les possibilités">∞</button></div></div><div class="hero-index"><b>01</b> / 03</div></section>
+  <div id="homeMajor" class="home-major-shell"><div class="home-major-loading">Dolcia vérifie les grands rendez-vous d’aujourd’hui…</div></div>
+  <section class="live-pulse" id="livePulse"><div class="pulse-weather"><span>Maintenant au Touquet</span><strong id="pulseTemp">Météo en direct</strong><small id="pulseWeather">Actualisation…</small></div><div class="pulse-events"><div><span>À vivre aujourd’hui</span><strong>Les événements qui comptent</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia vérifie les agendas officiels…</p></div></div></section>
+  <section class="local-now"><div class="local-now-copy"><span class="kicker">Votre concierge au Touquet</span><h2>Vous êtes ici.<br><em>Vivez-le vraiment.</em></h2><p>Premier séjour ou vie locale : Dolcia part de votre humeur et de vos envies maintenant, puis transforme votre temps libre en programme réel, varié et adapté à la météo.</p></div><div class="life-shortcuts"><button onclick="quickLife('couple')"><span>Maintenant · à deux</span><strong>Qu’est-ce qui nous ferait du bien ?</strong><b>→</b></button><button onclick="quickLife('family')"><span>Maintenant · en famille</span><strong>Qu’avons-nous envie de vivre ?</strong><b>→</b></button><button onclick="quickLife('friends')"><span>Aujourd’hui · entre amis</span><strong>Quelle ambiance voulons-nous ?</strong><b>→</b></button></div></section>
+  <section class="section" id="inspiration"><div class="section-head"><div><span class="kicker">L’inspiration du moment</span><h2>Et si c’était<br>pour aujourd’hui ?</h2></div><p class="section-copy">Une sélection éditoriale pour donner envie. Votre programme final sera construit uniquement avec des lieux et événements issus de sources réelles.</p></div><div class="moments">
+    ${moment('Ce soir','Une table, puis la mer',IMAGES.food)}${moment('En famille','Dehors, sans courir',IMAGES.family)}${moment('À deux','Une échappée douce',IMAGES.couple)}
+  </div></section>
+  <section class="drops-section"><div class="drops-head"><div><span class="kicker">Les drops Dolcia</span><h2>Des raisons de<br><em>sortir maintenant.</em></h2></div><p>Des propositions qui changent avec l’heure, la météo et vos goûts. Les offres commerciales ne s’affichent que lorsqu’elles viennent d’un partenaire vérifié.</p></div><div class="drops">
+    ${dropCard('Ce soir seulement','Une soirée déjà composée','Table, spectacle et dernier verre — en un seul élan.',IMAGES.night,'#c9a96e')}
+    ${dropCard('Plan B magique','La pluie devient une bonne idée','Dolcia réorganise votre moment avec des expériences intérieures.',IMAGES.culture,'#b8895c')}
+    ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#e2cf9b')}
+  </div><button class="desire-cta" onclick="startCompose()"><span>La signature Dolcia</span><strong>Compose-moi mon expérience</strong><b>→</b></button></section>`);loadHomePulse();
 }
-function summaryForResults(){
-  return `Sélection autour de ${state.city.name}, adaptée à votre brief.`;
+function home(){state.view='home';app.innerHTML=shell(`<section class="eclat-home"><div class="eclat-home-atmosphere"></div><div class="eclat-home-copy"><span class="kicker">Chaque instant mérite une expérience</span><div class="eclat-home-mark"><span>D<i>✦</i></span><small>Dolcia vous écoute</small></div><h1>Vos prochaines émotions<br><em>commencent ici.</em></h1><p>Parlez naturellement. Dolcia comprend avec qui vous êtes, ce que vous ressentez, le temps disponible et votre budget total.</p><div class="eclat-home-actions"><button class="primary" onclick="openEclatDialogue()">Composer mon moment <b>→</b></button><button class="secondary" onclick="openExplorer()">Explorer librement <b>∞</b></button></div><div class="eclat-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openEclatDialogue()">« Surprenez-nous, mais sans voiture. »</button></div></div></section><section class="home-live-minimal"><div id="homeMajor" class="home-major-shell"><div class="home-major-loading">Dolcia vérifie les rendez-vous qui comptent aujourd’hui…</div></div><div class="live-pulse" id="livePulse"><div class="pulse-weather"><span>Maintenant au Touquet</span><strong id="pulseTemp">Météo en direct</strong><small id="pulseWeather">Actualisation…</small></div><div class="pulse-events"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></div></section>`);loadHomePulse()}
+function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
+function retiredMountHomeConcierge(){return}
+function openEclatBrief(voice){openEclatDialogue(voice)}
+function openEclatDialogue(voice=false){
+  document.querySelector('#eclatDialogue')?.remove();
+  state.eclatBrief={step:0,answers:{}};
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal eclat-dialogue" id="eclatDialogue" data-scene="time"><div class="eclat-film" id="eclatScene" aria-hidden="true"><span class="eclat-film-current" style="background-image:url('${IMAGES.hero}')"></span></div><div class="eclat-aura" aria-hidden="true"></div><article><button class="close" onclick="document.querySelector('#eclatDialogue')?.remove()" aria-label="Fermer">×</button><header class="eclat-presence"><span class="eclat-d large">D<i>✦</i></span><div><small>Dolcia vous écoute</small><strong>Votre moment prend vie</strong></div></header><div class="eclat-context" id="eclatContext"><span>Une seule conversation</span></div><div id="eclatQuestion"></div><div class="eclat-film-caption"><span></span> Images d’inspiration · les propositions resteront vérifiées</div></article></div>`);
+  renderEclatQuestion();if(voice)setTimeout(startEclatVoice,250)
+}
+const ECLAT_LABELS={now:'Maintenant',tonight:'Ce soir',tomorrow:'Demain',custom:'À la date choisie',couple:'En amoureux',family:'En famille',friends:'Entre amis',colleagues:'Entre collègues',solo:'Pour moi',play:'Rire et bouger',breathe:'Prendre l’air',recharge:'Décrocher',taste:'Bien manger',create:'Découvrir',vibrate:'Vibrer ensemble','0':'Gratuit confirmé','60':'60 €','150':'150 €','300':'300 €',flexible:'Expérience prioritaire'};
+function eclatSceneFor(step,answers={}){const byWho={couple:IMAGES.couple,family:IMAGES.family,friends:IMAGES.friends,colleagues:IMAGES.friends,solo:IMAGES.solo};const byVibe={play:IMAGES.active,breathe:IMAGES.outside,recharge:IMAGES.slow,taste:IMAGES.food,create:IMAGES.culture,vibrate:IMAGES.night};if(step===0)return {id:'time',image:IMAGES.hero,line:'Le temps s’ouvre devant vous'};if(step===1)return {id:answers.date==='tonight'?'night':'people',image:answers.date==='tonight'?IMAGES.night:IMAGES.hero,line:'Le décor s’accorde à votre rythme'};if(step===2)return {id:answers.who||'people',image:byWho[answers.who]||IMAGES.friends,line:'Chaque personne compte dans l’expérience'};return {id:answers.vibe||'desire',image:byVibe[answers.vibe]||byWho[answers.who]||IMAGES.hero,line:'Dolcia affine l’émotion juste'} }
+function updateEclatScene(){const brief=state.eclatBrief,dialogue=document.querySelector('#eclatDialogue'),layer=document.querySelector('#eclatScene .eclat-film-current'),context=document.querySelector('#eclatContext');if(!brief||!dialogue||!layer)return;const scene=eclatSceneFor(brief.step,brief.answers);dialogue.dataset.scene=scene.id;layer.classList.remove('is-revealed');requestAnimationFrame(()=>{layer.style.backgroundImage=`url('${scene.image}')`;layer.classList.add('is-revealed')});const values=['date','who','vibe','budget'].map(key=>brief.answers[key]).filter(Boolean);if(context)context.innerHTML=`<b>${scene.line}</b>${values.map(value=>`<span>${esc(ECLAT_LABELS[value]||value)}</span>`).join('')}`}
+function renderEclatQuestion(){const target=document.querySelector('#eclatQuestion'),brief=state.eclatBrief;if(!target||!brief)return;const screens=[
+  {q:'Quand voulez-vous que ce moment commence ?',sub:'Je ne vous reposerai pas cette question.',options:[['now','Maintenant'],['tonight','Ce soir'],['tomorrow','Demain'],['custom','Choisir une date']]},
+  {q:'Avec qui allons-nous vivre ce moment ?',sub:'Je chercherai le meilleur accord pour les personnes présentes.',options:[['couple','En amoureux'],['family','En famille'],['friends','Entre amis'],['colleagues','Entre collègues'],['solo','Pour moi']]},
+  {q:'De quoi avez-vous vraiment besoin maintenant ?',sub:'Choisissez l’élan dominant. Je garderai une part d’inattendu maîtrisé.',options:[['play','Rire et bouger'],['breathe','Prendre l’air'],['recharge','Décrocher complètement'],['taste','Bien manger'],['create','Découvrir et créer'],['vibrate','Vibrer ensemble']]},
+  {q:'Quelle enveloppe totale souhaitez-vous respecter ?',sub:'Pour tout le groupe et tout le moment. Vous pourrez la modifier sans recommencer.',options:[['0','0 € · uniquement du gratuit confirmé'],['60','Jusqu’à 60 €'],['150','Jusqu’à 150 €'],['300','Jusqu’à 300 €'],['flexible','Priorité à l’expérience']]}
+  ];const screen=screens[brief.step];target.classList.remove('question-arrival');target.innerHTML=`<div class="dialogue-progress"><i style="--progress:${(brief.step+1)*25}%"></i><span>0${brief.step+1} / 04</span></div><h2>${screen.q}</h2><p>${screen.sub}</p><div class="dialogue-choices">${screen.options.map(([id,label])=>`<button onclick="answerEclat('${id}')"><span>${label}</span><b>→</b></button>`).join('')}</div><div class="dialogue-free"><input id="eclatFree" placeholder="${brief.step===3?'Ou indiquez votre montant total…':'Ou dites-le avec vos mots…'}" ${brief.step===3?'inputmode="decimal"':''}><button onclick="answerEclatFree()">Continuer</button><button class="voice" onclick="startEclatVoice()" aria-label="Parler à Dolcia">●</button></div>`;requestAnimationFrame(()=>target.classList.add('question-arrival'));updateEclatScene()}
+function answerEclat(value){const brief=state.eclatBrief;if(!brief)return;if(brief.step===0){brief.answers.date=value;if(value==='custom')return renderEclatCustomDate();brief.answers.duration=value==='tonight'?'evening':value==='tomorrow'?'day':'2h'}if(brief.step===1)brief.answers.who=value;if(brief.step===2){brief.answers.vibe=value;return advanceAfterVibe()}if(brief.step===3)brief.answers.budget=value;if(brief.step<3){brief.step++;renderEclatQuestion()}else finishEclat()}
+function renderEclatCustomDate(){const target=document.querySelector('#eclatQuestion');if(!target)return;const today=iso(new Date());target.innerHTML=`<span class="dialogue-step">Votre moment</span><h2>Quand puis-je prendre soin de votre temps ?</h2><p>Choisissez la date et le rythme ici, sans quitter Dolcia.</p><div class="eclat-custom-date"><input id="eclatDate" type="date" min="${today}" value="${today}"><select id="eclatDuration"><option value="2h">Environ 2 heures</option><option value="morning">La matinée</option><option value="afternoon">L’après-midi</option><option value="afternoon_evening">L’après-midi + la soirée</option><option value="evening">La soirée</option><option value="day">La journée complète</option><option value="stay">Plusieurs jours</option></select><button onclick="answerEclatCustomDate()">Continuer →</button></div>`}
+function answerEclatCustomDate(){const value=document.querySelector('#eclatDate')?.value,duration=document.querySelector('#eclatDuration')?.value;if(!value)return showToast('Choisissez une date');const date=new Date(`${value}T12:00:00`);state.eclatBrief.answers.dateObject=date.toISOString();state.eclatBrief.answers.date='custom';state.eclatBrief.answers.duration=duration||'2h';state.eclatBrief.step=1;renderEclatQuestion()}
+function stayRhythmInsight(){const brief=state.eclatBrief?.answers||{},sentence=plainText(state.answers.momentSentence||''),vibe=brief.vibe||'';if(/semaine sportive|stage sportif|sport tous les jours|vacances sportives|beaucoup de sport/.test(sentence))return{id:'sport',confidence:.98,voice:'Vous voulez conserver une vraie intensité sportive pendant le séjour.'};if(/farniente|plage et repos|repos total|ne rien faire|se reposer surtout|vacances tranquilles/.test(sentence))return{id:'rest',confidence:.96,voice:'Vous cherchez surtout la douceur, la plage et du temps libre.'};if(/alterner|equilibr|un peu de sport|sport et repos|temps forts et repos/.test(sentence))return{id:'balanced',confidence:.94,voice:'Vous souhaitez alterner les temps forts et les journées plus douces.'};if(vibe==='recharge')return{id:'rest',confidence:.82,voice:'Je vous imagine dans un séjour surtout doux, avec seulement quelques élans choisis.'};return{id:'adaptive',confidence:.45,voice:'Je peux équilibrer le séjour, mais une nuance changera vraiment son rythme.'}}
+function advanceAfterVibe(){const brief=state.eclatBrief;if(!brief)return;const stay=brief.answers.duration==='stay';if(stay&&!brief.answers.stayRhythm){const insight=stayRhythmInsight();brief.answers.rhythmInsight=insight;if(insight.confidence>=.8)brief.answers.stayRhythm=insight.id;else return renderStayRhythmQuestion(insight)}brief.step=3;renderEclatQuestion()}
+function renderStayRhythmQuestion(insight=stayRhythmInsight()){const target=document.querySelector('#eclatQuestion');if(!target)return;target.innerHTML=`<div class="dialogue-progress"><i style="--progress:72%"></i><span>UNE NUANCE DÉCISIVE</span></div><span class="dialogue-step">Dolcia a compris l’essentiel</span><h2>${esc(insight.voice)}</h2><p>Dois-je équilibrer librement, ou souhaitez-vous donner une dominante claire au séjour ?</p><div class="dialogue-options stay-rhythm-options"><button onclick="answerStayRhythm('adaptive')"><strong>Équilibrez pour nous</strong><small>Temps forts et respirations selon l’énergie réelle du groupe</small><b>→</b></button><button onclick="answerStayRhythm('rest')"><strong>Surtout douceur & plage</strong><small>Repos dominant, avec quelques découvertes choisies</small><b>→</b></button><button onclick="answerStayRhythm('balanced')"><strong>Des journées contrastées</strong><small>Une journée active peut être suivie d’une journée plus douce</small><b>→</b></button><button onclick="answerStayRhythm('sport')"><strong>Une vraie semaine sportive</strong><small>Conserver volontairement une intensité élevée</small><b>→</b></button></div>`}
+function answerStayRhythm(value){if(!state.eclatBrief)return;state.eclatBrief.answers.stayRhythm=value;state.eclatBrief.step=3;renderEclatQuestion()}
+function answerEclatFree(){const value=document.querySelector('#eclatFree')?.value.trim();if(!value)return showToast('Dites-moi simplement ce que vous souhaitez');if(state.eclatBrief.step===3){const amount=Number(value.replace(/[^0-9,.]/g,'').replace(',','.'));if(!Number.isFinite(amount)||amount<0)return showToast('Indiquez un budget total valide');state.eclatBrief.answers.budget=String(amount);return finishEclat()}state.answers.momentSentence=[state.answers.momentSentence,value].filter(Boolean).join(' · ');if(state.eclatBrief.step===2)return advanceAfterVibe();if(state.eclatBrief.step<3){state.eclatBrief.step++;renderEclatQuestion()}else finishEclat()}
+function startEclatVoice(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return showToast('La conversation vocale n’est pas disponible sur ce navigateur');const recognition=new Recognition();recognition.lang='fr-FR';recognition.onstart=()=>showToast('Dolcia vous écoute…');recognition.onresult=event=>{const input=document.querySelector('#eclatFree');if(input){input.value=event.results[0][0].transcript;answerEclatFree()}};recognition.start()}
+function finishEclat(){const a=state.eclatBrief.answers;if(a.date==='custom'&&a.dateObject){const date=new Date(a.dateObject);state.dateMode='custom';state.dateStart=new Date(date);state.dateEnd=new Date(date);state.dateEnd.setHours(23,59,59,999)}else setDate(a.date||'now');state.answers.who=a.who||state.answers.who||'solo';state.answers.vibes=[a.vibe||'breathe'];const amount=a.budget==='flexible'?null:Number(a.budget);state.budgetPlan.amount=Number.isFinite(amount)?amount:null;state.answers.budget=a.budget==='0'?'free':a.budget==='flexible'?'flexible':'custom';state.answers.duration=a.duration||(a.date==='tonight'?'evening':'2h');state.answers.stayRhythm=state.answers.duration==='stay'?(a.stayRhythm||inferStayRhythm()):null;save();document.querySelector('#eclatDialogue')?.remove();compose()}
+function openAccount(){const profile=JSON.parse(localStorage.getItem('dolcia_profile_v1')||'null'),people=state.circleProfiles;document.querySelector('#accountSpace')?.remove();document.body.insertAdjacentHTML('beforeend',`<div class="modal account-space" id="accountSpace"><article class="circle-account"><button class="close" onclick="document.querySelector('#accountSpace')?.remove()">×</button><span class="kicker">Votre espace privé</span><h2>${profile?'Bonjour '+esc(profile.name):'Dolcia apprend à vous connaître.'}</h2><p>Vos goûts vous appartiennent. Pour chaque moment, choisissez simplement qui vous accompagne.</p><div class="account-profile"><label>Votre prénom<input id="accountName" value="${esc(profile?.name||'')}"></label><label class="consent"><input id="accountConsent" type="checkbox" ${profile?.consent?'checked':''}> Mémoriser mes préférences pour personnaliser mes propositions.</label><button class="primary" onclick="saveAccount()">${profile?'Mettre à jour':'Créer mon espace Dolcia'}</button><button class="constellation-link" onclick="openConstellation()">Ouvrir Notre constellation <span>Vos expériences, vos émotions, vos proches →</span></button></div><section class="circle-section"><div><span class="kicker">Mon Cercle Dolcia</span><h3>Avec qui vivez-vous ce moment ?</h3><p>Famille, amis et proches restent disponibles, sans devoir les recréer à chaque sortie.</p></div><div class="circle-list">${people.length?people.map(circlePersonCard).join(''):'<div class="circle-empty">Votre cercle est encore vide. Ajoutez un proche ou un enfant en quelques secondes.</div>'}</div><div class="circle-add"><button onclick="openCirclePerson('account')">Inviter un compte Dolcia</button><button onclick="openCirclePerson('child')">Ajouter un enfant</button><button onclick="openCirclePerson('relative')">Ajouter un proche</button><button onclick="openCirclePerson('guest')">Invité ponctuel</button></div></section><small class="privacy-note">Les profils sont privés. Vous pouvez consulter, corriger ou effacer ce que Dolcia retient. La synchronisation sécurisée entre téléphones sera activée avec les comptes Supabase ; aujourd’hui, ces informations restent sur cet appareil.</small></article></div>`)}
+function circlePersonCard(person){const active=state.groupParticipants.some(item=>item.id===person.id&&item.selected!==false),detail=[person.relationship,person.ageBand,person.email?'Compte Dolcia':''].filter(Boolean).join(' · '),signal=[person.momentNeed,person.energy].filter(Boolean).join(' · ');return `<article class="circle-person ${active?'active':''}"><button class="circle-toggle" onclick="toggleCirclePerson('${person.id}')"><b>${esc(person.name).slice(0,1)}</b><span><strong>${esc(person.name)}</strong><small>${esc(detail||'Profil du cercle')}</small>${signal?`<small class="moment-signal">Aujourd’hui · ${esc(signal)}</small>`:''}</span><i>${active?'Avec moi':'Disponible'}</i></button><button class="sensitivity-edit" onclick="openSensitivity('${person.id}')">Sa sensibilité</button><button class="circle-remove" onclick="removeCirclePerson('${person.id}')" aria-label="Retirer ${esc(person.name)}">×</button></article>`}
+function openCirclePerson(kind){document.querySelector('#circlePersonModal')?.remove();const titles={account:'Inviter un proche sur Dolcia',child:'Ajouter un enfant',relative:'Ajouter un proche',guest:'Ajouter un invité ponctuel'};document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="circlePersonModal"><article class="circle-person-modal"><button class="close" onclick="document.querySelector('#circlePersonModal')?.remove()">×</button><span class="kicker">Mon Cercle</span><h2>${titles[kind]}</h2><label>Prénom ou surnom<input id="circleName" autocomplete="off"></label>${kind==='account'?'<label>E-mail du compte Dolcia<input id="circleEmail" type="email" placeholder="prenom@exemple.fr"></label>':''}${kind==='child'?'<label>Tranche d’âge<select id="circleAge"><option>0–3 ans</option><option>4–7 ans</option><option>8–11 ans</option><option>12–15 ans</option><option>16–17 ans</option></select></label>':'<label>Votre lien<select id="circleRelation"><option>Conjoint·e</option><option>Ami·e</option><option>Famille</option><option>Collègue</option><option>Autre</option></select></label>'}<label>À prendre en compte<input id="circleConstraint" placeholder="Ex. poussette, mobilité, allergie (facultatif)"></label><button class="primary" onclick="saveCirclePerson('${kind}')">Ajouter à mon cercle</button></article></div>`);setTimeout(()=>document.querySelector('#circleName')?.focus(),50)}
+function saveCirclePerson(kind){const name=document.querySelector('#circleName')?.value.trim();if(!name)return showToast('Indiquez un prénom ou un surnom');const person={id:`circle-${Date.now()}`,name,kind,email:document.querySelector('#circleEmail')?.value.trim()||'',ageBand:document.querySelector('#circleAge')?.value||'',relationship:document.querySelector('#circleRelation')?.value||(kind==='child'?'Enfant':''),constraint:document.querySelector('#circleConstraint')?.value.trim()||''};state.circleProfiles.push(person);state.groupParticipants.push({...person,role:'participant',selected:true});save();document.querySelector('#circlePersonModal')?.remove();openAccount();showToast(kind==='account'?'Invitation préparée et proche ajouté':'Personne ajoutée à ce moment')}
+function sensitivityOptions(selected=[]){return [['play','Rire & jouer'],['breathe','Prendre l’air'],['create','Découvrir & créer'],['taste','Bien manger'],['recharge','Se détendre'],['vibrate','Vibrer']].map(([id,label])=>`<label><input type="checkbox" value="${id}" ${selected.includes(id)?'checked':''}> ${label}</label>`).join('')}
+function openSensitivity(id){const person=state.circleProfiles.find(item=>item.id===id);if(!person)return;document.querySelector('#sensitivityModal')?.remove();document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="sensitivityModal"><article class="sensitivity-modal"><button class="close" onclick="document.querySelector('#sensitivityModal')?.remove()">×</button><span class="kicker">Une sensibilité, jamais une étiquette</span><h2>${esc(person.name)}</h2><p>Les goûts durables aident Dolcia. L’envie d’aujourd’hui ne modifiera pas automatiquement ce profil.</p><h3>Ce qui lui plaît généralement</h3><div class="sensitivity-grid" id="durableLikes">${sensitivityOptions(person.likes||[])}</div><h3>À éviter durablement</h3><div class="sensitivity-grid avoid" id="durableAvoids">${sensitivityOptions(person.avoids||[])}</div><div class="moment-brief"><label>Son énergie aujourd’hui<select id="personEnergy"><option value="">Je ne sais pas</option><option ${person.energy==='Douce'?'selected':''}>Douce</option><option ${person.energy==='Équilibrée'?'selected':''}>Équilibrée</option><option ${person.energy==='Élevée'?'selected':''}>Élevée</option></select></label><label>Son besoin du moment<select id="personMoment"><option value="">Aucun signal particulier</option><option ${person.momentNeed==='Se retrouver'?'selected':''}>Se retrouver</option><option ${person.momentNeed==='S’amuser'?'selected':''}>S’amuser</option><option ${person.momentNeed==='Souffler'?'selected':''}>Souffler</option><option ${person.momentNeed==='Découvrir'?'selected':''}>Découvrir</option><option ${person.momentNeed==='Être surpris'?'selected':''}>Être surpris</option></select></label></div><label class="moment-refusal">Une chose à éviter aujourd’hui<input id="personMomentAvoid" value="${esc(person.momentAvoid||'')}" placeholder="Ex. trop marcher, bruit, activité sportive…"></label><button class="primary" onclick="saveSensitivity('${id}')">Enregistrer cette nuance</button><small>« Pas aujourd’hui » expire avec ce moment. « À éviter durablement » reste modifiable dans le profil.</small></article></div>`)}
+function checkedValues(selector){return [...document.querySelectorAll(`${selector} input:checked`)].map(input=>input.value)}
+function saveSensitivity(id){const person=state.circleProfiles.find(item=>item.id===id);if(!person)return;person.likes=checkedValues('#durableLikes');person.avoids=checkedValues('#durableAvoids');person.energy=document.querySelector('#personEnergy')?.value||'';person.momentNeed=document.querySelector('#personMoment')?.value||'';person.momentAvoid=document.querySelector('#personMomentAvoid')?.value.trim()||'';if(id==='me')state.ownerSensitivity={likes:person.likes,avoids:person.avoids,energy:person.energy,momentNeed:person.momentNeed,momentAvoid:person.momentAvoid};const participant=state.groupParticipants.find(item=>item.id===id);if(participant)Object.assign(participant,person);save();document.querySelector('#sensitivityModal')?.remove();openAccount();showToast('Dolcia cherchera le point d’accord du groupe')}
+function currentGroupProfiles(){return state.groupParticipants.filter(person=>person.selected!==false).map(person=>{const full=state.circleProfiles.find(profile=>profile.id===person.id)||person;return {id:full.id,name:full.name||'Participant',kind:full.kind||'',ageBand:full.ageBand||'',constraint:full.constraint||'',likes:Array.isArray(full.likes)?full.likes:[],avoids:Array.isArray(full.avoids)?full.avoids:[],energy:full.energy||'',momentNeed:full.momentNeed||'',momentAvoid:full.momentAvoid||''}})}
+function toggleCirclePerson(id){const person=state.circleProfiles.find(item=>item.id===id);if(!person)return;const existing=state.groupParticipants.find(item=>item.id===id);if(existing)existing.selected=existing.selected===false;else state.groupParticipants.push({...person,role:'participant',selected:true});save();openAccount();showToast(state.groupParticipants.find(item=>item.id===id)?.selected?'Ajouté à ce moment':'Retiré de ce moment')}
+function removeCirclePerson(id){if(id==='me')return showToast('Votre profil principal ne peut pas être retiré');state.circleProfiles=state.circleProfiles.filter(item=>item.id!==id);state.groupParticipants=state.groupParticipants.filter(item=>item.id!==id);save();openAccount();showToast('Profil retiré de votre cercle')}
+function saveAccount(){const name=document.querySelector('#accountName')?.value.trim(),consent=document.querySelector('#accountConsent')?.checked;if(!name||!consent)return showToast('Indiquez votre prénom et acceptez la mémorisation');localStorage.setItem('dolcia_profile_v1',JSON.stringify({name,consent,updatedAt:new Date().toISOString()}));document.querySelector('#accountSpace')?.remove();showToast('Votre espace Dolcia est créé sur cet appareil')}
+function memoryItem(id){return state.agenda.find(item=>item.id===id)||state.allItems.find(item=>item.id===id)||state.items.find(item=>item.id===id)}
+function openConstellation(){document.querySelector('#accountSpace')?.remove();document.querySelector('#constellationSpace')?.remove();const ids=[...new Set([...Object.keys(state.experienceMemories),...Object.keys(state.experienceFeelings)])],records=ids.map(id=>({id,item:memoryItem(id),memory:state.experienceMemories[id]||{},feeling:state.experienceFeelings[id]})).filter(record=>record.item);const learned=Object.entries(state.tasteProfile).filter(([,value])=>value).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,6);document.body.insertAdjacentHTML('beforeend',`<div class="modal constellation-space" id="constellationSpace"><article><button class="close" onclick="document.querySelector('#constellationSpace')?.remove()">×</button><span class="kicker">Votre mémoire visible et corrigeable</span><h2>Notre constellation.</h2><p>Les moments réellement vécus deviennent une carte personnelle. Dolcia distingue vos goûts durables de votre envie du jour.</p><div class="constellation-summary"><span><b>${records.length}</b> expérience${records.length>1?'s':''} racontée${records.length>1?'s':''}</span><span><b>${state.favorites.length}</b> coup${state.favorites.length>1?'s':''} de cœur</span><span><b>${state.circleProfiles.length+1}</b> personne${state.circleProfiles.length?'s':''} dans votre cercle</span></div>${learned.length?`<section class="learned-tastes"><span class="kicker">Ce que Dolcia a compris — modifiable</span><div>${learned.map(([category,value])=>`<button onclick="resetTaste('${esc(category)}')"><b>${esc(category)}</b><small>${value>0?'Vous semble plaire':'À proposer avec prudence'} · effacer ×</small></button>`).join('')}</div></section>`:''}<section class="constellation-list">${records.length?records.map(({id,item,memory,feeling})=>`<article><img src="${itemImage(item)}" alt=""><div><span>${memory.reaction?esc(memory.reaction):feeling?esc(feeling):'Souvenir enregistré'}</span><h3>${esc(item.name)}</h3><small>${memory.at?new Date(memory.at).toLocaleDateString('fr-FR'):'Date non renseignée'} · ${(memory.people||[]).map(person=>esc(person.name)).join(', ')||'Participants non renseignés'}</small><button onclick="forgetExperience('${id}')">Effacer ce souvenir</button></div></article>`).join(''):'<div class="constellation-empty"><h3>Votre constellation commence après votre première expérience.</h3><p>Une réaction suffit. Photos et souvenirs resteront toujours facultatifs.</p></div>'}</section><small class="privacy-note">Dolcia ne déduit jamais que vous connaissez ou ignorez un lieu sans preuve. Vous gardez le droit de correction et d’effacement.</small></article></div>`)}
+function resetTaste(category){delete state.tasteProfile[category];save();openConstellation();showToast('Cette préférence a été effacée')}
+function forgetExperience(id){delete state.experienceMemories[id];delete state.experienceFeelings[id];delete state.experienceTags[id];save();openConstellation();showToast('Ce souvenir et son apprentissage contextuel ont été effacés')}
+function rememberExperience(id,reaction){const item=memoryItem(id);if(!item)return;state.experienceMemories[id]={reaction,at:new Date().toISOString(),people:state.groupParticipants.filter(person=>person.selected!==false).map(({id,name,kind})=>({id,name,kind})),who:state.answers.who||'unknown',category:item.category||'other'};save();showToast('Ce moment rejoint Notre constellation');openDetailRefresh(id)}
+async function loadHomePulse(){
+  const today=iso(new Date());
+  const list=document.querySelector('#pulseEventList');
+  const emptyPulse=()=>`<div class="pulse-empty"><span>Le champ des possibles reste ouvert</span><strong>Et si votre prochain moment commençait ici ?</strong><p>Dolcia n’affiche que les rendez-vous assez fiables. Les expériences disponibles autour de vous restent accessibles dès maintenant.</p><button onclick="startCompose()">Composer mon moment <b>→</b></button></div>`;
+  try{
+    const [weather,official,tickets,major]=await Promise.allSettled([
+      get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),
+      get(`/api/touquet-events?after=${today}&before=${today}`),
+      get(`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${today}`),
+      get(`/api/major-events?date=${today}`)
+    ]);
+    if(state.view!=='home')return;
+    const w=weather.status==='fulfilled'&&weather.value&&typeof weather.value==='object'?weather.value:null;
+    const temp=document.querySelector('#pulseTemp'),label=document.querySelector('#pulseWeather');
+    if(temp)temp.textContent=w?.main?.temp!=null?`${Math.round(w.main.temp)}° au Touquet`:'Le Touquet aujourd’hui';
+    if(label)label.textContent=w?.weather?.[0]?.description||'Votre moment, à votre rythme';
+    const officialEvents=official.status==='fulfilled'&&Array.isArray(official.value?.events)?official.value.events:[];
+    const ticketEvents=tickets.status==='fulfilled'&&Array.isArray(tickets.value?.events)?tickets.value.events:[];
+    const raw=[...officialEvents,...ticketEvents];
+    let normalized=[];
+    try{normalized=Array.isArray(raw)?normalizeEvents(raw):[]}catch(_){normalized=[]}
+    const events=dedupe(normalized).slice(0,3);
+    const majorSeed=major.status==='fulfilled'&&Array.isArray(major.value?.events)?major.value.events:[];
+    try{state.majorMoments=detectMajorMoments(normalized,majorSeed.map(event=>({...event,kind:event.kind||'event',score:Number(event.score)||100})))||[]}catch(_){state.majorMoments=[]}
+    renderHomeMajor(state.majorMoments[0]||null);
+    if(list)list.innerHTML=events.length?events.map(event=>`<button onclick="openHomeEvent('${esc(event.id||'')}')"><span>${event.date?new Date(event.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Aujourd’hui'}</span><strong>${esc(event.name)}</strong><b>→</b></button>`).join(''):emptyPulse();
+  }catch(_){
+    renderHomeMajor(null);
+    if(list)list.innerHTML=emptyPulse();
+  }
+}
+function renderHomeMajor(moment){const target=document.querySelector('#homeMajor');if(!target)return;if(!moment){target.innerHTML='';target.hidden=true;return}const date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});target.innerHTML=`<article class="home-major-card"><div><span class="kicker">Ce soir, un moment qui rassemble</span><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Grand rendez-vous')} · ${time}. Dolcia peut organiser votre soirée autour de cet événement et vérifier les lieux qui le diffusent.</p></div><div class="home-major-actions"><button class="primary" onclick="acceptHomeMajor('${esc(moment.id)}')">Oui, organiser ma soirée</button><button class="secondary" onclick="dismissHomeMajor()">Non merci</button></div></article>`}
+function acceptHomeMajor(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return startCompose();const date=new Date(moment.date);state.majorChoice=id;state.dateMode='major';state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),18,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);state.answers={duration:'evening',vibes:['vibrate']};openEclatDialogue()}
+function dismissHomeMajor(){const target=document.querySelector('#homeMajor');if(target){target.innerHTML='';target.hidden=true}}
+function openHomeEvent(id){startCompose();showToast('Choisissez votre timing : Dolcia intégrera les événements du jour')}
+function moment(kicker,title,image){return `<button class="moment-card" onclick="startCompose()"><img src="${image}" alt=""><span class="moment-copy"><small>${kicker}</small><h3>${title}</h3></span></button>`}
+function dropCard(tag,title,copy,image,color){return `<button class="drop" style="--accent:${color}" onclick="startCompose()"><div class="drop-visual" style="background-image:url('${image}')"><span>${tag}</span></div><div class="drop-copy"><h3>${title}</h3><p>${copy}</p><b>Créer ce moment →</b></div></button>`}
+function quickLife(who){const hour=new Date().getHours();state.dateMode=hour>=17?'tonight':'today';state.dateStart=new Date();state.dateEnd=new Date();state.answers={duration:hour>=17?'evening':hour>=13?'afternoon':'day',who,vibes:[],budget:'flexible'};openEclatDialogue()}
+
+function startCompose(){openEclatDialogue()}
+function renderComposer(){
+  if(state.step===-1) return renderDate();
+  if(state.step===0) return renderDate();
+  const base=FLOW[state.step], s=base.key==='budget'?{...base,...budgetStep()}:base, selected=state.answers[s.key];
+  app.innerHTML=shell(`<section class="composer"><div class="composer-shell"><div class="composer-head"><div><span class="kicker">${s.eyebrow}</span><h2>${s.title}</h2></div><div class="step-count">${state.step+1} / ${FLOW.length}<div class="progress"><span style="width:${((state.step+1)/FLOW.length)*100}%"></span></div></div></div><p class="step-lead">${s.sub}</p><div class="choice-grid">${s.options.map(o=>choice(s,o,selected)).join('')}</div><div class="composer-actions"><button class="secondary" onclick="backStep()">← Retour</button><button class="primary" onclick="nextStep()">${state.step===FLOW.length-1?'Composer mon moment':'Continuer →'}</button></div></div></section>`,'compose');
+  if(s.key==='who')setTimeout(mountCircleDetails,0);
+}
+function circleOptions(who){return({family:[['toddlers','Avec des tout-petits'],['children','Avec des enfants'],['teens','Avec des adolescents'],['mixed','Plusieurs âges']],couple:[['romantic','Une parenthèse romantique'],['reconnect','Se retrouver vraiment'],['spontaneous','Quelque chose de spontané']],friends:[['lively','Rire et bouger'],['chill','Prendre le temps'],['celebrate','Fêter quelque chose']],colleagues:[['afterwork','Décompresser après le travail'],['team','Créer un vrai moment d’équipe'],['impress','Faire découvrir une pépite']],solo:[['reset','Souffler'],['explore','Découvrir'],['social','Voir du monde']]}[who]||[])}
+function mountCircleDetails(){const grid=document.querySelector('.choice-grid'),who=state.answers.who,options=circleOptions(who);if(!grid||!who||!options.length)return;grid.insertAdjacentHTML('afterend',`<section class="circle-details"><span class="kicker">Votre cercle, aujourd'hui</span><strong>${who==='family'?'Qui sont les petits et les grands ?':'Quel moment voulez-vous partager ?'}</strong><p>Ce choix décrit uniquement cette sortie. Il ne modifie pas vos goûts permanents.</p><div>${options.map(([id,label])=>`<button class="${state.answers.groupDetail===id?'selected':''}" onclick="setGroupDetail('${id}')">${label}</button>`).join('')}</div></section>`)}
+function setGroupDetail(value){state.answers.groupDetail=value;renderComposer()}
+function budgetStep(){
+  const duration=state.answers.duration||'2h';
+  const nights=Math.max(1,tripDays()-1),economy=Math.ceil(nights*80/50)*50,comfort=Math.ceil(nights*160/50)*50,premium=Math.ceil(nights*300/50)*50;
+  const sets={
+    '2h':{title:'Quel budget pour ces deux heures ?',sub:'Budget total par personne pour l’ensemble du moment.',values:[['free','0 €','Uniquement les expériences confirmées gratuites'],['budget1','Jusqu’à 25 €','Une sortie simple et accessible'],['budget2','Jusqu’à 60 €','Plus de possibilités par personne'],['flexible','Sans limite précise','Priorité à l’expérience']]},
+    half:{title:'Quel budget pour cette demi-journée ?',sub:'Budget total par personne, activités et repas éventuel compris.',values:[['free','0 €','Uniquement les expériences confirmées gratuites'],['budget1','Jusqu’à 50 €','Une demi-journée accessible'],['budget2','Jusqu’à 120 €','Activités et belle table possibles'],['flexible','Sans limite précise','Priorité à l’expérience']]},
+    day:{title:'Quel budget pour toute la journée ?',sub:'Budget total par personne pour le programme complet.',values:[['free','0 €','Une journée uniquement gratuite'],['budget1','Jusqu’à 80 €','Sorties et repas maîtrisés'],['budget2','Jusqu’à 200 €','Une journée très complète'],['flexible','Sans limite précise','Priorité à l’expérience']]},
+    stay:{title:`Quel budget pour les ${tripDays()} jours ?`,sub:`Budget total par personne pour ${nights} nuit${nights>1?'s':''}, hébergement et expériences compris.`,values:[['budget1',`Jusqu’à ${economy.toLocaleString('fr-FR')} €`,`Environ 80 € par nuit et par personne, activités comprises`],['budget2',`Jusqu’à ${comfort.toLocaleString('fr-FR')} €`,`Environ 160 € par nuit et par personne`],['budget3',`Jusqu’à ${premium.toLocaleString('fr-FR')} €`,`Séjour premium calculé sur toute la durée`],['flexible','Sans limite précise','Priorité aux meilleures expériences']]}
+  };
+  const budgetKind=['morning','afternoon','evening'].includes(duration)?'half':duration==='afternoon_evening'?'day':duration;const set=sets[budgetKind]||sets['2h'];return {title:set.title,sub:set.sub,options:set.values.map((x,i)=>[...x,[IMAGES.outside,IMAGES.family,IMAGES.food,IMAGES.slow][i]])}
+}
+function choice(step,o,selected){const active=step.multi?selected.includes(o[0]):selected===o[0]; return `<button class="choice ${active?'selected':''}" onclick="pick('${step.key}','${o[0]}',${!!step.multi})"><img src="${o[3]}" alt=""><span class="choice-copy"><h3>${o[1]}</h3><p>${o[2]}</p></span></button>`}
+function pick(key,val,multi){if(multi){const a=state.answers[key];state.answers[key]=a.includes(val)?a.filter(x=>x!==val):[...a,val]}else{if(key==='who'&&state.answers.who!==val)state.answers.groupDetail=null;state.answers[key]=val;if(key==='duration')state.answers.budget=null}renderComposer()}
+function nextStep(){if(state.step>=0){const s=FLOW[state.step],v=state.answers[s.key];if(!v||(Array.isArray(v)&&!v.length))return showToast('Choisissez une option pour continuer')} if(state.step<FLOW.length-1){state.step++;renderComposer()}else compose()}
+function backStep(){if(state.step<=1){state.step=-1;renderDate()}else{state.step--;renderComposer()}}
+
+function renderDate(){
+  app.innerHTML=shell(`<section class="composer moment-editor"><div class="composer-shell"><div class="composer-head"><div><span class="kicker">Un seul choix, au même endroit</span><h2>Où et quand voulez-vous sortir ?</h2></div><div class="step-count">Votre moment<div class="progress"><span style="width:25%"></span></div></div></div><p class="step-lead">Choisissez la destination, la date et le créneau sur cet écran. Dolcia ne vous reposera pas la même question ensuite.</p><div class="destination-row">${Object.entries(DESTINATIONS).map(([id,d])=>`<button class="destination-pill ${state.location.name===d.name?'active':''}" onclick="setDestination('${id}')">${d.name}</button>`).join('')}<button class="destination-pill" onclick="useLocation()">Autour de moi</button></div><div class="date-presets compact-presets">${[['now','Maintenant',`Dès ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`],['tonight','Ce soir','À partir de 18 h'],['tomorrow','Demain','À votre rythme'],['weekend','Ce week-end','Samedi + dimanche']].map(x=>`<button class="date-pill ${state.dateMode===x[0]?'active':''}" onclick="setDate('${x[0]}')"><b>${x[1]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="moment-layout">${calendar()}<aside class="time-choice-panel"><span class="kicker">Votre créneau</span><h3>Combien de temps avez-vous ?</h3>${compactTimeChoices()}</aside></div><div class="composer-actions"><button class="secondary" onclick="home()">← Accueil</button><button class="primary" onclick="confirmDate()">Continuer →</button></div></div></section>`,'compose');
+}
+function compactTimeChoices(){
+  if(tripDays()>1)return`<button class="time-chip selected">Séjour de ${tripDays()} jours</button>`;
+  if(state.dateMode==='tonight')return`<button class="time-chip selected">Ce soir · à partir de 18 h</button>`;
+  const hour=new Date().getHours();
+  const choices=state.dateMode==='now'
+    ?[['2h','À partir de maintenant · 2 heures'],...(hour<18?[['afternoon_evening','Maintenant + la soirée']]:[['evening','Le reste de la soirée']])]
+    :[['2h','2 heures'],['morning','Matinée'],['afternoon','Après-midi'],['afternoon_evening','Après-midi + soirée'],['evening','Soirée'],['day','Journée complète']];
+  return `<div class="time-chip-grid">${choices.map(([id,label])=>`<button class="time-chip ${state.answers.duration===id?'selected':''}" onclick="selectDuration('${id}')">${label}</button>`).join('')}</div>`
+}
+function selectDuration(value){state.answers.duration=value;state.answers.budget=null;renderDate()}
+function confirmDate(){if(tripDays()>1||state.dateMode==='weekend')state.answers.duration='stay';if(!state.answers.duration)return showToast('Choisissez votre créneau sur ce même écran');state.step=1;renderComposer()}
+function setDestination(id){const d=DESTINATIONS[id];if(!d)return;state.location={name:d.name,lat:d.lat,lng:d.lng};state.radius=d.radius;renderDate()}
+function setDate(mode){const now=new Date();state.dateMode=mode;let d=new Date(now);if(mode==='now')state.answers.duration=now.getHours()>=18?'evening':'afternoon_evening';if(mode==='tonight'){d.setHours(Math.max(18,now.getHours()),now.getMinutes(),0,0);state.answers.duration='evening'}if(mode==='tomorrow'){d.setDate(d.getDate()+1);d.setHours(9,0,0,0);state.answers.duration=null}if(mode==='weekend'){const add=(6-d.getDay()+7)%7;d.setDate(d.getDate()+add);d.setHours(9,0,0,0);state.answers.duration='stay'}state.dateStart=d;state.dateEnd=mode==='weekend'?new Date(d.getFullYear(),d.getMonth(),d.getDate()+1,23,59):new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59);state.month=new Date(d.getFullYear(),d.getMonth(),1);renderDate()}
+function calendar(){const y=state.month.getFullYear(),m=state.month.getMonth(),first=(new Date(y,m,1).getDay()+6)%7,count=new Date(y,m+1,0).getDate();let cells='';for(let i=0;i<first;i++)cells+='<button class="cal-cell empty"></button>';for(let d=1;d<=count;d++){const date=new Date(y,m,d),selected=sameDay(date,state.dateStart)||sameDay(date,state.dateEnd),inRange=state.dateStart&&state.dateEnd&&date>state.dateStart&&date<state.dateEnd;cells+=`<button class="cal-cell ${selected?'selected':''} ${inRange?'in-range':''}" onclick="pickDate(${y},${m},${d})">${d}</button>`}const range=state.dateStart?`${fmt(state.dateStart)}${state.dateEnd&&!sameDay(state.dateStart,state.dateEnd)?` → ${fmt(state.dateEnd)} · ${tripDays()} jours`:''}`:'Choisissez une date';return `<div class="calendar"><div class="cal-head"><button onclick="moveMonth(-1)">←</button><div><b>${state.month.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</b><small>${range}</small></div><button onclick="moveMonth(1)">→</button></div><div class="cal-hint">Cliquez sur l’arrivée, puis sur le départ</div><div class="cal-days">${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class="cal-grid">${cells}</div></div>`}
+function moveMonth(n){state.month=new Date(state.month.getFullYear(),state.month.getMonth()+n,1);renderDate()}
+function pickDate(y,m,d){const date=new Date(y,m,d);if(state.dateMode!=='custom'||!state.dateStart||!sameDay(state.dateStart,state.dateEnd)){state.dateStart=date;state.dateEnd=date;state.dateMode='custom';state.answers.duration=null}else if(date<state.dateStart){state.dateEnd=state.dateStart;state.dateStart=date}else{state.dateEnd=date;if(!sameDay(state.dateStart,state.dateEnd))state.answers.duration='stay'}renderDate()}
+function tripDays(){if(!state.dateStart||!state.dateEnd)return 1;const start=Date.UTC(state.dateStart.getFullYear(),state.dateStart.getMonth(),state.dateStart.getDate()),end=Date.UTC(state.dateEnd.getFullYear(),state.dateEnd.getMonth(),state.dateEnd.getDate());return Math.max(1,Math.round((end-start)/86400000)+1)}
+
+async function useLocation(){
+  if(!navigator.geolocation)return showToast('La géolocalisation n’est pas disponible');
+  showToast('Localisation en cours…');navigator.geolocation.getCurrentPosition(p=>{state.location={name:'Autour de vous',lat:p.coords.latitude,lng:p.coords.longitude};state.radius=18000;renderDate()},()=>showToast('Localisation non autorisée'),{timeout:5000,maximumAge:600000});
+}
+
+async function openExplorer(force=false){
+  if(state.explorerLoading)return;
+  if(state.allItems.length&&!force)return renderResults();
+  state.explorerLoading=true;
+  state.catalogAttempted=true;
+  try{await compose(true)}finally{state.explorerLoading=false}
+}
+
+async function compose(explorerOnly=false){
+  state.catalogAttempted=true;
+  state.view='loading';app.innerHTML=shell(`<section class="loading"><div class="loading-card"><div class="loader"></div><span class="kicker">Concierge Dolcia</span><h2>Nous composons votre moment.</h2><p>Nous croisons vos envies, la date, la météo et les expériences réelles autour de ${esc(state.location.name)}.</p><div class="live-search"><div class="live-line"><span>Météo locale</span><b id="load-weather">En cours</b></div><div class="live-line"><span>Événements aux bonnes dates</span><b id="load-events">En cours</b></div><div class="live-line"><span>Lieux accordés à vos envies</span><b id="load-places">En cours</b></div><div class="live-preview" id="live-preview"></div></div></div></section>`,'compose');
+  state.items=[]; const queries=queriesForVibes();
+  try{
+    const weather=`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`;
+    const event=`/api/events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(new Date(state.dateEnd.getTime()+86400000))}&size=40`;
+    const officialTouquet=`/api/touquet-events?after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
+    const ticketmaster=`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
+    const partners=`/api/partner-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
+    const nationalTourism=`/api/datatourisme?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
+    const majorMoments=`/api/major-events?date=${iso(state.dateStart)}`;
+    const broadcastVenues=state.majorChoice?`/api/utils?action=broadcast-venues&event=${encodeURIComponent(state.majorChoice)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`:null;
+    const get=async url=>{const r=await fetch(url);if(!r.ok)throw new Error('source');return r.json()};
+    let retrievalPlan=queries.slice(0,24).map(query=>({query,radius:state.radius,scope:'local',reason:'LOCAL_FALLBACK'}));
+    try{const planned=await fetch('/api/utils?action=retrieval-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({queries,duration:state.answers.duration,momentSentence:state.answers.momentSentence||'',widened:Boolean(state.catalogFilters?.widened),localRadius:state.radius})}).then(response=>response.json());if(planned.plan?.length)retrievalPlan=planned.plan}catch(_){}
+    const placeQueries=retrievalPlan.map(entry=>({...entry,url:`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${entry.radius}&mode=text&keyword=${encodeURIComponent(entry.query+' '+state.location.name)}`}));
+    const weatherJob=get(weather).then(d=>{if(!d.error)state.weather=d;markLoaded('weather',d.error?'Indisponible':`${Math.round(d.main?.temp||0)}°`)}).catch(()=>markLoaded('weather','Indisponible'));
+    const eventJob=get(event).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);markLoaded('events',`${found.length} trouvés`);updateLivePreview()}).catch(()=>markLoaded('events','Source au repos'));
+    const officialJob=/Touquet|Opale/.test(state.location.name)?get(officialTouquet).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);markLoaded('events',`${found.length}+ officiels`);updateLivePreview()}).catch(()=>null):Promise.resolve();
+    const ticketmasterJob=get(ticketmaster).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);updateLivePreview()}).catch(()=>null);
+    const partnerJob=get(partners).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ partenaires`);updateLivePreview()}).catch(()=>null);
+    const nationalJob=get(nationalTourism).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ offices de tourisme`);updateLivePreview()}).catch(()=>null);
+    const majorJob=get(majorMoments).then(d=>{state.majorMoments=(d.events||[]).map(event=>({...event,kind:'sport',score:100}))}).catch(()=>{state.majorMoments=[]});
+    const broadcastJob=broadcastVenues?get(broadcastVenues).then(d=>{state.broadcastVenues=d.venues||[]}).catch(()=>{state.broadcastVenues=[]}):Promise.resolve();
+    let placesFound=0;
+    const placeJobs=placeQueries.map(entry=>get(entry.url).then(d=>{const found=normalizePlaces(d.results||[]).map(item=>({...item,retrievalScope:entry.scope,retrievalReason:entry.reason,retrievalMaxKm:entry.radius/1000})).filter(retrievalBoundaryAccepts);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés${retrievalPlan.some(item=>item.scope==='signature')?' · exception régionale demandée':''}`);updateLivePreview()}).catch(()=>null));
+    await Promise.allSettled([weatherJob,eventJob,officialJob,ticketmasterJob,partnerJob,nationalJob,majorJob,broadcastJob,...placeJobs]);
+    state.majorMoments=detectMajorMoments(state.items,state.majorMoments);
+    const deduped=dedupe(state.items);
+    await enrichPlaceAvailability(deduped);
+    state.allItems=(await rankItemsServer(deduped).catch(()=>[])).filter(geoVisible);
+    state.program=buildProgram(state.allItems);
+    if(state.majorChoice)state.program=injectMajorMoment(state.program);
+    state.alternatives=buildAlternatives(state.allItems);
+    state.items=state.program.map(slot=>slot.item);
+  }catch(_){/* L'état de repli reste volontairement non technique. */}
+  explorerOnly?renderResults():(state.majorChoice?renderSurprise():renderResults());
+}
+function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if(el){el.textContent=text;el.classList.add('done')}}
+function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
+function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
+function majorMomentPrompt(){const moment=state.majorMoments[0];if(!moment)return'';const chosen=state.majorChoice===moment.id,date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),venues=chosen?(state.broadcastVenues.length?`<div class="broadcast-list">${state.broadcastVenues.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="${venue.confirmation==='confirmed'?'confirmed':'to-confirm'}">${venue.confirmation==='confirmed'?'Diffusion confirmée':'Diffusion à confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}${venue.rating?` · Google ${venue.rating}/5`:''}</span></div><div>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank">Voir le lieu</a>`:''}</div></div>`).join('')}</div>`:'<div class="broadcast-empty"><b>Aucun lieu trouvé dans le rayon choisi.</b><span>Dolcia ne transforme pas un bar probable en diffusion certaine.</span></div>'):'';return `<section class="major-moment"><span class="kicker">Le grand rendez-vous du jour</span><div><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Événement exceptionnel')} · ${time}. Souhaitez-vous que Dolcia l’intègre à votre programme et cherche une diffusion réellement confirmée ?</p></div><div class="major-actions"><button class="primary" onclick="chooseMajorMoment('${esc(moment.id)}')">${chosen?'Actualiser les lieux':'Oui, l’intégrer'}</button><button class="secondary" onclick="dismissMajorMoment('${esc(moment.id)}')">Pas cette fois</button></div>${venues}<small>« À confirmer » signifie que le lieu est pertinent, mais qu’aucune annonce datée ne prouve encore la diffusion.</small></section>`}
+async function chooseMajorMoment(id){state.majorChoice=id;showToast('Dolcia compose votre soirée autour du match…');try{const response=await fetch(`/api/utils?action=broadcast-venues&event=${encodeURIComponent(id)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`),data=await response.json();state.broadcastVenues=data.venues||[]}catch(_){state.broadcastVenues=[]}state.program=injectMajorMoment(state.program.length?state.program:buildProgram(state.allItems));state.items=state.program.map(slot=>slot.item);renderSurprise()}
+function injectMajorMoment(program){const moment=state.majorMoments.find(item=>item.id===state.majorChoice);if(!moment)return program;const date=new Date(moment.date),minutes=date.getHours()*60+date.getMinutes(),item={id:moment.id,name:moment.title||moment.name,source:moment.source||'Source officielle',category:'night',date:moment.date,address:'Lieu de diffusion à choisir',official:true,timeKnown:true,summary:`${moment.stage||'Grand rendez-vous'} confirmé à ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}. Choisissez ensuite votre lieu de diffusion.`,quality:'official-partial'};let closest=-1,distance=Infinity;program.forEach((slot,index)=>{const match=slot.label.match(/(\d{2}):(\d{2})/);if(!match)return;const value=Number(match[1])*60+Number(match[2]),delta=Math.abs(value-minutes);if(delta<distance){distance=delta;closest=index}});const slot={label:`${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · Le grand rendez-vous`,item};if(closest>=0){const copy=[...program];copy[closest]=slot;return copy.sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}return [...program,slot].sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}
+function slotMinutes(label){const match=label.match(/(\d{2}):(\d{2})/);return match?Number(match[1])*60+Number(match[2]):0}
+function dismissMajorMoment(id){state.majorMoments=state.majorMoments.filter(item=>item.id!==id);renderResults()}
+function queriesForVibes(){
+  const selectedMap={
+    play:['parc attractions parc à thème','bowling','laser game','escape game','karting','trampoline park','réalité virtuelle','paintball mini golf'],
+    breathe:['plage balade nature jardin','accrobranche parcours aventure','réserve naturelle paysage','sports nautiques voile surf paddle kayak','golf vélo escalade'],
+    create:['atelier créatif cours stage','concert spectacle théâtre cinéma','musée exposition patrimoine','visite guidée'],
+    taste:['restaurant','brunch salon de thé','gastronomie dégustation marché'],
+    recharge:['spa thalasso bien-être','massage yoga détente'],
+    vibrate:['concert bar soirée','casino cabaret club','festival fête locale spectacle']
+  };
+  const broad=[
+    'restaurants cafés brunch gastronomie','parcs jardins plages réserves naturelles','animations famille enfants aire de jeux',
+    'parc attractions parc de loisirs parc à thème','bowling','laser game','escape game','karting circuit',
+    'trampoline park parc indoor','réalité virtuelle jeux immersifs','accrobranche parcours aventure','paintball airsoft',
+    'mini golf golf practice','escalade salle bloc','base nautique location matériel','char à voile','wing foil kite surf foil','voile catamaran dériveur location','surf paddle kayak location',
+    'tennis location court réservation','padel squash badminton location terrain','équitation poney centre équestre',
+    'piscine centre aquatique aquapark','zoo aquarium ferme pédagogique','musées expositions monuments patrimoine',
+    'cinéma théâtre spectacle concert','ateliers stages cours créatifs','marchés brocantes fêtes locales','spa thalasso bien-être',
+    'casino cabaret club soirée'
+  ];
+  const selected=(state.answers.vibes||[]).flatMap(v=>selectedMap[v]||[]);
+  const temperature=state.weather?.main?.temp;
+  if(temperature>=25)selected.unshift('base nautique location','char à voile','wing foil kite surf','surf paddle kayak','centre aquatique piscine');
+  if(['day','stay','afternoon_evening'].includes(state.answers.duration))selected.push('concert spectacle soirée casino bar');
+  if(state.answers.duration==='stay'){const lodging={family:'hôtel familial piscine',sea:'hôtel vue mer',character:'hôtel de charme',simple:'hôtel central bien placé'}[state.answers.lodging]||'hôtels hébergements résidences de tourisme';selected.unshift(lodging)}
+  if(state.answers.who==='family'&&state.answers.familyRhythm==='balanced')selected.unshift('atelier enfants encadré club enfants','spa massage parents proche activité enfants','activité parents enfants même lieu');
+  return [...new Set([...selected,...broad])];
+}
+function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),types=p.types||[],placeText=`${p.name||''} ${types.join(' ')}`.toLowerCase(),business=/restaurant|cafe|bar|lodging|campground|store|office|spa|school|travel_agency|tourist_information/.test(placeText),naturalType=types.some(type=>['beach','park','natural_feature','hiking_area','national_park'].includes(type)),naturalName=/^(plage|beach|parc|jardin|promenade|sentier)(\b|\s)/i.test(String(p.name||'').trim()),freeAccess=!business&&(naturalType||naturalName),experienceKind=/aquarium/.test(placeText)?'aquarium':/parc.*attraction|theme.?park|labyrinthe|labyparc|bagatelle/.test(placeText)?'theme_park':/foil|kitesurf|surf|paddle|kayak|voile|catamaran|nautique|aquatique/.test(placeText)?'water':/reserve naturelle|plage|promenade|sentier|hiking|natural_feature/.test(placeText)?'nature':/restaurant|cafe|food/.test(placeText)?'food':category(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),experienceKind,address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null,types}})}
+async function enrichPlaceAvailability(items){
+  const evening=['evening','afternoon_evening'].includes(state.answers.duration),priority=item=>(item.retrievalScope==='signature'?45:0)+(evening&&['food','night','culture','slow','outside'].includes(item.category)?30:0);
+  const candidates=items.filter(item=>item.source==='Google Places'&&item.placeId).sort((a,b)=>priority(b)-priority(a)||(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0)).slice(0,60);
+  let cursor=0;
+  const worker=async()=>{while(cursor<candidates.length){const item=candidates[cursor++];try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(item.placeId)}`),details=await response.json();if(!details.verified)continue;item.openingPeriods=details.openingPeriods||[];item.hours=details.hours||[];item.detailsKnown=true;item.phone=details.phone||null;item.website=details.website||null;item.booking=details.website||item.booking;item.businessStatus=details.businessStatus||item.businessStatus;item.types=details.types||[];if(details.photos?.length){item.photos=details.photos;item.photo=details.photos[0]}}catch(_){item.detailsKnown=false}}};
+  await Promise.all(Array.from({length:Math.min(8,candidates.length)},worker));
+}
+function normalizeEvents(items){return items.map((e,i)=>({id:'e-'+(e.uid||e.id||i),name:typeof e.title==='object'?(e.title.fr||Object.values(e.title)[0]):e.title,source:e.source||'OpenAgenda',category:category(`${e.type||''} ${typeof e.title==='object'?JSON.stringify(e.title):e.title}`),address:e.address||e.location||'',lat:e.lat??e.latitude,lng:e.lng??e.longitude,date:e.date,endDate:e.endDate||null,timeKnown:e.timeKnown!==false&&/T\d{2}:\d{2}/.test(e.date||''),photo:typeof e.image==='string'?e.image:(e.image?.base||e.thumbnail),booking:e.registrationUrl,free:e.free,priceLabel:e.priceLabel,official:e.official,partner:e.partner,sponsored:e.sponsored,sponsorshipTier:e.sponsorshipTier,programId:e.programId||e.program_id||null,programTitle:e.programTitle||null,audience:e.audience||null,description:e.description||'',establishmentId:e.establishmentId||e.establishment_id||null,checkedAt:e.checkedAt||e.checked_at||null}))}
+function plainText(text=''){return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function isCivicBuilding(text=''){
+  const t=plainText(text).replace(/[_-]+/g,' ');
+  return /\b(hotel de ville|mairie|city hall|town hall|municipal building|municipal office|local government office|civic center|civic centre|rathaus|ayuntamiento|municipio|municipalidad|prefeitura|prefectura|stadhuis|gemeentehuis|radhus|raadhuis|palazzo comunale|casa comunale|comune di|camara municipal|hotel communal|maison communale)\b/.test(t);
+}
+function isLodgingText(text=''){
+  const t=plainText(text);
+  if(isCivicBuilding(t)||/visite guidee|visite de l.hotel|histoire et architecture|monument|musee/.test(t))return false;
+  return /\b(lodging|hotel|hostel|motel|resort|campground|camping|chambre d.hote|bed and breakfast|residence de tourisme|village vacances|hebergement)\b/.test(t);
+}
+function category(text=''){const t=plainText(text);if(isLodgingText(t))return'hotel';if(/feu d.artifice|bal populaire|concert|spectacle|soiree/.test(t))return'night';if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|musee|art|cinema|theater|theatre|culture|expo|visite|patrimoine|hotel de ville|mairie/.test(t))return'culture';if(/spa|beauty|yoga|bien/.test(t))return'slow';if(/bar|night|music/.test(t))return'night';if(/park|parc|nature|plage|garden|foret/.test(t))return'outside';return'active'}
+function dedupe(items){const seen=new Map();return items.filter(x=>{const name=(x.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();const date=x.date?iso(new Date(x.date)):'';const k=`${name}:${date}`;if(!name)return false;const previous=seen.get(k);if(previous){previous.sources=[...new Set([...(previous.sources||[previous.source]),x.source].filter(Boolean))];return false}x.sources=[x.source].filter(Boolean);seen.set(k,x);return true})}
+function qualityGate(item){if(!item?.name)return false;if(item.category==='hotel'&&!isLodgingText(`${item.name||''} ${item.address||''}`))return false;if(item.source==='Google Places')return Boolean(item.placeId&&item.address&&item.lat!=null&&item.lng!=null&&item.businessStatus!=='CLOSED_PERMANENTLY');if(item.date){const date=new Date(item.date);if(Number.isNaN(date.getTime()))return false;return Boolean(item.source&&(item.address||item.booking||item.official))}return Boolean(item.address&&item.source)}
+function qualityLevel(item){if(item.source==='Google Places'&&item.address&&item.placeId&&item.photos?.length)return'verified';if(item.official&&item.date&&item.address&&item.booking)return'verified';if(item.official&&item.date&&(item.address||item.booking))return'official-partial';return'documented'}
+function itemImage(i){return i.photo||IMAGES[i.category]||IMAGES.fallback}
+function distanceKm(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,q=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
+function retrievalBoundaryAccepts(item){if(!Number.isFinite(item.lat)||!Number.isFinite(item.lng))return false;const distance=distanceKm(state.location.lat,state.location.lng,item.lat,item.lng),maximum=Math.min(item.retrievalMaxKm||state.radius/1000,item.retrievalScope==='signature'?60:25);item.distance=distance;return distance<=maximum}
+// Un restaurant, un hôtel ou une sortie nocturne existe déjà en abondance dans la ville : le vrai
+// critère n'est PAS la distance, c'est la commune. Cucq est à 2km du Touquet mais reste une autre
+// ville — proposer un restaurant là-bas n'a pas plus de sens qu'à 10km. Pour food/night, on exige
+// donc que la commune réelle corresponde à la destination (destinationLocalityMatch), quelle que
+// soit la distance. Les hôtels restent sur la logique distance + élargissement sur demande, car un
+// hôtel hors ville reste une vraie option quand aucun n'est disponible dans le budget en ville.
+const ABUNDANT_LOCAL_CATEGORIES=['food','hotel','night'];
+const STRICT_LOCALITY_CATEGORIES=['food','night'];
+const WIDEN_ELIGIBLE_CATEGORIES=['hotel'];
+function withinAbundantLocalReach(item){
+  if(!ABUNDANT_LOCAL_CATEGORIES.includes(item.category))return true;
+  if(STRICT_LOCALITY_CATEGORIES.includes(item.category)){
+    const match=item.geoEligibility?.destinationLocalityMatch;
+    if(match===false)return false;
+    if(match==null&&item.distance!=null&&item.distance>5)return false;
+    return true;
+  }
+  if(item.geoEligibility?.status==='extended')return true;
+  const widened=WIDEN_ELIGIBLE_CATEGORIES.includes(item.category)&&Boolean(state.catalogFilters?.abundantWidened?.[item.category]);
+  const cap=widened?20:5;
+  return item.distance==null||item.distance<=cap;
+}
+// Vrai seulement si : la catégorie est éligible à l'élargissement (hôtels uniquement), la personne
+// a un budget précis, aucune option locale (≤5km) ne le respecte, et une option plus loin le
+// respecterait — donc élargir servirait réellement à quelque chose. Jamais pour food/night.
+function localAbundanceBudgetGap(category){
+  if(!WIDEN_ELIGIBLE_CATEGORIES.includes(category))return false;
+  if(!state.answers.budget||state.answers.budget==='flexible'||state.answers.budget==='free')return false;
+  if(state.catalogFilters?.abundantWidened?.[category])return false;
+  const compatible=item=>!['exceptional','unknown'].includes(itemBudgetBand(item));
+  const local=state.allItems.some(item=>item.category===category&&item.geoEligibility?.premium_eligible===true&&(item.distance==null||item.distance<=5)&&compatible(item));
+  if(local)return false;
+  return state.allItems.some(item=>item.category===category&&item.geoEligibility?.premium_eligible===true&&item.distance!=null&&item.distance>5&&item.distance<=20&&compatible(item));
+}
+function confirmWidenAbundant(category){
+  if(!WIDEN_ELIGIBLE_CATEGORIES.includes(category))return;
+  state.catalogFilters=state.catalogFilters||{};
+  state.catalogFilters.abundantWidened=state.catalogFilters.abundantWidened||{};
+  state.catalogFilters.abundantWidened[category]=true;
+  if(state.radius<20000)state.radius=20000;
+  save();
+  showToast('Recherche élargie aux environs pour cette catégorie uniquement');
+  compose(true);
+}
+function declineWidenAbundant(category){
+  state.catalogFilters=state.catalogFilters||{};
+  state.catalogFilters.abundantWidenDeclined=state.catalogFilters.abundantWidenDeclined||{};
+  state.catalogFilters.abundantWidenDeclined[category]=true;
+  save();
+  renderResults();
+}
+function abundantWidenPrompt(category){
+  if(state.catalogFilters?.abundantWidenDeclined?.[category])return'';
+  if(!localAbundanceBudgetGap(category))return'';
+  const label=category==='hotel'?'hôtel':category==='night'?'sortie':'restaurant';
+  return `<div class="widen-prompt"><strong>Aucun ${label} à votre budget n'est disponible à ${esc(state.location.name)}.</strong><p>Souhaitez-vous élargir la recherche aux environs pour cette catégorie ?</p><div><button onclick="confirmWidenAbundant('${category}')">Oui, élargir</button><button onclick="declineWidenAbundant('${category}')">Non, je reste à ${esc(state.location.name)}</button></div></div>`;
+}
+function geoVisible(item){return item.geoEligibility?.premium_eligible===true&&['core','extended'].includes(item.geoEligibility?.status)&&withinAbundantLocalReach(item)}
+function geoCore(item){return item.geoEligibility?.premium_eligible===true&&item.geoEligibility?.status==='core'}
+async function rankItemsServer(items){
+  const payload={context:{lat:state.location.lat,lng:state.location.lng,locationName:state.location.name,radiusKm:state.radius/1000,start:state.dateStart.toISOString(),end:state.dateEnd.toISOString(),pilot:state.location.name==='Le Touquet-Paris-Plage'?'touquet':'other',who:state.answers.who,groupDetail:state.answers.groupDetail||'',childrenAges:state.answers.childrenAges||[],momentSentence:state.answers.momentSentence||'',duration:state.answers.duration,dateMode:state.dateMode,budget:state.answers.budget,budgetAmount:state.budgetPlan.amount,groupSize:currentGroupSize(),groupProfiles:currentGroupProfiles(),vibes:state.answers.vibes||[],temperature:state.weather?.main?.temp??18,weather:(state.weather?.weather?.[0]?.main||''),animal:Boolean(state.answers.animal)},memory:{favorites:state.favorites,feedback:state.feedback,tasteProfile:state.tasteProfile},items};
+  const response=await fetch('/api/events?service=recommendations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!response.ok)throw new Error('ranking unavailable');
+  const data=await response.json();
+  return Array.isArray(data.items)?data.items:[];
+}
+function currentGroupSize(){const active=state.groupParticipants.filter(person=>person.selected!==false);if(active.length>1)return active.length;return state.answers.who==='family'?Math.max(3,1+(state.answers.childrenAges||[]).length):state.answers.who==='couple'?2:['friends','colleagues'].includes(state.answers.who)?4:1}
+function estimateItemCost(item){if(item.free||item.price===0||item.freeAccess)return{total:0,known:true,label:'Gratuit confirmé'};const explicit=String(item.priceLabel||'').match(/(\d+(?:[,.]\d{1,2})?)\s*€/);if(explicit){const unit=Number(explicit[1].replace(',','.'));return{total:Math.round(unit*currentGroupSize()),known:true,label:`${unit.toLocaleString('fr-FR')} € par personne`}}const levels={0:0,1:15,2:35,3:70,4:120};if(item.price!=null){const unit=levels[Math.min(4,Number(item.price))]??35;return{total:Math.round(unit*currentGroupSize()),known:false,label:'Estimation Dolcia'}}return{total:0,known:false,label:'Tarif à confirmer'} }
+function itemBudgetBand(item){if(item.budgetBand)return item.budgetBand;const estimate=estimateItemCost(item),amount=state.budgetPlan.amount;if(estimate.known&&estimate.total===0)return'free';if(!estimate.known||amount==null)return'unknown';const ratio=estimate.total/Math.max(1,amount);return ratio<=.12?'light':ratio<=.3?'balanced':ratio<=.55?'signature':'exceptional'}
+function budgetBandLabel(item){return({free:'Libre ou gratuit',light:'Plaisir léger',balanced:'Équilibre choisi',signature:'Moment signature',exceptional:'Exception assumée',unknown:'Prix à confirmer'})[itemBudgetBand(item)]}
+function programEmotion(item,index,total){const kind=experienceKind(item);if(index===0)return'L’élan';if(index===total-1)return'Le souvenir';if(kind==='food')return'La respiration';if(kind==='wellness')return'Le relâchement';if(kind==='event'||item.official)return'Le temps fort';if(item.discoveryPick||item.distanceMerit==='proven_rarity')return'L’inattendu maîtrisé';return'La découverte'}
+function programArcPanel(){if(!state.program.length)return'';return`<aside class="program-arc"><div class="program-arc-title"><span>La courbe de votre moment</span><strong>Pas une succession d’adresses.<br>Une expérience qui respire.</strong><p>Dolcia alterne intensité, respiration et dépenses. Un budget confortable ne vous enferme jamais dans le luxe.</p></div><div class="program-arc-line">${state.program.map((slot,index)=>{const item=slot.item,band=itemBudgetBand(item),travel=item.geoEligibility?.travel_minutes;return`<article class="arc-${band}"><i></i><small>${esc(slot.label.split('·')[0].trim())}</small><b>${programEmotion(item,index,state.program.length)}</b><span>${budgetBandLabel(item)}${travel!=null?` · ${travel} min`:''}</span></article>`}).join('')}</div></aside>`}
+function programBudgetPanel(){const amount=state.budgetPlan.amount;if(amount==null)return`<aside class="budget-orchestra"><div><span>Budget du groupe</span><strong>Priorité à l’expérience</strong></div><button onclick="openBudgetEditor()">Définir une enveloppe</button></aside>`;const costs=state.program.map(slot=>estimateItemCost(slot.item)),documented=costs.filter(cost=>cost.known).reduce((sum,cost)=>sum+cost.total,0),estimated=costs.filter(cost=>!cost.known&&cost.total>0).reduce((sum,cost)=>sum+cost.total,0),remaining=amount-documented-estimated;return`<aside class="budget-orchestra ${remaining<0?'over':''}"><div><span>Enveloppe totale du groupe</span><strong>${amount.toLocaleString('fr-FR')} €</strong><small>${currentGroupSize()} personne${currentGroupSize()>1?'s':''} · ${tripDays()} jour${tripDays()>1?'s':''}</small></div><div><span>Prix documentés</span><strong>${documented.toLocaleString('fr-FR')} €</strong><small>Confirmés par les sources</small></div><div><span>Estimations prudentes</span><strong>${estimated?estimated.toLocaleString('fr-FR')+' €':'—'}</strong><small>Jamais présentées comme un prix certain</small></div><div><span>${remaining<0?'Dépassement estimé':'Budget restant estimé'}</span><strong>${Math.abs(remaining).toLocaleString('fr-FR')} €</strong><small>${remaining<0?'Dolcia doit recomposer':'Disponible pour enrichir le moment'}</small></div><button onclick="openBudgetEditor()">Ajuster</button></aside>`}
+function openBudgetEditor(){document.body.insertAdjacentHTML('beforeend',`<div class="modal budget-editor" id="budgetEditor"><article><button class="close" onclick="document.querySelector('#budgetEditor')?.remove()">×</button><span class="kicker">Votre enveloppe réelle</span><h2>Combien souhaitez-vous consacrer à tout le moment ?</h2><label>Budget total du groupe<input id="budgetAmount" type="number" min="0" step="10" value="${state.budgetPlan.amount??''}" placeholder="Ex. 300"></label><label>Marge exceptionnelle autorisée<select id="budgetMargin"><option value="0">Aucun dépassement</option><option value="10" ${state.budgetPlan.margin===10?'selected':''}>Jusqu’à 10 % si cela vaut vraiment le coup</option><option value="20" ${state.budgetPlan.margin===20?'selected':''}>Jusqu’à 20 % après confirmation</option></select></label><div class="budget-checks"><label><input id="budgetMeals" type="checkbox" ${state.budgetPlan.includesMeals?'checked':''}> Repas inclus</label><label><input id="budgetStay" type="checkbox" ${state.budgetPlan.includesStay?'checked':''}> Hébergement inclus</label><label><input id="budgetTransport" type="checkbox" ${state.budgetPlan.includesTransport?'checked':''}> Transport inclus</label></div><button class="primary" onclick="saveBudgetPlan()">Recomposer dans cette enveloppe</button></article></div>`) }
+function saveBudgetPlan(){const amount=Number(document.querySelector('#budgetAmount')?.value);if(!Number.isFinite(amount)||amount<0)return showToast('Indiquez un budget total valide');state.budgetPlan={amount,margin:Number(document.querySelector('#budgetMargin')?.value||0),includesMeals:Boolean(document.querySelector('#budgetMeals')?.checked),includesStay:Boolean(document.querySelector('#budgetStay')?.checked),includesTransport:Boolean(document.querySelector('#budgetTransport')?.checked)};state.answers.budget=amount===0?'free':'custom';save();document.querySelector('#budgetEditor')?.remove();refreshRecommendations()}
+function scoreItems(items){
+  const temp=state.weather?.main?.temp??18,cond=(state.weather?.weather?.[0]?.main||'').toLowerCase(),vibes=state.answers.vibes||[],who=state.answers.who;
+  const budget=state.answers.budget;
+  return items.filter(i=>{
+    if(!qualityGate(i))return false;
+    if(i.source==='Google Places'&&(!i.placeId||!i.address||i.lat==null||i.lng==null||i.businessStatus==='CLOSED_PERMANENTLY'))return false;
+    if(i.lat!=null&&i.lng!=null){
+      const km=distanceKm(state.location.lat,state.location.lng,i.lat,i.lng);
+      if(km>state.radius/1000)return false;
+    }
+    const addressText=`${i.address||''} ${i.name||''}`.toLowerCase();
+    if(state.location.name==='Le Touquet-Paris-Plage'&&/\bcalais\b|\bboulogne-sur-mer\b|\bdunkerque\b/.test(addressText))return false;
+    const activityText=`${i.name||''} ${i.address||''}`.toLowerCase();
+    if(/chien|chiens|canin|dog park|dog beach/.test(activityText))return false;
+    if(['family','friends'].includes(who)&&/golf/.test(activityText)&&/compétition|competition|championnat|trophée|trophee|coupe/.test(activityText))return false;
+    if(i.source!=='Google Places'){
+      if(!i.date)return false;
+      const day=iso(new Date(i.date));
+      if(day<iso(state.dateStart)||day>iso(state.dateEnd))return false;
+    }
+    const isOfficialHighlight=i.official&&i.date&&iso(new Date(i.date))===iso(state.dateStart)&&/feu d.artifice|bal populaire|fête nationale/.test(activityText);
+    /* Les envies ordonnent le catalogue ; elles ne doivent jamais supprimer toutes les autres possibilités pertinentes. */
+    if(budget==='free')return i.free||i.price===0||i.freeAccess;
+    if(budget==='budget1'&&i.price!=null)return i.price<=1;
+    if(budget==='budget2'&&i.price!=null)return i.price<=2;
+    if(budget==='budget3'&&i.price!=null)return i.price<=3;
+    if(budget==='custom'&&state.budgetPlan.amount!=null){const estimate=estimateItemCost(i);if(estimate.known&&estimate.total>state.budgetPlan.amount*(1+(state.budgetPlan.margin||0)/100))return false}
+    return true;
+  }).map(i=>{
+    const text=(i.name||'').toLowerCase(),distance=i.lat&&i.lng?distanceKm(state.location.lat,state.location.lng,i.lat,i.lng):null;let score=50;
+    if(matchesIntentions(i,vibes))score+=24;if(i.source==='OpenAgenda')score+=18;if(i.rating>=4.5)score+=12;if(i.reviews>100)score+=5;if(i.isOpen===true)score+=10;if(distance!==null&&distance<3)score+=8;
+    if(i.official)score+=35;
+    if(i.date&&iso(new Date(i.date))===iso(state.dateStart))score+=30;
+    if(temp>=25&&/paddle|surf|voile|foil|kite|kayak|plage|nautique|aquatique|piscine/.test(text))score+=42;if(temp>=25&&['outside','slow'].includes(i.category))score+=12;
+    if(/rain|drizzle|thunder|snow/.test(cond)){if(['culture','slow','food'].includes(i.category))score+=22;if(i.category==='outside')score-=15}
+    if((state.dateMode==='tonight'||state.answers.duration==='evening')&&['food','night','culture'].includes(i.category))score+=14;
+    if(state.answers.duration==='morning'&&['food','outside','active'].includes(i.category))score+=10;
+    if(state.answers.duration==='afternoon'&&['outside','culture','active','slow'].includes(i.category))score+=10;
+    if(who==='family'&&['outside','active'].includes(i.category))score+=12;
+    if(who==='family'&&vibes.includes('recharge')&&['outside','slow'].includes(i.category))score+=24;
+    if(budget==='budget1'&&i.price===1)score+=12;
+    if(budget==='budget2'&&i.price===2)score+=14;
+    if(budget==='budget3'&&i.price>=2)score+=16;
+    if(state.answers.duration==='stay'&&i.category==='hotel')score+=32;
+    if(budget==='custom'&&state.budgetPlan.amount!=null){const estimate=estimateItemCost(i);if(!estimate.known)score-=5;else if(estimate.total===0)score+=3}
+    if(budget==='flexible'){
+      if(i.rating>=4.6&&i.reviews>100)score+=10;
+    }
+    if(state.favorites.includes(i.id))score+=20;
+    if(state.feedback[i.id]==='like')score+=18;if(state.feedback[i.id]==='dislike')score-=30;
+    score+=(state.tasteProfile[i.category]||0)*4;
+    if(state.experienceFeelings[i.id])score+=(feelingWeight(state.experienceFeelings[i.id])||0)*5;
+    return {...i,score,distance,quality:qualityLevel(i),budgetBand:itemBudgetBand(i)};
+  }).sort((a,b)=>(b.score-a.score)||(Number(b.sponsored)-Number(a.sponsored)))
+}
+
+function matchesIntentions(item,intentions){
+  const text=`${item.name||''} ${item.category||''}`.toLowerCase();
+  const rules={
+    play:/active|parc|attraction|bowling|karting|laser|escape|trampoline|virtuelle|paintball|mini.?golf/,
+    breathe:/outside|plage|nature|jardin|forêt|balade|accrobranche|réserve|nautique|voile|surf|paddle|kayak|équitation|vélo/,
+    create:/culture|atelier|cours|stage|spectacle|cinéma|musée|exposition|visite|patrimoine/,
+    taste:/food|restaurant|brunch|gastronomie|café|marché|dégustation/,
+    recharge:/slow|spa|thalasso|massage|yoga|bien-être/,
+    vibrate:/night|bar|soirée|casino|cabaret|club|concert|festival|fête|feu d.artifice/
+  };
+  return intentions.some(intent=>rules[intent]?.test(text));
+}
+
+function buildProgram(pool, excludedIds=[]){
+  const available=pool.filter(item=>!excludedIds.includes(item.id)&&item.geoEligibility?.premium_eligible!==false&&!(item.ranking?.groupFit?.vetoes>0));
+  const used=new Set(), usedKinds=new Set(), slots=[],dayLoads=new Map();
+  const wanted=programTemplates();
+  for(const [label,categories] of wanted){
+    let candidates=available.filter(item=>!used.has(item.id)&&categories.includes(item.category)&&isTimeCompatible(item,label)&&(state.answers.duration==='stay'||!usedKinds.has(experienceKind(item))||experienceKind(item)==='event'));
+    const previousBand=slots.length?itemBudgetBand(slots[slots.length-1].item):null,previousEnergy=slots.length?experienceEnergy(slots[slots.length-1].item):null;
+    const day=programDayNumber(label),rhythmContext={day,currentDayLoad:dayLoads.get(day)||0,previousDayLoad:day>1?(dayLoads.get(day-1)||0):0};
+    candidates.sort((a,b)=>programBalanceScore(b,label,previousBand,previousEnergy,rhythmContext)-programBalanceScore(a,label,previousBand,previousEnergy,rhythmContext));
+    const item=candidates[0];
+    if(item){used.add(item.id);usedKinds.add(experienceKind(item));slots.push({label,item});if(day)dayLoads.set(day,(dayLoads.get(day)||0)+energyLoad(item))}
+  }
+  const vibes=state.answers.vibes||[];
+  if(slots.length>=3&&vibes.length){
+    const target=slots.findIndex((slot,index)=>index>0&&index<slots.length-1&&slot.item.category!=='hotel'&&slot.item.category!=='food');
+    if(target>=0){const current=slots[target],[label,categories]=wanted.find(([candidateLabel])=>candidateLabel===current.label)||[];const discovery=available.filter(item=>!used.has(item.id)&&categories?.includes(item.category)&&isTimeCompatible(item,label)&&!matchesIntentions(item,vibes)&&((item.rating>=4.5&&item.reviews>=30)||item.official)).sort((a,b)=>slotScore(b,label)-slotScore(a,label))[0];if(discovery&&slotScore(discovery,label)>=slotScore(current.item,label)-12)slots[target]={label,item:{...discovery,discoveryPick:true}}}
+  }
+  return slots;
+}
+
+function programBalanceScore(item,label,previousBand,previousEnergy=null,rhythmContext={}){let score=slotScore(item,label),band=itemBudgetBand(item),energy=experienceEnergy(item);if(['signature','exceptional'].includes(previousBand)&&['free','light'].includes(band))score+=20;if(['signature','exceptional'].includes(previousBand)&&['signature','exceptional'].includes(band))score-=24;if(previousEnergy==='high'&&!wantsSustainedEnergy()){if(energy==='soft')score+=24;if(energy==='high')score-=32}if(previousEnergy==='soft'&&energy==='high')score+=6;const rhythm=state.answers.stayRhythm||'adaptive',recoveryPressure=groupRecoveryPressure();if(state.answers.duration==='stay'&&rhythm!=='sport'){const tiredYesterday=(rhythmContext.previousDayLoad||0)>=5,alreadyActive=(rhythmContext.currentDayLoad||0)>=3;if(rhythm==='rest'){if(energy==='soft')score+=28;if(energy==='high')score-=40}if(tiredYesterday){if(energy==='soft')score+=rhythm==='active_recovery'?18:30;if(energy==='high')score-=rhythm==='active_recovery'?18:34}if(alreadyActive&&energy==='high')score-=24;if(recoveryPressure>=.34){if(energy==='soft')score+=14;if(energy==='high')score-=16}}if(/Déjeuner/.test(label)&&band==='signature')score+=4;if(/Dîner/.test(label)&&['free','light','balanced'].includes(band))score+=5;if(item.distanceMerit==='proven_rarity')score+=8;if(item.distanceMerit==='ordinary')score-=22;return score}
+
+function experienceKind(item){const t=`${item.name||''} ${item.category||''}`.toLowerCase();if(/golf|tennis|padel|sport/.test(t))return'sport';if(/restaurant|brunch|café|food/.test(t))return'food';if(/concert|spectacle|festival|fête|feu d.artifice|atelier|exposition/.test(t))return'event';if(/spa|massage|thalasso|yoga/.test(t))return'wellness';if(/plage|voile|foil|surf|paddle|kayak|nautique|aquatique/.test(t))return'water';if(/parc|bowling|laser|escape|karting/.test(t))return'play';return item.category||'other'}
+function experienceEnergy(item){const t=plainText(`${item.name||''} ${item.category||''}`);if(/karting|laser|paintball|accrobranche|trampoline|surf|foil|kite|char a voile|tennis|padel|squash|badminton|golf|sport|escalade|velo|kayak|parc d.attraction/.test(t))return'high';if(/spa|massage|thalasso|yoga|balade|jardin|musee|exposition|plage|restaurant|brunch|cafe|degustation|cinema/.test(t))return'soft';return'medium'}
+function energyLoad(item){return {soft:1,medium:2,high:3}[experienceEnergy(item)]||2}
+function programDayNumber(label){const match=String(label||'').match(/Jour\s+(\d+)/i);return match?Number(match[1]):0}
+function inferStayRhythm(){const sentence=plainText(state.answers.momentSentence||'');if(/semaine sportive|stage sportif|sport tous les jours|vacances sportives/.test(sentence))return'sport';if(/repos|recuper|prendre notre temps|sans courir/.test(sentence))return'balanced';return'adaptive'}
+function groupRecoveryPressure(){const profiles=currentGroupProfiles(),tired=profiles.filter(person=>person.energy==='Douce'||person.momentNeed==='Souffler').length;return profiles.length?tired/profiles.length:0}
+function wantsSustainedEnergy(){const sentence=plainText(state.answers.momentSentence||''),vibes=state.answers.vibes||[];return state.answers.stayRhythm==='sport'||/journee sportive|sport toute la journee|semaine sportive|sport tous les jours|a fond|sans pause|challenge sportif/.test(sentence)||(vibes.length===1&&vibes[0]==='play'&&state.answers.groupDetail==='lively')}
+
+function buildAlternatives(pool){
+  return programTemplates().map(([label,categories])=>{
+    let candidates=pool.filter(item=>categories.includes(item.category)&&isTimeCompatible(item,label));
+    candidates.sort((a,b)=>slotScore(b,label)-slotScore(a,label));
+    return {label,items:candidates.slice(0,12),total:candidates.length};
+  }).filter(group=>group.items.length);
+}
+
+function requiresPublishedSession(item){return /cinema|cinéma|theatre|théâtre|spectacle|visite guidee|visite guidée|atelier|cours|stage|excursion|croisiere|croisière|e.?foil|wing.?foil|kite|surf|char à voile|char a voile|paddle|kayak|catamaran|voile|tennis|padel|squash|badminton|golf|piscine|spa|massage|thalasso|escape game|laser game|bowling|location|école|ecole/.test(`${item.name||''} ${(item.types||[]).join(' ')}`.toLowerCase())}
+function requestedMomentLabel(){const date=new Date(state.dateStart),hours=String(date.getHours()).padStart(2,'0'),minutes=String(date.getMinutes()).padStart(2,'0');return `${hours}:${minutes} · Votre moment`}
+function momentCompatibility(item){
+  const label=requestedMomentLabel();
+  if(item.date){if(item.timeKnown===false)return'unknown';const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime())||!sameDay(eventDate,state.dateStart))return'incompatible';const delta=Math.abs(eventDate.getHours()*60+eventDate.getMinutes()-(new Date(state.dateStart).getHours()*60+new Date(state.dateStart).getMinutes()));return delta<=120?'confirmed':'incompatible'}
+  if(item.source!=='Google Places')return'unknown';
+  if(requiresPublishedSession(item))return item.detailsKnown&&isOpenForSlot(item,label)?'open-not-session':'unknown';
+  if(item.detailsKnown&&item.openingPeriods?.length)return isOpenForSlot(item,label)?'confirmed':'incompatible';
+  if(item.freeAccess)return'autonomous';
+  return'unknown';
+}
+function recommendationEligibleNow(item){const compatible=['confirmed','autonomous'].includes(momentCompatibility(item)),text=plainText(`${item.name||''} ${(item.types||[]).join(' ')}`);if(!geoVisible(item))return false;if(!compatible)return false;if(/office de tourisme|tourist information|mairie|hotel de ville|agence immobiliere|camping|campground/.test(text)&&state.answers.duration!=='stay')return false;if(item.official&&item.date)return true;
+  const signature=item.retrievalScope==='signature'&&['day','stay','afternoon_evening'].includes(state.answers.duration);const maximum=state.answers.duration==='stay'?20:(state.answers.duration==='evening'?4:7);if(!signature&&item.distance!=null&&item.distance>maximum)return false;if(signature&&item.distance!=null&&item.distance>60)return false;if(momentCompatibility(item)==='confirmed'&&item.source==='Google Places'&&!item.partner&&!item.official&&((item.rating||0)<4.3||(item.reviews||0)<20))return false;return true}
+function isOpenForSlot(item,label){
+  const match=(label||'').match(/(\d{2}):(\d{2})/)||requestedMomentLabel().match(/(\d{2}):(\d{2})/);if(!match)return false;
+  if(!item.detailsKnown||!item.openingPeriods?.length)return false;
+  const date=new Date(state.dateStart),day=date.getDay(),start=day*1440+Number(match[1])*60+Number(match[2]),end=start+75;
+  return item.openingPeriods.some(period=>{if(!period.open)return false;const open=period.open.day*1440+Number(String(period.open.time||'0000').slice(0,2))*60+Number(String(period.open.time||'0000').slice(2,4));if(!period.close)return true;let close=period.close.day*1440+Number(String(period.close.time||'0000').slice(0,2))*60+Number(String(period.close.time||'0000').slice(2,4));if(close<=open)close+=7*1440;let target=start;if(target<open&&target+7*1440>=open)target+=7*1440;return target>=open&&target+75<=close});
+}
+function isTimeCompatible(item,label){const match=(label||'').match(/(\d{2}):(\d{2})/)||requestedMomentLabel().match(/(\d{2}):(\d{2})/);if(!match)return false;if(item.source==='Google Places'){if(requiresPublishedSession(item))return false;return isOpenForSlot(item,label)}if(!item.date)return false;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
+
+function programTemplates(){
+  const nights=Math.max(1,tripDays()-1);
+  const templates={
+    '2h':[['Votre moment',['active','culture','outside','slow','food','night']]],
+    morning:[['09:30 · Commencer doucement',['food','outside','slow']],['11:00 · Découvrir',['active','culture','outside']]],
+    afternoon:[['14:00 · Explorer',['active','culture','outside']],['16:30 · Faire une pause',['slow','food','outside']]],
+    evening:[['19:00 · Ouvrir la soirée',['slow','outside','food','culture']],['21:00 · Le temps fort',['slow','outside','night','culture']],['23:00 · Prolonger',['night','outside','slow']]],
+    afternoon_evening:[['16:00 · Première échappée',['active','culture','outside','slow']],['18:30 · Transition plaisir',['food','outside','culture']],['20:30 · Le temps fort',['night','culture','food','slow']],['22:30 · Prolonger si vous en avez envie',['night','food','outside']]],
+    day:[['09:30 · Commencer la journée',['outside','active','culture']],['12:30 · Déjeuner',['food']],['15:00 · Activité de l’après-midi',['active','culture','slow','outside']],['19:30 · Dîner',['food']],['22:30 · Événement ou sortie du soir',['night','culture','outside']]],
+    stay:[[`Votre hébergement · ${nights} nuit${nights>1?'s':''}`,['hotel']],...Array.from({length:tripDays()},(_,index)=>[[`Jour ${index+1} · Expérience phare`,['outside','culture','active','slow']],[`Jour ${index+1} · Dîner ou soirée`,['food','night']]]).flat()]
+  };
+  return (templates[state.answers.duration||'2h']||templates['2h']).filter(([label])=>isFutureSlot(label));
+}
+function isFutureSlot(label){if(!sameDay(new Date(state.dateStart),new Date()))return true;const match=label.match(/(\d{2}):(\d{2})/);if(!match)return true;const slot=new Date(state.dateStart);slot.setHours(Number(match[1]),Number(match[2]),0,0);const minimum=new Date(Date.now()+20*60*1000);return slot>=minimum}
+
+function slotScore(item,label){
+  let score=item.score||0;
+  if(item.official&&item.date)score+=25;
+  if(/Événement|temps fort|soir|Prolonger/.test(label)&&item.official)score+=35;
+  if(/Déjeuner|Dîner/.test(label)&&item.category==='food')score+=30;
+  if(item.distance!=null)score+=Math.max(0,12-item.distance);
+  return score;
+}
+
+function retiredResultsArchive(){
+  state.view='results';
+  const criteria=criteriaLabels();
+  app.innerHTML=shell(`<section class="results-hero"><div class="results-photo" style="background-image:url('${IMAGES.hero}')"></div><div class="results-copy"><span class="kicker">Composé pour vous</span><h1>Votre moment<br>prend forme.</h1><p>${state.weather?.main?.temp?`${Math.round(state.weather.main.temp)}°, `:''}${esc(state.location.name)}. Plusieurs choix pertinents pour chaque moment, uniquement à la date et dans la destination sélectionnées.</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><button class="surprise-hero" onclick="surprise()"><span>Confiez votre temps à Dolcia</span><strong>${composeCta()}</strong><b>→</b></button></div></section>${majorMomentPrompt()}<section class="program">${weatherPlan()}<div class="program-head proposal-intro"><div><span class="kicker">Sélection vérifiée pour vous</span><h2>${state.alternatives.length?'Votre moment peut commencer ici.':'Dolcia cherche une autre voie.'}</h2><p>${state.alternatives.length?'Des idées compatibles avec votre horaire, vos envies et votre destination. Ouvrez une fiche ou ajoutez uniquement ce qui vous plaît.':'Aucune proposition ne passera si elle n’est pas suffisamment fiable.'}</p></div><div class="program-actions"><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="startCompose()">Ajuster mes choix</button></div></div>${state.alternatives.length?state.alternatives.map(alternativeGroup).join(''):emptyState()}${state.alternatives.length?`<div class="agenda-guidance"><strong>Vous choisissez activité par activité.</strong><span>Retrouvez uniquement vos choix dans l’onglet Agenda en bas de l’écran.</span><button onclick="renderAgenda()">Ouvrir mon agenda →</button></div>`:''}</section>`,'discover');
+}
+function catalogFamily(item){const t=plainText(`${item.name||''} ${item.category||''}`);if(item.category==='hotel')return'hotel';if(item.category==='food')return'food';if(item.category==='slow')return'wellness';if(item.category==='night')return'night';if(item.category==='culture')return'culture';if(item.category==='outside'||/plage|nature|jardin|foret|mer|nautique|voile|surf|paddle|kayak/.test(t))return'nature';return'fun'}
+function catalogSelection(){
+  const filters=state.catalogFilters||{family:'all',sort:'recommended',availability:'all',query:'',limit:60};state.catalogFilters=filters;
+  filters.preferred=filters.preferred||[];
+  filters.lenses=filters.lenses||[];
+  let items=[...state.allItems];
+  const momentOrder={confirmed:0,autonomous:1,unknown:2,'open-not-session':3,incompatible:4};
+  if(filters.family!=='all')items=items.filter(item=>catalogFamily(item)===filters.family);
+  if(filters.availability==='open')items=items.filter(item=>item.isOpen===true);
+  if(filters.availability==='scheduled')items=items.filter(item=>item.date&&item.timeKnown!==false);
+  filters.lenses.forEach(id=>{const definition=adaptiveLensDefinitions().find(lens=>lens.id===id);if(definition)items=items.filter(definition.test)});
+  if(filters.query){const q=plainText(filters.query);items=items.filter(item=>plainText(`${item.name||''} ${item.address||''} ${item.category||''}`).includes(q))}
+  const geoOrder={core:0,extended:1,location_unknown:2,outside:3};
+  if(filters.sort==='recommended')items.sort((a,b)=>(geoOrder[a.geoEligibility?.status]??2)-(geoOrder[b.geoEligibility?.status]??2)||(momentOrder[momentCompatibility(a)]??9)-(momentOrder[momentCompatibility(b)]??9)||(filters.preferred.length?Number(filters.preferred.includes(catalogFamily(b)))-Number(filters.preferred.includes(catalogFamily(a))):0)||(a.geoEligibility?.travel_minutes??999)-(b.geoEligibility?.travel_minutes??999)||(b.score||0)-(a.score||0));
+  if(filters.discoveryMode)items.sort((a,b)=>Number(!filters.preferred.includes(catalogFamily(b)))-Number(!filters.preferred.includes(catalogFamily(a)))||(b.score||0)-(a.score||0));
+  if(filters.sort==='distance')items.sort((a,b)=>(a.distance??999)-(b.distance??999));
+  if(filters.sort==='rating')items.sort((a,b)=>(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0));
+  if(filters.sort==='new')items.sort((a,b)=>Number(Boolean(b.date))-Number(Boolean(a.date))||new Date(a.date||0)-new Date(b.date||0));
+  return items;
 }
 function renderResults(){
-  const heroPhoto = AMBIANCE[state.understood.vibe] || AMBIANCE.start;
-  $('resultsHeroImg').src = heroPhoto;
-  $('resultsTitle').textContent = titleForResults();
-  $('resultsSummary').textContent = summaryForResults();
-  const chips = [];
-  if (state.understood.who) chips.push({couple:'En couple',family:'En famille',friends:'Entre amis',solo:'Solo'}[state.understood.who]);
-  if (state.understood.when) chips.push({now:'Maintenant',tonight:'Ce soir',tomorrow:'Demain',weekend:'Week-end',stay:'Séjour'}[state.understood.when]);
-  if (state.understood.vibe) chips.push({food:'Gastronomie',nature:'Nature',culture:'Culture',wellness:'Bien-être',sport:'Sport',festive:'Sortir',free:'Gratuit'}[state.understood.vibe]);
-  $('criteriaLine').innerHTML = chips.map(c=>`<span>${c}</span>`).join('');
-  $('demoNotice').classList.toggle('hidden', !state.DEMO_MODE);
-  renderDiagnostic();
-  renderExplore();
-  renderProgram();
-  renderAnime('beach');
-  updateBudgetRing();
-}
-function renderDiagnostic(){
-  // Le diagnostic technique (URLs, codes d'erreur) ne doit JAMAIS apparaître à l'écran d'un
-  // utilisateur — ça casse totalement la confiance et donne l'impression que l'appli est cassée.
-  // Il reste disponible dans la console du navigateur pour le développement.
-  const box = $('diagnosticBox');
-  box.classList.add('hidden');
-  if (state.DEMO_MODE && state.diagnostics.length){
-    console.groupCollapsed('%cDolcia — diagnostic données (visible développeur uniquement)', 'color:#C9A84C');
-    state.diagnostics.forEach(d=> d.ok ? console.log('OK', d.url, d.count) : console.warn('Échec', d.url, d.error));
-    console.groupEnd();
-  }
-}
-
-function priceText(x){ if(x.free||x.priceN===0) return 'Gratuit'; if(x.priceN) return '€'.repeat(Math.max(1,Math.min(4,x.priceN))); return ''; }
-function heartHtml(id){
-  const liked = state.favs.includes(id);
-  return `<button class="card-like ${liked?'liked':''}" data-like="${id}" aria-label="J'aime">
-    <svg viewBox="0 0 24 24" fill="${liked?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6"><path d="M12 20.5 C7 16.8 3 13.4 3 9.4 3 6.7 5.1 4.6 7.7 4.6 9.4 4.6 11 5.5 12 7 13 5.5 14.6 4.6 16.3 4.6 18.9 4.6 21 6.7 21 9.4 21 13.4 17 16.8 12 20.5Z"/></svg>
-  </button>`;
-}
-function cardHtml(x){
-  const meta = [x.source, x.dist!=null?`${x.dist} km`:null, priceText(x), x.rating?`note ${x.rating}/5`:null, x.date||null].filter(Boolean).join(' · ');
-  return `<article class="experience-card" data-open="${x.id}">
-    <div class="experience-photo">
-      <img src="${ambiancePhoto(x)}" alt="" loading="lazy" onerror="this.style.display='none'">
-    </div>
-    <div class="experience-shade"></div>
-    ${heartHtml(x.id)}
-    <div class="experience-content">
-      <div class="source-badge">${x.kind==='event'?'Événement':'Lieu réel'}</div>
-      <h3>${x.title}</h3>
-      <p>${meta}</p>
-      <div class="card-actions">
-        <button class="mini-btn gold" data-agenda="${x.id}">Agenda</button>
-        <button class="mini-btn dark reserve-disabled" data-reserve="${x.id}">Réserver bientôt</button>
-      </div>
-    </div>
-  </article>`;
-}
-function applyFilters(items){
-  const f = state.filters;
-  let out = items.filter(x=>{
-    if (f.openNow && x.open !== true) return false;
-    if (f.walkable && (x.dist==null || x.dist > 2)) return false;
-    if (f.freeOnly && !(x.free || x.priceN===0)) return false;
-    if (f.kidsOk && !x.forKids) return false;
-    if (x.dist != null && x.dist > f.maxDist) return false;
-    return true;
-  });
-  if (f.sort === 'distance') out.sort((a,b)=>(a.dist??999)-(b.dist??999));
-  else if (f.sort === 'rating') out.sort((a,b)=>(b.rating||0)-(a.rating||0));
-  else if (f.sort === 'new') out.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0));
-  else {
-    // Pertinence : les catégories déjà aimées remontent légèrement, sans jamais exclure le reste.
-    const counts = likedCategoryCounts();
-    out.sort((a,b) => (counts[b.category]||0) - (counts[a.category]||0));
-  }
-  return out;
-}
-function renderExplore(){
-  const el = $('cardsSection');
-  const filtered = applyFilters(state.items);
-  $('filterCount').textContent = `${filtered.length} sur ${state.items.length}`;
-  if (!filtered.length){
-    el.innerHTML = `<div class="empty-state"><h3>Aucune activité ne correspond à ces filtres.</h3><p>Élargissez le rayon, ou retirez un critère — D préfère élargir plutôt que cacher silencieusement des possibilités.</p></div>`;
+  if(!state.allItems.length&&!state.catalogAttempted)return openExplorer();
+  state.view='results';state.catalogFilters=state.catalogFilters||{family:'all',sort:'recommended',availability:'all',query:'',limit:60};
+  const filters=state.catalogFilters;filters.preferred=filters.preferred||[];const allCatalogItems=catalogSelection(),items=allCatalogItems.filter(geoVisible),shown=items.slice(0,filters.limit),families=[['all','Tout'],['fun','Fun & famille'],['nature','Nature & mer'],['culture','Culture & événements'],['food','Restaurants & gourmandises'],['wellness','Bien-être'],['night','Sortir le soir'],['hotel','Hébergements']];
+  const visibleBase=state.allItems.filter(geoVisible);
+  const counts=Object.fromEntries(families.map(([id])=>[id,id==='all'?visibleBase.length:visibleBase.filter(item=>catalogFamily(item)===id).length]));
+  if(!state.allItems.length){
+    app.innerHTML=shell(`<section class="explorer-recovery"><div class="explorer-recovery-glow"></div><span class="eclat-mini">D<i>✦</i></span><span class="kicker">Dolcia garde le cap</span><h1>Le territoire ne nous a pas encore<br><em>livré ses meilleures idées.</em></h1><p>Ce n’est pas une absence d’activités. Les sources n’ont simplement pas répondu correctement. Dolcia peut les interroger à nouveau sans perdre votre moment.</p><div><button class="primary" onclick="openExplorer(true)">Relancer toutes les sources</button><button class="secondary" onclick="openEclatDialogue()">Dites-moi ce qui vous ferait plaisir</button></div><small>Aucune proposition inventée ne remplacera une information indisponible.</small></section>`,'discover');
     return;
   }
-  el.innerHTML = `<h3 class="section-title">Votre sélection</h3><div class="cards-grid">${filtered.map(cardHtml).join('')}</div>`;
+  setTimeout(()=>mountThreeFutures(),0);
+  app.innerHTML=shell(`<section class="explore-signature"><div class="explore-signature-copy"><span class="kicker">Votre terrain de jeu · ${esc(state.location.name)}</span><h1>Qu’allons-nous<br><em>vivre maintenant ?</em></h1><p>Écrivez une envie. Les meilleures idées remontent pendant que vous parlez, sans jamais cacher le reste.</p></div><div class="living-brief"><span class="eclat-mini">D<i>✦</i></span><div><label for="catalogSearch">Dites-le simplement à Dolcia</label><input id="catalogSearch" value="${esc(filters.query)}" placeholder="Avec les enfants, face à la mer, sans trop marcher…" oninput="liveCatalogSearch(this.value)"><small><b></b><span>${items.length} possibilités explorées maintenant</span></small></div><button class="voice-live" onclick="startCatalogVoice()" aria-label="Dicter mon envie">◉</button></div><div class="signature-actions"><button class="signature-compose" onclick="surprise()"><span>Dolcia s’occupe de tout</span><strong>${composeCta()}</strong><b>→</b></button><button class="signature-adjust" onclick="openEclatDialogue()">Préciser mon moment</button></div></section><section class="catalog-shell result-first"><div class="catalog-toolbar compact-toolbar"><div class="catalog-families">${families.filter(([id])=>id!=='hotel'||state.answers.duration==='stay').map(([id,label])=>`<button class="${filters.family===id?'selected':''}" onclick="setCatalogFamily('${id}')">${label}<small>${counts[id]}</small></button>`).join('')}</div><details class="advanced-refinements"><summary><span>Affiner les résultats</span><small>Distance, disponibilité, confiance et tri</small><b>+</b></summary><div class="catalog-controls"><select onchange="setCatalogSort(this.value)"><option value="recommended" ${filters.sort==='recommended'?'selected':''}>Les plus pertinents</option><option value="distance" ${filters.sort==='distance'?'selected':''}>Les plus proches</option><option value="rating" ${filters.sort==='rating'?'selected':''}>Les mieux notés</option><option value="new" ${filters.sort==='new'?'selected':''}>Événements en premier</option></select><select onchange="setCatalogAvailability(this.value)"><option value="all" ${filters.availability==='all'?'selected':''}>Toutes les disponibilités</option><option value="open" ${filters.availability==='open'?'selected':''}>Ouverts maintenant</option><option value="scheduled" ${filters.availability==='scheduled'?'selected':''}>Événements avec horaire</option></select><button onclick="startCompose()">Date, groupe et budget</button></div><div class="refinement-lenses">${adaptiveLensDefinitions().filter(lens=>state.allItems.some(lens.test)).map(lens=>`<button class="${lens.id==='signature'?'lens-signature ':''}${(filters.lenses||[]).includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')">${lens.label}</button>`).join('')}</div></details></div><div class="catalog-summary"><strong>${items.length} idées disponibles</strong><span>Classées selon votre moment · jamais selon le montant payé par un partenaire</span></div>${filters.family==='hotel'?abundantWidenPrompt('hotel'):''}<div class="catalog-list">${shown.map((item,index)=>experience(item,index,'')).join('')}</div>${shown.length<items.length?`<button class="catalog-more" onclick="showMoreCatalog()">Découvrir ${Math.min(60,items.length-shown.length)} idées de plus</button>`:''}</section>`,'discover')
 }
-const PEPITE_ICONS = {
-  craft: '<circle cx="24" cy="24" r="16"/><path d="M17 24 L22 29 L31 18"/>',
-  circus: '<path d="M24 8 L24 40 M14 40 L34 40" stroke-linecap="round"/><circle cx="24" cy="16" r="6"/>',
-  party: '<path d="M10 38 L38 38 M14 38 C14 24 34 24 34 38" stroke-linecap="round"/><path d="M24 10 L24 16 M16 14 L19 18 M32 14 L29 18"/>'
+
+let catalogSearchTimer;
+function interpretCatalogIntent(value){const sentence=value.trim(),t=plainText(sentence),words=t.split(/\s+/).filter(Boolean),preferred=new Set(state.catalogFilters.preferred||[]),vibes=new Set(state.answers.vibes||[]);if(!sentence){state.catalogFilters.query='';return}state.answers.momentSentence=sentence;if(/enfant|fille|fils|famille|ado|bebe|tout.petit/.test(t))state.answers.who='family';else if(/mari|femme|couple|a deux|amoureux/.test(t))state.answers.who='couple';else if(/collegue|equipe|travail|afterwork/.test(t))state.answers.who='colleagues';else if(/ami|copain|copine/.test(t))state.answers.who='friends';else if(/seul|seule|pour moi/.test(t))state.answers.who='solo';if(/bouger|sport|defouler|sensation|aventure|parc d.attraction|laser game|bowling/.test(t)){preferred.add('fun');vibes.add('play')}if(/mer|plage|nature|balade|dehors|nautique|voile|surf|paddle|kayak/.test(t)){preferred.add('nature');vibes.add('breathe')}if(/restaurant|diner|manger|gourmand|deguster|brunch/.test(t)){preferred.add('food');vibes.add('taste')}if(/calme|detendre|massage|spa|souffler|repos|bien.etre/.test(t)){preferred.add('wellness');vibes.add('recharge')}if(/concert|danser|bar|soiree|faire la fete/.test(t)){preferred.add('night');vibes.add('vibrate')}if(/musee|culture|expo|atelier|creatif|decouvrir/.test(t)){preferred.add('culture');vibes.add('create')}state.catalogFilters.preferred=[...preferred];state.answers.vibes=[...vibes];const semantic=preferred.size>0||/avec|sans|envie|besoin|quelque chose|nous|je veux|j aimerais/.test(t);state.catalogFilters.query=semantic?'':(words.length<=3?sentence:'')}
+function liveCatalogSearch(value){clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(()=>{interpretCatalogIntent(value);state.catalogFilters.limit=60;save();renderResults();setTimeout(()=>{const input=document.querySelector('#catalogSearch');if(input){input.value=value;input.focus();input.setSelectionRange(input.value.length,input.value.length)}},0)},220)}
+function startCatalogVoice(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return showToast('La dictée vocale n’est pas disponible sur ce navigateur');const recognition=new Recognition();recognition.lang='fr-FR';recognition.interimResults=true;recognition.onstart=()=>showToast('Dolcia vous écoute…');recognition.onresult=event=>{const value=[...event.results].map(result=>result[0].transcript).join('');const input=document.querySelector('#catalogSearch');if(input)input.value=value;if(event.results[event.results.length-1].isFinal)liveCatalogSearch(value)};recognition.onerror=()=>showToast('Je n’ai pas bien entendu. Réessayez simplement.');recognition.start()}
+function futurePool(id){const all=[...state.allItems].filter(recommendationEligibleNow),preferred=state.catalogFilters?.preferred||[];if(id==='local')return all.filter(item=>geoCore(item)&&item.distance!=null&&item.distance<=8&&(item.rating>=4.3||item.official)).sort((a,b)=>(a.distance??99)-(b.distance??99)||(b.score||0)-(a.score||0));if(id==='unexpected')return all.filter(item=>geoCore(item)&&!preferred.includes(catalogFamily(item))&&((item.rating>=4.5&&item.reviews>=30)||item.official)).sort((a,b)=>(b.score||0)-(a.score||0));return all.filter(geoCore).sort((a,b)=>(b.score||0)-(a.score||0))}
+function futurePreview(id){const pool=futurePool(id),first=pool[0];if(!first)return null;const confidence=pool.filter(item=>item.ranking?.confidence==='confirmed'||item.quality==='verified'||item.official).length;return{first,count:pool.length,confidence}}
+function mountThreeFuturesLegacy(){const shell=document.querySelector('.catalog-shell'),toolbar=document.querySelector('.catalog-toolbar');if(!shell||!toolbar)return;const futures=[['perfect','L’évidence parfaite','Le meilleur accord entre votre groupe, votre envie et le réel.'],['local','La pépite locale','Tout près, très qualitative et moins évidente.'],['unexpected','L’inattendu maîtrisé','Hors de vos habitudes, jamais hors de vos contraintes.']].map(([id,title,copy])=>({id,title,copy,preview:futurePreview(id)})).filter(item=>item.preview);if(!futures.length)return;toolbar.insertAdjacentHTML('beforebegin',`<section class="three-futures"><div class="future-intro"><span class="kicker">Une innovation Dolcia</span><h2>Trois futurs.<br><em>Un seul moment.</em></h2><p>Explorez trois directions calculées dans le même catalogue immense. Rien n'est inventé, rien n'est définitivement masqué.</p></div><div class="future-grid">${futures.map((future,index)=>`<article class="future-card future-${future.id}"><div class="future-image" style="background-image:url('${itemImage(future.preview.first)}')"><span>0${index+1}</span></div><div class="future-copy"><small>${future.preview.count} possibilités · ${future.preview.confidence} solides</small><h3>${future.title}</h3><p>${future.copy}</p><strong>${esc(future.preview.first.name)}</strong><div><button onclick="openFuture('${future.id}')">Explorer cette voie</button><button onclick="composeFuture('${future.id}')">Confier à L’Éclat</button></div></div></article>`).join('')}</div></section>`)}
+function openFuture(id){state.catalogFilters.discoveryMode=id==='unexpected';state.catalogFilters.sort=id==='local'?'distance':'recommended';state.catalogFilters.lenses=id==='local'?['near']:[];state.catalogFilters.limit=60;renderResults();showToast(id==='unexpected'?'Dolcia ouvre une voie inattendue mais compatible':id==='local'?'Les pépites proches passent en premier':'Votre meilleur accord passe en premier')}
+function composeFuture(id){const pool=futurePool(id);if(!pool.length)return showToast('Cette voie ne contient pas encore assez d’expériences fiables');state.program=buildProgram(pool);state.items=state.program.map(slot=>slot.item);state.catalogFilters.future=id;renderSurprise();showToast('L’Éclat a composé ce futur en programme réel')}
+function momentSnapshot(){const group=label('who')||'Votre groupe',duration=label('duration')||'Votre rythme',budget=state.answers.budget==='custom'&&state.budgetPlan.amount!=null?`${state.budgetPlan.amount.toLocaleString('fr-FR')} € pour le groupe`:label('budget')||'Budget à préciser';return [group,duration,budget]}
+function horizonSignal(item){const compatibility=momentCompatibility(item);if(item.partner&&item.booking)return['bookable','Réservable avec Dolcia'];if(item.official&&item.date&&item.timeKnown!==false)return['confirmed','Horaire officiel'];if(compatibility==='confirmed')return['open','Compatible avec votre créneau'];if(compatibility==='autonomous')return['free','Accès libre'];if(item.quality==='verified')return['verified','Informations vérifiées'];return['check','À vérifier avant de partir']}
+function mountThreeFutures(){const toolbar=document.querySelector('.catalog-toolbar');if(!toolbar)return;const take=(pool,count,used)=>pool.filter(item=>!used.has(item.id)).slice(0,count),used=new Set(),perfect=take(futurePool('perfect'),5,used);perfect.forEach(i=>used.add(i.id));const local=take(futurePool('local'),3,used);local.forEach(i=>used.add(i.id));const dated=take(state.allItems.filter(i=>i.date&&i.timeKnown!==false).sort((a,b)=>(b.score||0)-(a.score||0)),2,used);dated.forEach(i=>used.add(i.id));const unexpected=take(futurePool('unexpected'),2,used),items=[...perfect,...local,...dated,...unexpected];if(!items.length)return;const directions=[['perfect','Valeurs sûres'],['local','Pépites locales'],['unexpected','Inattendu maîtrisé']],snapshot=momentSnapshot();toolbar.insertAdjacentHTML('beforebegin',`<section class="horizon"><div class="moment-command"><div><span>Votre moment, en un regard</span><strong>${snapshot.map(esc).join(' · ')}</strong></div><button onclick="openEclatDialogue()">Ajuster</button></div><div class="horizon-head"><div><span class="kicker">La sélection vivante de Dolcia</span><h2>Douze idées.<br><em>Déjà très vous.</em></h2><p>Une vitrine éditoriale calculée pour votre moment. Faites défiler, réagissez, ou confiez toute la composition à Dolcia.</p></div><div class="horizon-directions">${directions.map(([id,label])=>`<button onclick="openFuture('${id}')">${label}</button>`).join('')}<button class="compose" onclick="surprise()">Composer mon programme</button></div></div><div class="horizon-grid">${items.map((item,index)=>{const signal=horizonSignal(item);return`<article class="horizon-card" onclick="openDetail('${item.id}')"><div class="horizon-image" style="background-image:url('${itemImage(item)}')"><span>${index<5?'Pour vous':index<8?'Pépite locale':index<10?'À votre date':'Inattendu maîtrisé'}</span><button onclick="event.stopPropagation();openReactionMenu('${item.id}')" aria-label="Réagir à cette activité">${state.favorites.includes(item.id)?'♥':'♡'}</button></div><div class="horizon-card-copy"><div class="horizon-signal ${signal[0]}"><i></i>${signal[1]}</div><small>${why(item)}</small><h3>${esc(item.name)}</h3><p>${esc(item.address||state.location.name)}</p><div class="horizon-quick"><button onclick="event.stopPropagation();openDetail('${item.id}')">Voir la fiche</button><button onclick="event.stopPropagation();addAgenda('${item.id}')">Ajouter au programme</button></div></div></article>`}).join('')}</div><button class="horizon-all" onclick="document.querySelector('.catalog-toolbar')?.scrollIntoView({behavior:'smooth'})">Explorer les ${state.allItems.length} possibilités →</button></section>`)}
+function adaptiveLensDefinitions(){return[
+  {id:'signature',label:'Sélection Dolcia',test:item=>(item.rating||0)>=4.6&&(item.reviews||0)>=50&&(item.official||item.quality==='verified'||item.ranking?.confidence==='confirmed')},
+  {id:'near',label:'À moins de 3 km',test:item=>item.distance!=null&&item.distance<=3},
+  {id:'confirmed',label:'Confiance maximale',test:item=>item.ranking?.confidence==='confirmed'||item.quality==='verified'},
+  {id:'today',label:'À votre date',test:item=>item.date&&sameDay(new Date(item.date),state.dateStart)},
+  {id:'open',label:'Ouvert maintenant',test:item=>item.isOpen===true},
+  {id:'free',label:'Gratuit confirmé',test:item=>item.free||item.price===0||item.freeAccess},
+  {id:'loved',label:'Très apprécié',test:item=>(item.rating||0)>=4.5&&(item.reviews||0)>=30},
+  {id:'bookable',label:'Réservable',test:item=>Boolean(item.booking||item.website)},
+  {id:'official',label:'Officiel',test:item=>Boolean(item.official)}
+]}
+function mountAdaptiveFilters(){const controls=document.querySelector('.catalog-controls');if(!controls)return;const active=state.catalogFilters.lenses||[],definitions=adaptiveLensDefinitions();const counts=Object.fromEntries(definitions.map(lens=>[lens.id,state.allItems.filter(lens.test).length]));controls.insertAdjacentHTML('beforebegin',`<section class="adaptive-filters"><div><span class="kicker">Filtres intelligents</span><strong>Affinez sans perdre le fil.</strong><p>Combinez uniquement les critères qui comptent maintenant. Chaque compteur révèle l'abondance réellement disponible.</p></div><div>${definitions.filter(lens=>counts[lens.id]>0).map(lens=>`<button class="${lens.id==='signature'?'lens-signature ':''}${active.includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')"><span>${lens.label}</span><small>${counts[lens.id]}</small></button>`).join('')}${active.length?'<button class="clear-lenses" onclick="clearAdaptiveLenses()">Réinitialiser les filtres</button>':''}</div></section>`)}
+function toggleAdaptiveLens(id){const active=state.catalogFilters.lenses||[];state.catalogFilters.lenses=active.includes(id)?active.filter(value=>value!==id):[...active,id];state.catalogFilters.limit=60;renderResults()}
+function clearAdaptiveLenses(){state.catalogFilters.lenses=[];state.catalogFilters.availability='all';state.catalogFilters.family='all';state.catalogFilters.query='';state.catalogFilters.limit=60;renderResults()}
+function setCatalogFamily(value){state.catalogFilters.family=value;state.catalogFilters.limit=60;renderResults()}
+function mountCatalogPreferences(families){const toolbar=document.querySelector('.catalog-toolbar');if(!toolbar)return;const preferred=state.catalogFilters.preferred||[],choices=families.filter(([id])=>id!=='all'&&id!=='hotel');toolbar.insertAdjacentHTML('afterbegin',`<section class="moment-brief"><div><span class="kicker">Brief du moment</span><strong>Dites simplement ce qui vous ferait plaisir.</strong><p>Une phrase suffit. Dolcia comprend le groupe, l’énergie et l’ambiance sans vous enfermer dans une catégorie.</p></div><div><input id="momentBriefInput" value="${esc(state.answers.momentSentence||'')}" placeholder="Ex. Avec mes enfants de 7 et 13 ans, bouger puis dîner face à la mer"><button onclick="applyMomentBrief()">Comprendre mon envie</button></div></section><section class="catalog-preferences"><div><span class="kicker">Ce qui me tente aujourd’hui</span><strong>Choisissez un ou plusieurs styles</strong><p>Ils remonteront en premier. Toutes les autres propositions resteront visibles.</p></div><div>${choices.map(([id,label])=>`<button class="${preferred.includes(id)?'selected':''}" onclick="toggleCatalogPreference('${id}')">${preferred.includes(id)?'✓ ':''}${label}</button>`).join('')}${preferred.length?'<button onclick="clearCatalogPreferences()">Tout réafficher sans préférence</button>':''}</div></section>`)}
+function applyMomentBrief(){const input=document.querySelector('#momentBriefInput'),sentence=input?.value.trim();if(!sentence)return showToast('Décrivez votre envie en une phrase');const t=plainText(sentence),preferred=new Set(state.catalogFilters.preferred||[]),vibes=new Set(state.answers.vibes||[]),ages=[...sentence.matchAll(/\b(\d{1,2})\s*ans?\b/gi)].map(match=>Number(match[1])).filter(age=>age<18);if(/enfant|fille|fils|famille|ado|bebe|tout.petit/.test(t)){state.answers.who='family';if(ages.length)state.answers.childrenAges=ages;if(/bebe|tout.petit|bout.chou/.test(t))state.answers.groupDetail='toddlers';else if(/ado/.test(t))state.answers.groupDetail='teens'}if(/mari|femme|couple|a deux|amoureux/.test(t))state.answers.who='couple';if(/collegue|equipe|travail|afterwork/.test(t))state.answers.who='colleagues';else if(/ami|copain|copine/.test(t))state.answers.who='friends';if(/seul|seule|pour moi/.test(t))state.answers.who='solo';if(/bouger|sport|defouler|sensation|aventure/.test(t)){preferred.add('fun');vibes.add('play')}if(/mer|plage|nature|balade|dehors/.test(t)){preferred.add('nature');vibes.add('breathe')}if(/restaurant|diner|manger|gourmand|deguster|brunch/.test(t)){preferred.add('food');vibes.add('taste')}if(/calme|detendre|massage|spa|souffler|repos/.test(t)){preferred.add('wellness');vibes.add('recharge')}if(/concert|danser|bar|soiree|faire la fete/.test(t)){preferred.add('night');vibes.add('vibrate')}if(/musee|culture|expo|atelier|creatif|decouvrir/.test(t)){preferred.add('culture');vibes.add('create')}state.answers.momentSentence=sentence;state.answers.vibes=[...vibes];state.catalogFilters.preferred=[...preferred];state.catalogFilters.sort='recommended';state.catalogFilters.limit=60;save();renderResults();showToast('Dolcia a compris votre brief et réordonné toutes les propositions')}
+function mountVoiceBrief(){const target=document.querySelector('.moment-brief>div:last-child');if(!target)return;target.insertAdjacentHTML('beforeend','<button class="voice-brief" onclick="startVoiceBrief()" title="Parler à Dolcia">◉ Parler à Dolcia</button>')}
+function startVoiceBrief(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return showToast('La dictée vocale n’est pas disponible dans ce navigateur');const recognition=new Recognition();recognition.lang='fr-FR';recognition.interimResults=false;recognition.onstart=()=>showToast('Dolcia vous écoute…');recognition.onerror=()=>showToast('Dolcia n’a pas bien entendu. Vous pouvez réessayer.');recognition.onresult=event=>{const input=document.querySelector('#momentBriefInput');if(input){input.value=event.results[0][0].transcript;applyMomentBrief()}};recognition.start()}
+function mountGuidedCompass(){const brief=document.querySelector('.moment-brief');if(!brief)return;const stage=state.catalogFilters.compassStage||'direction';brief.insertAdjacentHTML('afterend',`<section class="guided-compass"><div><span class="kicker">La boussole Dolcia</span><strong>${stage==='direction'?'Dans quelle direction part-on ?':'Quel ton donner à ce moment ?'}</strong><p>Chaque réponse affine l’ordre des idées sans cacher le reste.</p></div><div>${stage==='direction'?[['energy','Bouger et rire'],['soft','Souffler vraiment'],['share','Vivre quelque chose ensemble'],['unknown','Je ne sais pas, étonnez-moi']].map(([id,label])=>`<button onclick="chooseCompass('${id}')">${label}</button>`).join(''):[['iconic','Une valeur sûre'],['local','Une pépite locale'],['unexpected','Quelque chose d’inattendu'],['mix','Un mélange parfait']].map(([id,label])=>`<button onclick="finishCompass('${id}')">${label}</button>`).join('')}</div></section>`)}
+function chooseCompass(path){const preferred=new Set(state.catalogFilters.preferred||[]),vibes=new Set(state.answers.vibes||[]);if(path==='energy'){preferred.add('fun');preferred.add('nature');vibes.add('play')}if(path==='soft'){preferred.add('wellness');preferred.add('food');vibes.add('recharge')}if(path==='share'){preferred.add('culture');preferred.add('food');vibes.add('create')}if(path==='unknown')state.catalogFilters.discoveryMode=true;state.catalogFilters.preferred=[...preferred];state.answers.vibes=[...vibes];state.catalogFilters.compassStage='tone';renderResults()}
+function finishCompass(tone){state.catalogFilters.compassTone=tone;state.catalogFilters.compassStage='direction';if(tone==='unexpected')state.catalogFilters.discoveryMode=true;if(tone==='iconic')state.catalogFilters.sort='rating';if(tone==='local')state.catalogFilters.sort='distance';save();renderResults();showToast('La boussole a réordonné le catalogue sans rien masquer')}
+function toggleCatalogPreference(value){const list=state.catalogFilters.preferred||[];state.catalogFilters.preferred=list.includes(value)?list.filter(id=>id!==value):[...list,value];state.catalogFilters.sort='recommended';renderResults()}
+function clearCatalogPreferences(){state.catalogFilters.preferred=[];renderResults()}
+function setCatalogSort(value){state.catalogFilters.sort=value;renderResults()}
+function setCatalogAvailability(value){state.catalogFilters.availability=value;state.catalogFilters.limit=60;renderResults()}
+function applyCatalogSearch(){state.catalogFilters.query=document.querySelector('#catalogSearch')?.value.trim()||'';state.catalogFilters.limit=60;renderResults()}
+function showMoreCatalog(){state.catalogFilters.limit+=60;renderResults()}
+
+function renderSurprise(){
+  state.view='surprise';
+  const criteria=criteriaLabels();
+  setTimeout(mountProgramIntelligence,0);
+  const ready=state.program.length>0;
+  app.innerHTML=shell(`<section class="surprise-cover"><div class="surprise-cover-photo"></div><div class="surprise-cover-copy"><span class="kicker">${ready?'Votre programme composé':'Dolcia explore encore'}</span><h1>${ready?'Votre moment.<br><em>Aux petits oignons.</em>':'La bonne idée<br><em>mérite d’être vraie.</em>'}</h1><p>${ready?'Dolcia a choisi et ordonné chaque étape selon la durée, la date, la météo, votre budget et ce qu’elle apprend de vos goûts.':'Aucune proposition insuffisamment documentée ne remplira artificiellement votre programme. Élargissez une nuance, pas vos exigences.'}</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><div class="surprise-controls">${ready?'<button class="primary" onclick="adoptSurprise()">Adopter ce programme</button>':''}<button class="secondary" onclick="surprise(true)">${ready?'Tout recomposer ↻':'Relancer la composition'}</button><button class="secondary" onclick="renderResults()">Explorer toutes les idées</button></div></div></section>${ready?`<section class="program surprise-program">${programBudgetPanel()}${weatherPlan('program')}<div class="surprise-note"><strong>Un vrai programme, pas une liste.</strong><span>Chaque activité correspond à un créneau. Changez une seule idée, précisez votre envie ou adoptez le programme composé.</span></div>${broadcastProgramPanel()}${state.answers.duration==='stay'?lodgingPreference():''}${state.program.map(programSlot).join('')}<div class="agenda-guidance"><strong>Votre programme est prêt.</strong><span>Adoptez-le en entier ou ajoutez seulement certains moments.</span><button onclick="renderAgenda()">Voir mon agenda →</button></div></section>`:programEmptyCinematic()}`,'discover');
+}
+function programEmptyCinematic(){const strictFree=state.answers.budget==='free';return `<section class="program-empty-cinematic"><div><span class="kicker">${strictFree?'0 € sans compromis':'Une autre voie existe'}</span><h2>${strictFree?'Aucune offre gratuite vérifiée.<br>Créons un vrai moment.':'Ne remplissons jamais<br>le vide avec du médiocre.'}</h2><p>${strictFree?'Dolcia ne transformera jamais un tarif inconnu en gratuit. Elle peut en revanche animer une expérience autonome adaptée à votre groupe, ici et maintenant.':'Modifiez une nuance avec Dolcia, parcourez le catalogue ou laissez Dolcia animer une expérience autonome. Vos contraintes restent conservées.'}</p><div><button class="primary" onclick="openDolciaAnimate()">Dolcia anime ce moment</button><button class="secondary" onclick="openEclatDialogue()">Modifier une nuance</button><button class="secondary" onclick="renderResults()">Voir toutes les idées</button></div><small>Programme Dolcia · aucun lieu, événement ou professionnel inventé</small></div></section>`}
+function mountProgramIntelligence(){if(!state.program.length)return;const anchor=document.querySelector('.surprise-note');if(!anchor)return;const discovery=state.program.some(slot=>slot.item.discoveryPick),official=state.program.filter(slot=>slot.item.official&&slot.item.date).length,verified=state.program.filter(slot=>slot.item.quality==='verified'||slot.item.official).length,profiles=currentGroupProfiles().filter(person=>person.likes.length||person.avoids.length||person.momentNeed),strong=state.program.filter(slot=>slot.item.ranking?.groupFit?.ratio>=.75).length;anchor.insertAdjacentHTML('afterend',`${programArcPanel()}<aside class="program-intelligence"><div><span>Signature Dolcia</span><strong>${profiles.length?'J’ai trouvé votre point d’accord':'Pourquoi ce programme vous ressemble'}</strong>${profiles.length?`<small>${profiles.map(person=>esc(person.name)).join(', ')} · aucune étape contraire à un refus durable déclaré</small>`:''}</div><div class="intelligence-signals"><span><b>${verified}</b> choix solidement documentés</span><span><b>${official}</b> rendez-vous officiels à vos dates</span><span><b>${profiles.length?strong:(discovery?'1':'—')}</b> ${profiles.length?'accords forts dans ce programme':(discovery?'pépite inattendue mais cohérente':'surprise ajoutée seulement si elle est assez pertinente')}</span><span><b>100 %</b> ordonné selon votre rythme</span></div></aside>${state.answers.who==='family'?familyRhythmPanel():''}`)}
+function familyRhythmPanel(){const value=state.answers.familyRhythm||'together';return `<aside class="family-rhythm"><div><span class="kicker">Le rythme de votre famille</span><strong>Ensemble, ou chacun son moment ?</strong><p>Dolcia peut chercher un temps enfants réellement encadré, une parenthèse pour les parents, puis organiser les retrouvailles. Rien ne sera proposé sans encadrement documenté.</p></div><div>${[['together','Tout vivre ensemble'],['balanced','Un moment chacun + retrouvailles'],['flexible','Dolcia choisit le meilleur équilibre']].map(([id,label])=>`<button class="${value===id?'selected':''}" onclick="setFamilyRhythm('${id}')">${label}</button>`).join('')}</div></aside>`}
+function setFamilyRhythm(value){state.answers.familyRhythm=value;save();showToast(value==='together'?'Dolcia privilégie les moments tous ensemble':'Dolcia vérifie les activités encadrées avant de séparer le programme');compose()}
+function broadcastProgramPanel(){if(!state.majorChoice)return'';if(!state.broadcastVenues.length)return`<aside class="program-broadcast"><span>Lieu du match</span><strong>Aucune diffusion confirmée au Touquet.</strong><p>Le match reste dans le programme à 21 h. Dolcia continuera à vérifier les annonces ; aucun établissement ne sera présenté comme certain sans preuve.</p></aside>`;return `<aside class="program-broadcast"><span>Où voir le match ?</span><strong>${state.broadcastVenues.some(v=>v.confirmation==='confirmed')?'Diffusions confirmées':'Lieux à appeler pour confirmer'}</strong><div>${state.broadcastVenues.slice(0,4).map(venue=>`<article><b>${esc(venue.name)}</b><small>${venue.confirmation==='confirmed'?'Confirmé':'À confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</small>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank">Voir</a>`:''}</article>`).join('')}</div></aside>`}
+function lodgingPreference(){const value=state.answers.lodging;return `<aside class="lodging-preference"><div><span>Votre hébergement</span><strong>${value?'Préférence enregistrée':'Quel séjour vous ressemble ?'}</strong><p>Dolcia ne confondra jamais un lieu à visiter avec un hébergement.</p></div><div>${[['family','Familial + piscine'],['sea','Vue mer'],['character','Hôtel de charme'],['simple','Simple et bien placé']].map(([id,label])=>`<button class="${value===id?'selected':''}" onclick="setLodging('${id}')">${label}</button>`).join('')}</div></aside>`}
+function setLodging(value){state.answers.lodging=value;showToast('Votre préférence d’hébergement est prise en compte');compose()}
+// Plan B météo : un seul design premium (noir/or, pas de bleu clair oublié d'une ancienne version),
+// utilisable dans Explorer comme dans le programme composé — c'est là que la promesse
+// "je déplace la plage à demain" doit vraiment se voir, pas seulement dans la liste libre.
+function badWeatherActive(){return /rain|drizzle|thunder|snow/.test((state.weather?.weather?.[0]?.main||'').toLowerCase())}
+function weatherPlan(scope='explorer'){
+  if(!badWeatherActive()||state.weatherPlanDismissed)return'';
+  if(scope==='program'&&!state.program.some(slot=>slot.item.category==='outside'))return'';
+  const primary=scope==='program'
+    ?'<button class="primary" onclick="applyWeatherPlanB()">Réorganiser mon programme</button>'
+    :'<button class="primary" onclick="toggleOutdoor()">Prioriser les idées abritées</button>';
+  const secondary=scope==='program'
+    ?'<button class="secondary" onclick="dismissWeatherPlan()">Je garde mon programme tel quel</button>'
+    :'<button class="secondary" onclick="dismissWeatherPlan()">Voir aussi les idées dehors</button>';
+  return `<aside class="plan-b"><i class="plan-b-icon" aria-hidden="true"></i><div><span>Plan B météo</span><strong>${scope==='program'?'La pluie s’invite. Votre programme peut rester magique.':'La météo change. Votre moment reste magique.'}</strong><p>${scope==='program'?'Dolcia peut remplacer chaque moment en extérieur par une idée abritée aussi fiable, sans toucher au reste.':'Les expériences intérieures peuvent passer en priorité, sans rien cacher du reste.'}</p></div><div class="plan-b-actions">${primary}${secondary}</div></aside>`;
+}
+function dismissWeatherPlan(){state.weatherPlanDismissed=true;if(state.view==='surprise')renderSurprise();else renderResults()}
+function applyWeatherPlanB(){
+  const used=new Set(state.program.map(slot=>slot.item.id));
+  let changed=0;
+  state.program=state.program.map(slot=>{
+    if(slot.item.category!=='outside')return slot;
+    const replacement=state.allItems.filter(item=>item.category!=='outside'&&!used.has(item.id)&&recommendationEligibleNow(item)&&isTimeCompatible(item,slot.label)).sort((a,b)=>(b.score||0)-(a.score||0))[0];
+    if(!replacement)return slot;
+    used.add(replacement.id);changed++;
+    return{...slot,item:replacement};
+  });
+  if(!changed)return showToast('Aucune alternative abritée assez fiable trouvée pour l’instant');
+  state.items=state.program.map(slot=>slot.item);
+  save();
+  renderSurprise();
+  showToast(`${changed} moment${changed>1?'s':''} en extérieur remplacé${changed>1?'s':''} par une idée abritée`);
+}
+function toggleOutdoor(){state.items=[...state.items].sort((a,b)=>(b.category==='outside')-(a.category==='outside'));renderResults()}
+function label(key){const base=FLOW.find(x=>x.key===key),s=key==='budget'?{...base,...budgetStep()}:base,v=state.answers[key];return s?.options.find(o=>o[0]===v)?.[1]}
+function criteriaLabels(){const vibeStep=FLOW.find(step=>step.key==='vibes');const vibes=(state.answers.vibes||[]).map(value=>vibeStep.options.find(option=>option[0]===value)?.[1]).filter(Boolean),budget=state.answers.budget==='custom'&&state.budgetPlan.amount!=null?`${state.budgetPlan.amount.toLocaleString('fr-FR')} € pour le groupe`:label('budget');return [fmt(state.dateStart),label('duration'),label('who'),budget,...vibes].filter(Boolean)}
+function confidencePresentation(item){const compatibility=momentCompatibility(item);if(item.official&&item.date&&item.timeKnown!==false)return['confirmed','Confirmé'];if(compatibility==='confirmed')return['compatible','Compatible'];if(compatibility==='autonomous')return['free','Activité libre'];return['check','À confirmer']}
+function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>item.id===i.id),reserved=state.reservations.some(r=>r.itemId===i.id&&r.status!=='cancelled'),fallback=IMAGES[i.category]||IMAGES.fallback,label=i.partner?'Partenaire Dolcia · réservation intégrée':i.sponsored?'Suggestion partenaire · pertinence vérifiée':i.quality==='verified'?'Informations vérifiées':i.quality==='official-partial'?'Source officielle · détails à confirmer':esc(i.source),trust=confidencePresentation(i),isSignature=(i.rating||0)>=4.6&&(i.reviews||0)>=50&&(i.official||i.quality==='verified'||i.ranking?.confidence==='confirmed'),price=i.free?'<span>Gratuit confirmé</span>':i.freeAccess?'<span>Accès libre · options éventuelles payantes</span>':i.price!=null?`<span>${i.price===0?'Gratuit confirmé':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>',dateMeta=i.date?`<span>${i.timeKnown===false?new Date(i.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' · horaire à confirmer':new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:'',travel=i.geoEligibility?.travel_minutes,travelMeta=travel!=null?`<span>${travel} min de trajet</span>`:i.distance!=null?`<span>${i.distance.toFixed(1)} km à vol d’oiseau</span>`:'';return `<article class="experience ${i.partner?'partner-ready':''} ${i.geoEligibility?.status==='outside'?'outside-scope':''}">${isSignature?'<span class="signature-ribbon">✦ Sélection Dolcia</span>':''}<button class="quick-heart ${state.favorites.includes(i.id)?'selected':''}" onclick="openReactionMenu('${i.id}')" aria-label="Dire à Dolcia si cette activité vous plaît">${state.favorites.includes(i.id)?'♥':'♡'}</button><img class="exp-image" src="${itemImage(i)}" alt="" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label">${label}<i class="trust-badge ${trust[0]}">${trust[1]}</i></span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à confirmer auprès de la source')}</p><div class="exp-meta">${travelMeta}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${i.isOpen===true?'<span>Ouvert actuellement</span>':''}${dateMeta}</div><p class="dolcia-voice"><b>✦ Le regard de Dolcia</b><em>${esc(why(i))}</em></p></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir la fiche</button>${i.partner?`<button class="agenda-button pass-action ${reserved?'added':''}" onclick="reserveWithDolcia('${i.id}','${esc(slotLabel)}')">${reserved?'Réservation confirmée':'Réserver avec Dolcia'}</button>`:`<button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Ajouté à mon agenda':'Ajouter à mon agenda'}</button>`}</div></article>`}
+function programSlot(slot,index){const protectedMoment=slot.item.id===state.majorChoice;return `<section class="program-slot"><div class="slot-heading"><span>${slot.label}</span><div class="slot-actions">${protectedMoment?'<button onclick="chooseMajorMoment(state.majorChoice)">Actualiser les lieux ↻</button>':`<button onclick="openSlotRefinement(${index})">Préciser mon envie</button><button onclick="regenerateSlot(${index})">Changer cette idée ↻</button>`}</div></div>${experience(slot.item,index,slot.label)}</section>`}
+function openSlotRefinement(index){const slot=state.program[index];if(!slot)return;document.body.insertAdjacentHTML('beforeend',`<div class="modal refine-modal" id="refineModal"><article><button class="close" onclick="document.querySelector('#refineModal')?.remove()">×</button><span class="kicker">L’Éclat affine ce moment</span><h2>Dites-moi simplement votre nuance.</h2><p>« Plus calme », « vue mer », « avec les enfants », « moins cher »… L’Éclat conservera votre horaire, votre groupe et votre budget.</p><input id="refineInput" autocomplete="off" placeholder="Ce que vous aimeriez plutôt…"><div class="refine-live" id="refineLive" aria-live="polite"></div><div><button class="secondary" onclick="document.querySelector('#refineModal')?.remove()">Annuler</button><button class="primary" onclick="applySlotRefinement(${index})">Affiner ce moment</button></div></article></div>`);setTimeout(()=>document.querySelector('#refineInput')?.focus(),50)}
+function refineStatus(lines){const target=document.querySelector('#refineLive');if(target)target.innerHTML=lines.map(([stateText,text])=>`<div class="${stateText}"><b>${stateText==='done'?'✓':'✦'}</b><span>${esc(text)}</span></div>`).join('')}
+async function applySlotRefinement(index){const input=document.querySelector('#refineInput'),query=input?.value.trim(),slot=state.program[index];if(!query||!slot)return showToast('Précisez ce que vous souhaitez');const steps=[['active',`Je comprends « ${query} »`]];refineStatus(steps);try{steps[0][0]='done';steps.push(['active',`Recherche autour de ${state.location.name}`]);refineStatus(steps);const response=await fetch(`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${state.radius}&mode=text&keyword=${encodeURIComponent(query+' '+state.location.name)}`),data=await response.json(),raw=normalizePlaces(data.results||[]);steps[1][0]='done';steps.push(['active',`${raw.length} possibilités trouvées · vérification du contexte`]);refineStatus(steps);const ranked=await rankItemsServer(raw),found=ranked.filter(item=>isTimeCompatible(item,slot.label)&&!state.program.some(current=>current.item.id===item.id));steps[2][0]='done';steps.push([found.length?'done':'active',found.length?`${found.length} alternatives compatibles avec ce créneau`:'Aucune alternative assez fiable']);refineStatus(steps);if(!found.length)return;state.program[index]={...slot,item:found[0]};state.items=state.program.map(current=>current.item);setTimeout(()=>{document.querySelector('#refineModal')?.remove();renderSurprise();showToast('L’Éclat a recomposé uniquement ce moment')},450)}catch(_){refineStatus([...steps,['active','La source est momentanément indisponible']])}}
+function alternativeGroup(group,index){return `<section class="alternative-group"><div class="slot-heading"><span>${group.label}</span><small>${group.total||group.items.length} possibilités vérifiées · les meilleures en premier</small></div><div class="alternative-list">${group.items.map((item,itemIndex)=>experience(item,index*12+itemIndex,group.label)).join('')}</div></section>`}
+function geoWhy(i){if(i.geoEligibility?.status==='outside')return'Hors de la destination · cette proposition est exclue';if(i.geoEligibility?.status!=='extended')return'';const minutes=i.geoEligibility.travel_minutes;return [`Pépite locale exceptionnelle`,minutes!=null?`${minutes} min de trajet`:null,i.geoEligibility.decision_codes?.includes('HIGH_RARITY')?'rareté vérifiée et sourcée':i.official&&i.date?'rendez-vous unique à votre date':'élargissement demandé'].filter(Boolean).join(' · ')}
+function why(i){const temp=state.weather?.main?.temp??18,vibes=state.answers.vibes||[],compatibility=momentCompatibility(i),group=i.ranking?.groupFit;if(geoWhy(i))return geoWhy(i);if(compatibility==='incompatible')return'Incompatible avec le créneau choisi';if(compatibility==='unknown'||compatibility==='open-not-session')return requiresPublishedSession(i)?'Séance ou réservation à confirmer':'Horaire à vérifier';if(group?.vetoes)return'Une réserve existe dans votre groupe · visible dans Explorer, exclue du programme composé';if(group?.ratio>=.75)return`Point d’accord fort · ${group.matched} affinités reconnues dans votre groupe`;if(compatibility==='autonomous')return'Accès libre possible · conditions à vérifier';if(i.retrievalScope==='signature')return [`Expérience régionale repérée pour votre journée`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,`le déplacement reste indiqué clairement`].filter(Boolean).join(' · ');if(compatibility==='confirmed'&&i.source==='Google Places')return [`Ouvert pour votre créneau`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,i.rating?`${i.rating}/5 · ${i.reviews||0} avis`:null].filter(Boolean).join(' · ');if(i.ranking?.reasons?.length)return i.ranking.reasons.map(reason=>reason.charAt(0).toUpperCase()+reason.slice(1)).join(' · ');if(i.discoveryPick)return'La pépite que vous n’auriez peut-être pas cherchée';if(i.official&&i.date)return'Événement officiel à votre date';if(temp>=25&&/plage|nautique|voile|surf|paddle|kayak|piscine/.test(plainText(i.name||'')))return'Idéal avec la météo du moment';if((state.tasteProfile[i.category]||0)>1)return'Inspiré de ce que vous aimez déjà';if(matchesIntentions(i,vibes))return'Correspond à votre envie maintenant';if(i.rating>=4.6&&i.reviews>=100)return'Valeur sûre très appréciée';if(i.distance!=null&&i.distance<2)return'Belle idée tout près de vous';return'Sélection Dolcia pour élargir vos envies'}
+function composeCta(){return ({'2h':'Compose-moi 2 heures parfaites',morning:'Compose-moi ma matinée',afternoon:'Compose-moi mon après-midi',afternoon_evening:'Compose-moi la suite de ma journée',evening:'Compose-moi ma soirée',day:'Compose-moi ma journée',stay:'Compose-moi mon séjour'})[state.answers.duration]||'Compose mon moment'}
+function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Le catalogue n’a pas encore livré la bonne idée.</h3><p>Dolcia peut relancer les sources, affiner votre envie ou créer une expérience autonome sans inventer un événement.</p><div class="empty-actions"><button class="primary" onclick="openDolciaAnimate()">Dolcia anime ce moment</button><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="openEclatDialogue()">Parler à Dolcia</button></div></div>`}
+
+const DOLCIA_ANIMATE_PROGRAMS={
+  social:{title:'Le grand défi complice',tone:'Rire ensemble',duration:55,place:'Un espace public autorisé, calme et sûr',steps:[['00:00','Choisissez ensemble trois thèmes qui vous font rire.'],['00:05','Défi photo : recréez une scène de film sans accessoire.'],['00:20','Mission duo : faites deviner un souvenir uniquement avec des gestes.'],['00:35','Final collectif : inventez le slogan de votre journée et photographiez-le.'],['00:50','Chacun nomme son moment préféré.']]},
+  family:{title:'L’aventure des petits explorateurs',tone:'Jouer en famille',duration:45,place:'Parc, plage ou hébergement autorisé',steps:[['00:00','L’adulte vérifie l’espace et choisit une zone délimitée.'],['00:05','Cherchez cinq couleurs, trois textures et deux sons.'],['00:18','Construisez une histoire avec ce que vous avez observé.'],['00:30','Défi coopération : rejoignez un point sans lâcher le lien du groupe.'],['00:40','Photo-souvenir et retour au calme.']]},
+  water:{title:'La piscine devient un terrain de jeu',tone:'Parent-enfant',duration:35,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez les règles, la profondeur et la surveillance.'],['00:04','Jeu des couleurs : rejoindre ensemble un repère visible.'],['00:12','Le petit train : avancer lentement en restant à portée de bras.'],['00:20','Les animaux de l’eau : imiter à tour de rôle un déplacement doux.'],['00:28','Retour au calme, respiration et sortie groupée.']]},
+  calm:{title:'La parenthèse qui remet tout à zéro',tone:'Souffler vraiment',duration:30,place:'Espace calme, sûr et autorisé',steps:[['00:00','Installez-vous confortablement, sans gêner le passage.'],['00:03','Respirez lentement et observez cinq détails autour de vous.'],['00:10','Marche silencieuse : chacun choisit son rythme.'],['00:20','Étirement doux sans douleur ni performance.'],['00:27','Choisissez ensemble la suite de votre journée.']]}
 };
-function pepiteCardHtml(x){
-  const pairingHtml = x.pairing ? `
-    <div class="pepite-pairing">
-      <div class="pairing-label">Pendant ce temps, pour les grands</div>
-      <p>${x.pairing}</p>
-    </div>` : '';
-  return `<article class="pepite-card" data-open="${x.id}">
-    ${heartHtml(x.id)}
-    <div class="pepite-head">
-      <svg class="pepite-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3">${PEPITE_ICONS[x.icon]||PEPITE_ICONS.craft}</svg>
-      <div>
-        <h4>${x.title}</h4>
-        <div class="pepite-meta">
-          <span class="detour">${x.distanceKm} km · vaut le détour</span>
-          <span class="price">${x.price}</span>
-          ${x.forKids?'<span>Atelier enfants</span>':''}
-        </div>
-      </div>
-    </div>
-    <div class="pepite-desc">${x.desc}</div>
-    ${pairingHtml}
-    <div class="pepite-actions">
-      <button class="mini-btn gold" data-agenda="${x.id}">Ajouter à l'agenda</button>
-    </div>
-  </article>`;
+function suggestedAnimateProgram(){const vibes=state.answers.vibes||[],who=state.answers.who;if(state.answers.momentSentence&&/piscine|bassin|eau/.test(plainText(state.answers.momentSentence)))return'water';if(who==='family')return'family';if(vibes.includes('recharge'))return'calm';return'social'}
+function openDolciaAnimate(){
+  document.querySelector('#dolciaAnimate')?.remove();
+  const selected=suggestedAnimateProgram();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal dolcia-animate" id="dolciaAnimate"><article><button class="close" onclick="document.querySelector('#dolciaAnimate')?.remove()">×</button><header><span>D<i>✦</i></span><div><small>Programme autonome Dolcia</small><h2>Et si Dolcia animait ce moment ?</h2><p>Choisissez une direction. Je vous guiderai étape par étape, sans inventer de lieu ni de prestation.</p></div></header><div class="animate-choices">${Object.entries(DOLCIA_ANIMATE_PROGRAMS).map(([id,program])=>`<button class="${selected===id?'selected':''}" onclick="previewDolciaAnimate('${id}')"><small>${esc(program.tone)} · ${program.duration} min</small><strong>${esc(program.title)}</strong><span>${esc(program.place)}</span></button>`).join('')}</div><div id="animatePreview"></div><aside><b>Avant de commencer</b><span>Vous restez responsable du lieu, des règles locales, des personnes et du matériel. Dolcia n’est ni un encadrant diplômé, ni un maître-nageur. Avec des enfants dans l’eau : surveillance adulte active, constante et à portée de bras.</span></aside></article></div>`);
+  previewDolciaAnimate(selected)
 }
-function renderPepites(){
-  $('pepitesSection').innerHTML = state.pepitesItems.map(pepiteCardHtml).join('');
+function previewDolciaAnimate(id){
+  const program=DOLCIA_ANIMATE_PROGRAMS[id],target=document.querySelector('#animatePreview');if(!program||!target)return;
+  document.querySelectorAll('.animate-choices button').forEach(button=>button.classList.toggle('selected',button.getAttribute('onclick')?.includes(`'${id}'`)));
+  target.innerHTML=`<section><div><span class="kicker">${esc(program.tone)}</span><h3>${esc(program.title)}</h3><p>${esc(program.place)} · ${program.duration} minutes</p></div><ol>${program.steps.map(step=>`<li><time>${step[0]}</time><span>${esc(step[1])}</span></li>`).join('')}</ol><label><input type="checkbox" id="animateSafety"> J’ai vérifié le lieu, les règles et la sécurité du groupe.</label><div><button class="secondary" onclick="addDolciaAnimate('${id}')">Ajouter au programme</button><button class="primary" onclick="startDolciaAnimate('${id}')">Commencer avec la voix</button></div></section>`
 }
-function switchAnimeSub(sub){
-  document.querySelectorAll('.anime-subtab').forEach(t=>t.classList.toggle('active', t.dataset.sub===sub));
-  $('subAnimator').classList.toggle('hidden', sub!=='animator');
-  $('subPepites').classList.toggle('hidden', sub!=='pepites');
-  if (sub==='pepites') renderPepites();
+function dolciaAnimateItem(id){
+  const program=DOLCIA_ANIMATE_PROGRAMS[id];return{id:`dolcia-animate-${id}-${Date.now()}`,name:program.title,tone:program.tone,category:id==='calm'?'slow':id==='water'?'outside':'active',source:'Programme Dolcia',address:program.place,summary:`Expérience autonome guidée par Dolcia · ${program.duration} minutes`,free:true,price:0,detailsKnown:true,autonomousProgram:id,steps:program.steps,quality:'verified',official:false,photo:IMAGES[id==='family'?'family':id==='calm'?'slow':id==='water'?'outside':'friends']}
 }
-function renderAnime(ctx){
-  const items = demoAnimeItems(ctx);
-  state.animeItems = items;
-  const ctxPhoto = { pool:AMBIANCE.wellness, beach:AMBIANCE.nature, city:AMBIANCE.culture, home:AMBIANCE.family }[ctx] || AMBIANCE.festive;
-  const el = $('animeSection');
-  el.innerHTML = `<div class="cards-grid">${items.map(x=>`
-    <article class="experience-card" data-open="${x.id}">
-      <div class="experience-photo">
-        <img src="${ctxPhoto}" alt="" loading="lazy" onerror="this.style.display='none'">
-      </div>
-      <div class="experience-shade"></div>
-      ${heartHtml(x.id)}
-      <div class="experience-content">
-        <div class="source-badge anime">Programme Dolcia · énergie ${x.energy||'vive'}</div>
-        <h3>${x.title}</h3>
-        <p>${x.desc}</p>
-        <div class="card-actions">
-          <button class="mini-btn gold" data-launch="${x.id}">Lancer avec D</button>
-          <button class="mini-btn dark" data-agenda="${x.id}">Agenda</button>
-        </div>
-      </div>
-    </article>`).join('')}</div>`;
+function ensureAnimateSafety(){if(!document.querySelector('#animateSafety')?.checked){showToast('Confirmez d’abord le lieu, les règles et la sécurité du groupe');return false}return true}
+function addDolciaAnimate(id){if(!ensureAnimateSafety())return;const item=dolciaAnimateItem(id);state.allItems.push(item);state.agenda.push({...item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia'});save();document.querySelector('#dolciaAnimate')?.remove();renderAgenda();showToast('Programme Dolcia ajouté à votre agenda')}
+function startDolciaAnimate(id){
+  if(!ensureAnimateSafety())return;
+  const item=dolciaAnimateItem(id);
+  state.activeAnimate={item,index:0,startedAt:new Date().toISOString(),elan:0,completed:0,adjustments:[],reactions:[],status:'active'};
+  document.querySelector('#dolciaAnimate')?.remove();
+  save();renderDolciaAnimateLive()
 }
+function pickVoiceLine(options){return options[Math.floor(Math.random()*options.length)]}
+function animateCoachLine(session){
+  if(!session.index)return pickVoiceLine([
+    'Je lance le groupe. Vous n’avez rien à préparer : écoutez, vivez, puis dites-moi comment cela se passe.',
+    'Bon, on y va. Laissez-vous porter, je m’occupe du rythme — dites-moi juste ce que ça donne.',
+    'Ok, c’est parti. Rien à préparer de votre côté, juste à vivre le moment, je m’adapte ensuite.'
+  ]);
+  const last=session.reactions.at(-1);
+  if(last==='great')return pickVoiceLine([
+    'Je vous sens lancés. Je garde cette énergie et je fais monter le moment d’un cran.',
+    'Ah, ça, c’est le genre d’énergie que j’aime. On garde ce rythme et on pousse un peu plus.',
+    'Voilà, c’est exactement ça. Je monte d’un cran sans rien casser.'
+  ]);
+  if(last==='calmer')return pickVoiceLine([
+    'J’ai compris. Je ralentis sans casser l’ambiance.',
+    'Ok, on souffle un peu. Je baisse l’intensité, l’ambiance reste.',
+    'Mmh, reçu. On calme le jeu, tranquillement.'
+  ]);
+  if(last==='livelier')return pickVoiceLine([
+    'On réveille le groupe. La prochaine mission sera plus vive et plus collective.',
+    'Allez, on secoue un peu tout ça. La suite sera plus vivante, promis.',
+    'Ok, plus de peps. Je prépare quelque chose de plus collectif.'
+  ]);
+  if(last==='skip')return pickVoiceLine([
+    'Cette mission ne vous correspondait pas. Je l’oublie pour la suite, sans pénalité.',
+    'Pas grave, celle-là n’était pas pour vous. On passe à autre chose, aucun souci.',
+    'Ok, on efface celle-ci. Ça ne change rien pour la suite.'
+  ]);
+  return pickVoiceLine([
+    'Le groupe avance. Je garde le fil et j’adapte la suite à vos réactions.',
+    'On continue sur cette lancée. J’ajuste au fur et à mesure de ce que vous me dites.',
+    'Ça avance bien. Je garde un œil sur le rythme du groupe.'
+  ]);
+}
+function animateStepText(session){
+  const base=session.item.steps[session.index][1],last=session.reactions.at(-1);
+  if(last==='calmer')return`${base} Faites-le tranquillement, sans vitesse ni compétition.`;
+  if(last==='livelier')return`${base} Donnez-vous un mini compte à rebours et célébrez le résultat ensemble.`;
+  return base
+}
+function renderDolciaAnimateLive(){
+  const session=state.activeAnimate;if(!session)return;
+  document.querySelector('#animateLive')?.remove();
+  const step=session.item.steps[session.index],progress=Math.round(session.completed/session.item.steps.length*100),last=session.index===session.item.steps.length-1;
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live" id="animateLive"><article>
+    <button class="close" onclick="pauseDolciaAnimate()" aria-label="Mettre la session en pause">×</button>
+    <header class="animate-presence"><span class="eclat-d large">D<i>✦</i></span><div><small>D anime en direct</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
+    <p class="animate-coach-line">« ${esc(animateCoachLine(session))} »</p>
+    <div class="animate-session-meta"><span>Mission ${session.index+1}/${session.item.steps.length}</span><span>${progress}% vécu</span><span>${Math.max(0,session.item.steps.length-session.completed)} temps forts à venir</span></div>
+    <h2>${esc(session.item.name)}</h2>
+    <div class="animate-live-step"><time>${esc(step[0])}</time><p>${esc(animateStepText(session))}</p></div>
+    <div class="animate-response"><small>Comment vit le groupe ?</small><div>
+      <button onclick="reactDolciaAnimate('great')">Ça prend ✦</button>
+      <button onclick="reactDolciaAnimate('calmer')">Plus calme</button>
+      <button onclick="reactDolciaAnimate('livelier')">Plus vivant</button>
+      <button onclick="reactDolciaAnimate('skip')">Pas pour nous</button>
+    </div></div>
+    <div class="animate-live-actions"><button onclick="speakAnimateStep()">Dites-le à voix haute</button><button class="animate-live-voice" onclick="toggleLiveConversation('animate')" aria-pressed="false"><i></i>Parler à D en direct</button><button class="primary" onclick="completeDolciaAnimateStep()">${last?'Clore ce moment':'Mission accomplie →'}</button></div>
+    <progress value="${session.completed}" max="${session.item.steps.length}"></progress>
+    <small class="animate-trust">L’Élan mémorise la progression du groupe. Il ne classe jamais les personnes et ne pénalise aucun refus.</small>
+  </article></div>`);
+  speakAnimateStep()
+}
+function speakAnimateStep(){
+  const session=state.activeAnimate;if(!session)return;
+  const text=`${animateCoachLine(session)} ${animateStepText(session)}`;
+  if('speechSynthesis'in window){window.speechSynthesis.cancel();const voice=new SpeechSynthesisUtterance(text);voice.lang='fr-FR';voice.rate=.94;voice.pitch=1.02;window.speechSynthesis.speak(voice)}
+}
+function reactDolciaAnimate(reaction){
+  const session=state.activeAnimate;if(!session)return;
+  session.reactions.push(reaction);
+  session.adjustments.push({step:session.index,reaction,at:new Date().toISOString()});
+  if(reaction==='great')session.elan+=15;
+  if(reaction==='livelier')session.elan+=8;
+  if(reaction==='calmer')session.elan+=5;
+  if(reaction==='skip')session.elan=Math.max(0,session.elan-2);
+  save();renderDolciaAnimateLive()
+}
+function completeDolciaAnimateStep(){
+  const session=state.activeAnimate;if(!session)return;
+  session.completed=Math.max(session.completed,session.index+1);
+  session.elan+=10;
+  if(session.index>=session.item.steps.length-1)return finishDolciaAnimate();
+  session.index+=1;save();renderDolciaAnimateLive()
+}
+function finishDolciaAnimate(){
+  const session=state.activeAnimate;if(!session)return;
+  const completedAt=new Date().toISOString(),record={id:session.item.id,title:session.item.name,program:session.item.autonomousProgram,startedAt:session.startedAt,completedAt,elan:session.elan,completed:session.completed,total:session.item.steps.length,adjustments:session.adjustments};
+  state.animateHistory.unshift(record);state.animateHistory=state.animateHistory.slice(0,30);
+  if(!state.agenda.some(item=>item.id===session.item.id))state.agenda.push({...session.item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia',completedAt,animateElan:session.elan});
+  save();document.querySelector('#animateLive')?.remove();state.activeAnimate=null;
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-finale" id="animateFinale"><article><span class="eclat-d large">D<i>✦</i></span><small>Moment accompli</small><h2>Votre groupe a créé<br>son propre souvenir.</h2><div><b>${record.elan}</b><span>points d’Élan collectif</span></div><p>J’ai retenu le rythme qui vous a plu et les missions que vous avez écartées. La prochaine animation commencera déjà plus juste.</p><button class="primary" onclick="document.querySelector('#animateFinale')?.remove();renderAgenda()">Retrouver ce moment</button></article></div>`)
+}
+function pauseDolciaAnimate(){stopLiveConversation();if('speechSynthesis'in window)window.speechSynthesis.cancel();document.querySelector('#animateLive')?.remove();if(state.activeAnimate){state.activeAnimate.status='paused';save();showToast('Votre session est en pause. D garde votre progression.')}}
+function stopDolciaAnimate(){pauseDolciaAnimate()}
 
-/* ---------------- Mon programme + budget vivant ---------------- */
-function renderProgram(){
-  const el = $('programSection');
-  if (!state.agenda.length){
-    el.innerHTML = `<div class="empty-state"><h3>Votre programme est vide.</h3><p>Ajoutez une activité depuis Explorer ou Dolcia Anime pour composer votre moment.</p></div>`;
-    return;
+function detailMapUrl(item){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name,item.address||state.location?.name].filter(Boolean).join(' '))}`}
+function detailQuickActions(item){const added=state.agenda.some(entry=>entry.id===item.id),liked=state.favorites.includes(item.id);return `<div class="detail-sticky-actions"><button class="detail-back" onclick="closeDetail()">← Retour</button><button class="detail-like ${liked?'selected':''}" onclick="rate('${item.id}','favorite')">${liked?'♥ Dans mes envies':'♡ Cette idée me plaît'}</button><button class="detail-map" onclick="window.open('${detailMapUrl(item)}','_blank')">Itinéraire ↗</button><button class="detail-add ${added?'added':''}" onclick="addAgenda('${item.id}')">${added?'Déjà dans mon agenda':'Ajouter à mon agenda'}</button></div>`}
+function saveDetailIdea(id){if(!state.favorites.includes(id))state.favorites.push(id);save();showToast('Cette idée est conservée dans vos envies');const item=state.allItems.find(entry=>entry.id===id)||state.items.find(entry=>entry.id===id);if(item)openDetailRefresh(id)}
+async function openDetail(id){
+  const item=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);
+  if(!item)return;
+  /* La fiche reste utile même lorsqu'une source externe répond mal. */
+  const initialPhoto=itemImage(item),initialAddress=item.address||state.location?.name||'Localisation à confirmer';
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal detail-modal" id="modal" onclick="if(event.target===this)closeDetail()"><article class="detail detail-progressive">${detailQuickActions(item)}<div class="detail-image" style="background-image:url('${initialPhoto}')"></div><div class="detail-body"><span class="kicker">Fiche disponible · enrichissement en cours</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p><div class="verified-facts"><div><b>Localisation connue</b><span>${esc(initialAddress)}</span></div><div><b>Pourquoi Dolcia</b><span>${esc(why(item))}</span></div></div><div class="detail-live-status"><span class="loader"></span><p>Dolcia vérifie les horaires, contacts, photos et liens officiels. Vous pouvez déjà revenir, afficher l’itinéraire ou conserver cette idée.</p></div><div class="detail-actions"><button class="primary" onclick="addAgenda('${item.id}')">Ajouter à mon agenda</button><button class="secondary" onclick="saveDetailIdea('${item.id}')">Garder dans mes envies</button><button class="secondary" onclick="window.open('${detailMapUrl(item)}','_blank')">Voir sur la carte</button></div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article></div>`);
+  let details=null;
+  if(item.source==='Google Places'&&item.placeId){
+    try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4500),response=await fetch(`/api/place-details?id=${encodeURIComponent(item.placeId)}`,{signal:controller.signal});clearTimeout(timer);details=await response.json()}catch(_){details={verified:false,status:'UNAVAILABLE'}}
+    if(!details.verified){details=null;item.quality='documented';item.detailWarning='Les informations déjà affichées restent disponibles. Les champs décisifs encore absents sont indiqués séparément.'}
+    if(details)Object.assign(item,{name:details.name||item.name,address:details.address||item.address,phone:details.phone,website:details.website,booking:details.booking||item.booking,googleUrl:details.googleUrl,rating:details.rating||item.rating,reviews:details.reviews||item.reviews,isOpen:details.openNow,summary:details.summary,hours:details.hours,photos:details.photos?.length?details.photos:item.photos,photo:details.photos?.[0]||item.photo,officialSource:details.officialSource,officialCheckedAt:details.officialCheckedAt});
   }
-  const slots = state.agenda.length<=3 ? ['Début','Suite','Fin'] : ['Matin','Midi','Après-midi','Soir'];
-  el.innerHTML = `<div class="program-card"><div class="program-title">Votre composition</div><div class="timeline">${
-    state.agenda.map((x,i)=>`<div class="timeline-item" data-open="${x.key}"><div class="time">${slots[i]||''}</div><div><h4>${x.title}</h4><p>${x.source||''}</p></div></div>`).join('')
-  }</div></div>`;
+  const photos=(item.photos?.length?item.photos:[itemImage(item)]).slice(0,6);
+  const verified=item.source==='Google Places'?Boolean(details?.verified):Boolean(item.official&&item.date&&item.address);
+  const facts=[
+    item.address?`<div><b>Adresse</b><span>${esc(item.address)}</span></div>`:'<div><b>Adresse</b><span>Lieu exact à confirmer · la fiche reste consultable</span></div>',
+    item.date?`<div><b>Date</b><span>${new Date(item.date).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})}</span></div>`:'',
+    item.phone?`<div><b>Téléphone</b><span><a href="tel:${esc(item.phone.replace(/\s+/g,''))}" class="phone-link">${esc(item.phone)}</a></span></div>`:'<div><b>Téléphone</b><span>Non communiqué</span></div>',
+    item.rating?`<div><b>Avis Google</b><span>${item.rating}/5${item.reviews?` · ${item.reviews} avis`:''}</span></div>`:'',
+    item.isOpen!=null?`<div><b>Ouverture</b><span>${item.isOpen?'Ouvert actuellement':'Fermé actuellement'}</span></div>`:'',
+    item.hours?.length?`<div><b>Horaires</b><span>${item.hours.map(esc).join('<br>')}</span></div>`:''
+  ].filter(Boolean).join('');
+  const links=[`<button class="secondary" onclick="window.open('${item.googleUrl?esc(item.googleUrl):detailMapUrl(item)}','_blank')">Voir sur la carte</button>`,item.phone?`<button class="secondary phone-cta" onclick="window.location.href='tel:${esc(item.phone.replace(/\s+/g,''))}'">Appeler</button>`:'',item.website?`<button class="secondary" onclick="window.open('${esc(item.website)}','_blank')">Site officiel</button>`:'',item.booking?`<button class="secondary" onclick="window.open('${esc(item.booking)}','_blank')">Réserver</button>`:''].join('');
+  const modal=document.querySelector('#modal');if(!modal)return;
+  modal.setAttribute('onclick','if(event.target===this)closeDetail()');
+  modal.innerHTML=`<article class="detail">${detailQuickActions(item)}<div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${verified?'Information vérifiée':'Fiche utile · informations partielles'}</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p>${item.officialSource?`<div class="source-proof"><b>Confirmé par ${esc(item.officialSource)}</b><span>Source officielle consultée${item.officialCheckedAt?' le '+new Date(item.officialCheckedAt).toLocaleDateString('fr-FR'):''}</span></div>`:''}${item.detailWarning?`<div class="detail-warning">${esc(item.detailWarning)} Vérifiez les informations décisives avant de réserver.</div>`:''}<div class="verified-facts">${facts}</div>${preExperiencePanel(item)}${hasHappened(item)?postExperiencePanel(item):''}<div class="detail-actions"><button class="primary" onclick="addAgenda('${item.id}')">Ajouter à mon agenda</button><button class="secondary" onclick="saveDetailIdea('${item.id}')">Garder dans mes envies</button>${links}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article>`;
 }
-function updateBudgetRing(){
-  const remaining = Math.max(0, state.budgetTotal - state.budgetSpent);
-  const pct = Math.round((remaining / state.budgetTotal) * 100);
-  const circumference = 308;
-  const offset = circumference * (1 - pct/100);
-  $('budgetRingFill').style.strokeDashoffset = offset;
-  $('budgetPercent').textContent = pct + '%';
-  $('budgetText').textContent = `${remaining} € restants sur ${state.budgetTotal} € — recalculé à chaque ajout.`;
+function preExperiencePanel(item){return `<div class="preference-panel emotion-panel"><span class="emotion-kicker">Avant de le vivre</span><strong>Est-ce que ce moment vous ressemble ?</strong><div class="preference-actions"><button class="${state.favorites.includes(item.id)?'selected':''}" onclick="rate('${item.id}','favorite')">Coup de cœur</button><button class="${state.feedback[item.id]==='like'?'selected':''}" onclick="rate('${item.id}','like')">Ça me donne envie</button><button class="${state.feedback[item.id]==='later'?'selected':''}" onclick="rate('${item.id}','later')">Pas maintenant</button><button class="${state.feedback[item.id]==='dislike'?'selected':''}" onclick="rate('${item.id}','dislike')">Pas pour moi</button></div><small>Ces choix restent privés et affinent uniquement votre concierge.</small></div>`}
+function hasHappened(item){const agendaItem=state.agenda.find(x=>x.id===item.id);return Boolean(agendaItem?.agendaDate&&new Date(agendaItem.agendaDate).getTime()<=Date.now())}
+function feelingWeight(value){return({unforgettable:3,loved:2,nice:1,notforme:-2,disappointing:-3})[value]||0}
+function postExperiencePanel(item){const reactions=['Vécu ensemble','À refaire','Pas pour moi','Une belle surprise','Favori de la famille'],memory=state.experienceMemories[item.id]||{};const feelings=[['unforgettable','Inoubliable'],['loved','J’ai adoré'],['nice','Un joli moment'],['notforme','Pas pour moi'],['disappointing','Décevant']];const tags=[['value','Bon rapport qualité-prix'],['family','Parfait avec les enfants'],['couple','Idéal à deux'],['discovery','Belle découverte'],['welcome','Accueil remarquable'],['again','À refaire'],['expensive','Trop cher'],['far','Trop loin'],['touristy','Trop touristique']];const selected=state.experienceTags[item.id]||[];return `<div class="experience-memory"><span class="emotion-kicker">Après l’expérience · Notre constellation</span><h3>Quel souvenir gardez-vous de ce moment ?</h3><div class="memory-reactions">${reactions.map(label=>`<button class="${memory.reaction===label?'selected':''}" onclick="rememberExperience('${item.id}','${label}')">${label}</button>`).join('')}</div><p>Comment vous êtes-vous senti ?</p><div class="feeling-scale">${feelings.map(([id,label])=>`<button class="${state.experienceFeelings[item.id]===id?'selected':''}" onclick="saveFeeling('${item.id}','${id}')">${label}</button>`).join('')}</div><p>Qu’est-ce qui a compté ?</p><div class="memory-tags">${tags.map(([id,label])=>`<button class="${selected.includes(id)?'selected':''}" onclick="toggleExperienceTag('${item.id}','${id}')">${label}</button>`).join('')}</div><small>Votre ressenti nourrit vos prochaines compositions. Vous pouvez tout consulter, corriger ou effacer dans Notre constellation.</small></div>`}
+function selectPhoto(button,url){document.querySelector('#detailHero').style.backgroundImage=`url('${url}')`;document.querySelectorAll('.photo-thumb').forEach(x=>x.classList.remove('active'));button.classList.add('active')}
+function whyDetail(i){return i.source==='OpenAgenda'?'Cette expérience a lieu pendant les dates choisies et correspond à l’ambiance recherchée.':'Cette adresse réelle correspond à vos envies, à votre destination et au rythme du moment.'}
+function closeDetail(){document.querySelector('#modal')?.remove()}
+async function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;const returnTo=state.view;if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
+  const compatibility=momentCompatibility(i);
+  if(compatibility==='incompatible')return showToast('Cette activité n’est pas compatible avec votre horaire');
+  if(compatibility==='open-not-session'||(compatibility==='unknown'&&requiresPublishedSession(i)))return showToast('Impossible de l’ajouter sans séance réellement confirmée');
+  if(compatibility==='unknown')return showToast('Dolcia doit encore confirmer l’horaire avant l’ajout');
+  if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});save();showToast(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda')}else showToast('Cette activité est déjà dans votre agenda');closeDetail();if(returnTo==='surprise')renderSurprise();else if(returnTo==='results')renderResults()}
+function agendaDateFor(item,slotLabel=''){if(item.date)return item.date;const date=new Date(state.dateStart);const match=slotLabel.match(/(\d{2}):(\d{2})/);if(match)date.setHours(Number(match[1]),Number(match[2]),0,0);return date.toISOString()}
+function adoptSurprise(){state.program.forEach(slot=>{if(!state.agenda.some(item=>item.id===slot.item.id))state.agenda.push({...slot.item,agendaDate:agendaDateFor(slot.item,slot.label),agendaSlot:slot.label,addedAt:new Date().toISOString(),fromSurprise:true})});state.agenda.sort((a,b)=>new Date(a.agendaDate)-new Date(b.agendaDate));save();showToast('Votre programme est ajouté à l’agenda');renderAgenda()}
+function surprise(forceNew=false){if(!state.allItems.length){state.radius=Math.min(state.radius*1.6,60000);showToast('Dolcia compose votre programme…');return compose()}if(forceNew||state.view!=='surprise'){const pool=[...state.allItems].sort(()=>Math.random()-.5);state.program=buildProgram(pool);if(state.majorChoice)state.program=injectMajorMoment(state.program);state.items=state.program.map(slot=>slot.item)}renderSurprise();showToast(forceNew?'Un nouveau programme vient d’être composé':'Votre programme est prêt')}
+function regenerateSlot(index){const current=state.program[index];if(!current)return;const excluded=state.program.map(slot=>slot.item.id);const categories=slotCategories(current.label);const strict=categories.length===1&&categories[0]==='hotel';const replacement=state.allItems.find(item=>!excluded.includes(item.id)&&categories.includes(item.category))||(strict?null:state.allItems.find(item=>!excluded.includes(item.id)));if(!replacement)return showToast(strict?'Aucun autre hébergement réel et vérifié pour le moment':'Pas encore d’autre idée réelle pour ce créneau');state.program[index]={...current,item:replacement};state.items=state.program.map(slot=>slot.item);state.view==='surprise'?renderSurprise():renderResults();showToast('Cette activité a été remplacée')}
+function slotCategories(label){if(/manger|table/.test(label))return['food'];if(/soir|Vibrer|final|Prolonger/.test(label))return['night','culture','food','outside'];if(/hébergement/.test(label))return['hotel'];return['outside','active','culture','slow']}
+function rate(id,value){const item=state.allItems.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!item)return;if(value==='favorite'){state.favorites=state.favorites.includes(id)?state.favorites.filter(x=>x!==id):[...state.favorites,id]}else{const previous=state.feedback[id],oldDelta=previous==='like'?1:previous==='dislike'?-1:0,newDelta=value==='like'?1:value==='dislike'?-1:0;state.feedback[id]=previous===value?null:value;state.tasteProfile[item.category]=Math.max(-5,Math.min(8,(state.tasteProfile[item.category]||0)-oldDelta+(previous===value?0:newDelta)))}save();refreshRecommendations();showToast(value==='favorite'?'Coup de cœur mémorisé':value==='like'?'Dolcia comprend mieux vos envies':value==='later'?'Cette idée reviendra au meilleur moment':'Dolcia proposera moins ce type d’idée')}
+function openReactionMenu(id){const item=state.allItems.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!item)return;document.body.insertAdjacentHTML('beforeend',`<div class="modal reaction-modal" id="reactionModal"><article><button class="close" onclick="document.querySelector('#reactionModal')?.remove()">×</button><span class="kicker">Votre ressenti affine Dolcia</span><h2>${esc(item.name)}</h2><p>Ce choix sera mémorisé avec le contexte de cette sortie, pas comme une vérité valable à chaque instant.</p><div>${[['favorite','♥','Coup de cœur','J’adorerais vivre ça'],['like','✦','Ça me tente','Bonne idée pour ce moment'],['later','◷','Pas aujourd’hui','À reproposer dans un autre contexte'],['dislike','—','Pas pour moi','Éviter durablement ce style']].map(([idReaction,icon,title,copy])=>`<button onclick="contextualRate('${item.id}','${idReaction}')"><b>${icon}</b><span><strong>${title}</strong><small>${copy}</small></span></button>`).join('')}</div></article></div>`)}
+function contextualRate(id,value){state.feedbackContext[id]={value,who:state.answers.who||'unknown',groupDetail:state.answers.groupDetail||'',vibes:[...(state.answers.vibes||[])],weather:state.weather?.weather?.[0]?.main||'',temperature:state.weather?.main?.temp??null,dateMode:state.dateMode,at:new Date().toISOString()};document.querySelector('#reactionModal')?.remove();rate(id,value)}
+function saveFeeling(id,value){const item=state.allItems.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!item)return;const previous=state.experienceFeelings[id];state.experienceFeelings[id]=previous===value?null:value;state.tasteProfile[item.category]=Math.max(-5,Math.min(8,(state.tasteProfile[item.category]||0)-feelingWeight(previous)+(previous===value?0:feelingWeight(value))));save();refreshRecommendations();showToast('Ce souvenir affine vos prochaines expériences')}
+function toggleExperienceTag(id,tag){const current=state.experienceTags[id]||[];state.experienceTags[id]=current.includes(tag)?current.filter(x=>x!==tag):[...current,tag];save();openDetailRefresh(id)}
+async function refreshRecommendations(){state.allItems=await rankItemsServer(state.allItems).catch(()=>scoreItems(state.allItems));state.alternatives=buildAlternatives(state.allItems);state.program=buildProgram(state.allItems);state.items=state.program.map(slot=>slot.item);closeDetail();if(state.view==='agenda')renderAgenda();else if(state.view==='surprise')renderSurprise();else renderResults()}
+function openDetailRefresh(id){closeDetail();openDetail(id)}
+function renderAgendaLegacy(){/* Conservé uniquement pour compatibilité des anciennes données locales. */}
+function renderServices(){state.view='services';const services=[['animate','Animateur & coach','Une présence humaine qualifiée pour animer, guider ou encadrer un moment.'],['babysitting','Babysitting de confiance','Profils vérifiés, âges acceptés, disponibilités et contact d’urgence.'],['driver','Chauffeur & navette','Aller, retour, capacité, délai et prix total reliés à votre programme.'],['concierge','Concierge humain','Une demande spéciale prise en charge de bout en bout.'],['home','Ménage & intendance','Préparer, entretenir ou remettre en ordre votre hébergement.'],['booking','Réservations difficiles','Dolcia sollicite ses partenaires pour vous.']];app.innerHTML=shell(`<section class="services-view"><div class="services-hero"><span class="kicker">Le club sans murs</span><h2>Profitez.<br>On s’occupe du reste.</h2><p>Animation, mobilité, garde et conciergerie rejoignent le même programme uniquement lorsqu’un professionnel réellement disponible peut intervenir.</p><div><button class="primary" onclick="openDolciaAnimate()">Essayer Dolcia Anime</button><button class="secondary" onclick="renderAgenda()">Voir mon programme</button></div></div><div class="trust-banner"><strong>La confiance avant la vitesse.</strong><span>Identité, qualifications, assurance, avis, délai d’arrivée et prix total devront être visibles avant réservation. Aucun prestataire fictif ne sera proposé.</span></div><div class="service-grid">${services.map(service=>`<article class="service-card"><span class="service-status">Ouverture territoire par territoire</span><h3>${service[1]}</h3><p>${service[2]}</p><button onclick="serviceInterest('${service[0]}')">M’avertir à l’ouverture</button></article>`).join('')}</div></section>`,'services')}
+function serviceInterest(type){const interests=JSON.parse(localStorage.getItem('dolcia_service_interests')||'[]');if(!interests.includes(type))interests.push(type);localStorage.setItem('dolcia_service_interests',JSON.stringify(interests));showToast('Votre intérêt est enregistré. Aucun push ne sera envoyé sans votre accord.')}
+function agendaTravelConnector(from,to){
+  if(!Number.isFinite(from.lat)||!Number.isFinite(from.lng)||!Number.isFinite(to.lat)||!Number.isFinite(to.lng))return `<div class="agenda-connector"><i></i><span>Trajet à estimer sur place</span></div>`;
+  const km=distanceKm(from.lat,from.lng,to.lat,to.lng),walking=km<=1.2,minutes=Math.max(1,Math.round(walking?km*12:km*2.3));
+  return `<div class="agenda-connector"><i></i><span>${walking?'À pied':'En voiture'} · environ ${minutes} min · ${km.toFixed(1)} km · estimation</span></div>`;
 }
+function renderAgenda(){
+  state.view='agenda';state.agenda.sort((a,b)=>new Date(a.agendaDate)-new Date(b.agendaDate));
+  const groups={};state.agenda.forEach(item=>{const key=iso(new Date(item.agendaDate||state.dateStart));(groups[key]=groups[key]||[]).push(item)});
+  const dayKeys=Object.keys(groups).sort();
+  const cards=dayKeys.map((dayKey,dayPos)=>{
+    const dayItems=groups[dayKey],dateObj=new Date(dayKey+'T12:00:00');
+    const weekday=dateObj.toLocaleDateString('fr-FR',{weekday:'long'});
+    const header=`<div class="agenda-day-header"><strong>${weekday.charAt(0).toUpperCase()+weekday.slice(1)} ${dateObj.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</strong>${dayKeys.length>1?`<span>Jour ${dayPos+1} sur ${dayKeys.length}</span>`:''}</div>`;
+    const dayCards=dayItems.map((item,localIndex)=>{
+      const globalIndex=state.agenda.indexOf(item),date=new Date(item.agendaDate||state.dateStart),day=iso(date),time=`${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+      const card=`<article class="agenda-card agenda-editable ${item.fromSurprise?'from-surprise':''}"><div class="agenda-time"><input type="time" value="${time}" onchange="updateAgendaTime('${item.id}',this.value)"><input type="date" value="${day}" onchange="updateAgendaDate('${item.id}',this.value)"></div><img src="${itemImage(item)}" alt=""><div><span class="agenda-slot">${esc(item.agendaSlot||'Moment choisi')}</span><h3>${esc(item.name)}</h3><p>${esc(item.address||state.location.name)}</p><div class="agenda-tools"><button onclick="moveAgenda(${globalIndex},-1)" ${globalIndex===0?'disabled':''}>↑ Plus tôt</button><button onclick="moveAgenda(${globalIndex},1)" ${globalIndex===state.agenda.length-1?'disabled':''}>↓ Plus tard</button><button onclick="openDetail('${item.id}')">Voir la fiche</button><button onclick="removeAgenda('${item.id}')">Retirer</button></div></div></article>`;
+      const next=dayItems[localIndex+1];
+      return card+(next?agendaTravelConnector(item,next):'');
+    }).join('');
+    return header+dayCards;
+  }).join('');app.innerHTML=shell(`<section class="agenda-view agenda-deluxe"><div class="agenda-title"><div><span class="kicker">Votre temps, orchestré</span><h2>Mon programme.</h2><p>Modifiez directement la date et l’heure de chaque moment.</p></div><button class="primary" onclick="openComposition()">${state.program.length?'Revoir mon programme composé':'Compose-moi mon programme'}</button></div>${sharedAgendaPanel()}<div id="flashOfferZone" class="flash-offer-zone"><div class="offer-loading">Dolcia vérifie les opportunités réelles autour de votre programme…</div></div>${cards||`<div class="empty-state"><h3>Votre programme commence ici.</h3><p>Dolcia construira un véritable agenda, heure par heure.</p><button class="primary" onclick="startCompose()">Compose-moi mon programme</button></div>`}</section>`,'agenda');setTimeout(loadFlashOffers,0)}
 
-/* ---------------- Depth tabs ---------------- */
-function switchDepth(depth){
-  state.currentDepth = depth;
-  document.querySelectorAll('.depth-tab').forEach(t=>t.classList.toggle('active', t.dataset.depth===depth));
-  $('viewExplore').classList.toggle('hidden', depth!=='explore');
-  $('viewProgram').classList.toggle('hidden', depth!=='program');
-  $('viewAnime').classList.toggle('hidden', depth!=='anime');
+function reserveWithDolcia(id,slotLabel=''){
+  const item=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!item)return;
+  const existing=state.reservations.find(r=>r.itemId===id&&r.status!=='cancelled');if(existing)return renderPass(existing.id);
+  const date=item.date||agendaDateFor(item,slotLabel||requestedMomentLabel());
+  const reservation={id:`DLC-${Date.now().toString(36).toUpperCase()}`,itemId:item.id,name:item.name,address:item.address||state.location.name,date,status:'confirmed',people:currentGroupSize(),rightLabel:item.category==='food'?'Formule Dolcia réservée':'Expérience Dolcia réservée',createdAt:new Date().toISOString()};
+  state.reservations.push(reservation);if(!state.agenda.some(x=>x.id===item.id))state.agenda.push({...item,agendaDate:date,agendaSlot:slotLabel||'Réservation Dolcia',reservationId:reservation.id});
+  state.passWallet={status:'active',title:'Mon Pass Dolcia',holder:(JSON.parse(localStorage.getItem('dolcia_profile_v1')||'null')?.name||'Voyageur Dolcia'),rights:state.reservations.filter(r=>r.status!=='cancelled').map(r=>({reservationId:r.id,label:r.rightLabel,status:r.status})),privileges:state.passWallet.privileges||[],updatedAt:new Date().toISOString()};save();renderPass(reservation.id)
 }
-
-/* ---------------- Fiche détail ---------------- */
-function findItem(id){
-  return state.items.find(i=>i.id===id) || state.animeItems.find(i=>i.id===id) || state.pepitesItems.find(i=>i.id===id);
-}
-function openItem(id){
-  const x = findItem(id); if(!x) return;
-  state.current = x;
-  $('detailTitle').textContent = x.title;
-  $('detailDesc').textContent = x.desc || 'Information issue de la source. Dolcia n\'ajoute aucune donnée inventée.';
-  $('detailSource').textContent = x.source || 'Programme Dolcia';
-  const conf = x.confidence || (x.kind ? 'check' : 'probable');
-  const confLabel = { confirmed:'Confirmé', probable:'Très probable', check:'À vérifier' }[conf] || 'À vérifier';
-  $('detailConfidence').textContent = confLabel;
-  $('detailConfidence').className = 'confidence-badge ' + conf;
-  const distLabel = x.dist!=null ? `${x.dist} km` : (x.distanceKm!=null ? `${x.distanceKm} km · vaut le détour` : null);
-  const priceLabel = x.price || priceText(x);
-  $('detailMeta').innerHTML = [x.source, distLabel, priceLabel, x.rating?`Note ${x.rating}/5`:null].filter(Boolean).map(m=>`<span>${m}</span>`).join('');
-  $('detailWhy').textContent = x.desc ? `Pourquoi cette idée : ${x.desc}` : '';
-  $('reserveBtn').textContent = 'Réservation bientôt disponible';
-  $('reserveBtn').classList.remove('active');
-  $('detail').classList.remove('hidden');
-}
-function closeOverlays(){ $('detail').classList.add('hidden'); $('agenda').classList.add('hidden'); }
-
-function addToAgenda(id){
-  const x = findItem(id); if(!x) return;
-  const key = x.id;
-  if (state.agenda.some(a=>a.key===key)) { flash('Déjà dans votre agenda'); return; }
-  const price = x.priceN ? x.priceN * 12 : (x.free ? 0 : 15);
-  state.agenda.push({ key, title:x.title, source:x.source||'Programme Dolcia', price });
-  state.budgetSpent += price;
-  saveAgenda();
-  renderProgram();
-  updateBudgetRing();
-  flash('Ajouté à votre agenda Dolcia');
-}
-function removeFromAgenda(key){
-  const item = state.agenda.find(a=>a.key===key);
-  if (item) state.budgetSpent = Math.max(0, state.budgetSpent - (item.price||0));
-  state.agenda = state.agenda.filter(a=>a.key!==key);
-  saveAgenda(); renderAgendaList(); renderProgram(); updateBudgetRing();
-}
-function renderAgendaList(){
-  const el = $('agendaList');
-  if (!state.agenda.length){
-    el.innerHTML = `<div class="empty-state"><h3>Votre agenda est vide.</h3><p>Ajoutez une activité pour construire votre programme.</p></div>`;
-    return;
-  }
-  el.innerHTML = state.agenda.map(a=>`<div class="agenda-item">
-    <div class="agenda-thumb"></div>
-    <div><h4>${a.title}</h4><p>${a.source}${a.price?` · ${a.price} €`:''}</p></div>
-    <button class="agenda-remove" data-remove="${a.key}">Retirer</button>
-  </div>`).join('');
-}
-
-/* ---------------- Son synthétisé (aucun fichier externe) ---------------- */
-let audioCtx = null;
-function getAudioCtx(){
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
-}
-function playTone(freq, duration, type='sine', gainStart=0.18){
-  if (liveState.muted) return;
+function passToken(reservation){const seed=`${reservation.id}-${Math.floor(Date.now()/60000)}`;let hash=0;for(const char of seed)hash=((hash<<5)-hash)+char.charCodeAt(0);return Math.abs(hash).toString().padStart(8,'0').slice(0,8)}
+function renderPass(focusId){state.view='pass';const active=state.reservations.filter(r=>r.status!=='cancelled'),focus=active.find(r=>r.id===focusId)||active[0];if(!focus){renderAgenda();return}const when=new Date(focus.date);app.innerHTML=shell(`<section class="pass-view"><div class="pass-stage"><span class="kicker">Votre séjour, sans friction</span><h1>Tout est prêt.<br><em>Votre Pass suffit.</em></h1><p>Présentez ce Pass au partenaire. Il confirme la réservation et uniquement ce qui est compris.</p><article class="pass-card"><div class="pass-brand"><span>D<i>✦</i></span><b>DOLCIA PASS</b></div><div class="pass-next"><small>Votre prochain moment</small><h2>${esc(focus.name)}</h2><p>${when.toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})} · ${esc(focus.address)}</p><strong>${esc(focus.rightLabel)}</strong></div><div class="pass-qr" aria-label="Code de validation Dolcia"><div class="qr-pattern"></div><b>${passToken(focus)}</b><small>Code renouvelé automatiquement</small></div><div class="pass-status"><span></span> Réservation confirmée · ${focus.people} personne${focus.people>1?'s':''}</div></article><div class="pass-switcher">${active.map(r=>`<button class="${r.id===focus.id?'active':''}" onclick="renderPass('${r.id}')"><span>${new Date(r.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span><b>${esc(r.name)}</b></button>`).join('')}</div><details class="pass-details"><summary>Voir ce qui est compris</summary><p>${esc(focus.rightLabel)}. Les consommations et options supplémentaires sont réglées séparément sauf mention contraire avant validation.</p><small>Identifiant ${focus.id}</small></details></div></section>`,'pass')}
+function sharedAgendaPanel(){const people=state.groupParticipants,proposals=state.agendaProposals;return `<section class="shared-agenda"><div><span class="kicker">Programme partagé</span><h3>Tout le groupe, au même rythme.</h3><p>L'organisateur valide. Les proches peuvent consulter, voter ou proposer un changement selon leurs droits.</p></div><div class="participant-row">${people.map(person=>`<span class="participant"><b>${esc(person.name).slice(0,1)}</b>${esc(person.name)}<small>${person.role==='organizer'?'Organisateur':person.kind==='standard'?'Invité':'Participant'}</small></span>`).join('')}<button onclick="openParticipantModal()">+ Ajouter</button><button onclick="shareAgenda()">Inviter par lien</button></div>${proposals.length?`<div class="group-proposals">${proposals.map(proposal=>`<article><span>Proposition au groupe</span><strong>${esc(proposal.title)}</strong><small>${proposal.votes?.yes||0} partant · ${proposal.votes?.maybe||0} pourquoi pas · ${proposal.votes?.no||0} garder le programme</small><div><button onclick="voteProposal('${proposal.id}','yes')">Partant</button><button onclick="voteProposal('${proposal.id}','maybe')">Pourquoi pas</button><button onclick="voteProposal('${proposal.id}','no')">Garder l'actuel</button></div></article>`).join('')}</div>`:''}</section>`}
+function openParticipantModal(){openAccount()}
+function addParticipant(kind){const input=document.querySelector('#participantName'),name=input?.value.trim();if(!name)return showToast('Indiquez un prénom ou un surnom');state.groupParticipants.push({id:`p-${Date.now()}`,name,role:'participant',kind});save();document.querySelector('#participantModal')?.remove();renderAgenda();showToast(kind==='account'?'Invitation Dolcia préparée':'Accompagnant ajouté')}
+async function shareAgenda(){const url=`${location.origin}${location.pathname}?group=${Date.now().toString(36)}`;try{await navigator.clipboard.writeText(url);showToast('Lien du programme copié')}catch(_){showToast('Le lien sera activé avec les comptes Dolcia')}}
+async function loadFlashOffers(){const zone=document.querySelector('#flashOfferZone');if(!zone)return;try{const response=await fetch(`/api/events?service=flash-offers&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`),data=await response.json();state.flashOffers=(data.offers||[]).filter(offer=>offer.verified&&new Date(offer.expires_at)>new Date());const alertToggle=`<button class="flash-alert-toggle ${state.flashAlertsEnabled?'active':''}" onclick="toggleFlashAlerts()">${state.flashAlertsEnabled?'✓ Alertes activées':'Être alerté dès qu’une occasion se libère'}</button>`;zone.innerHTML=state.flashOffers.length?`<section class="flash-offers"><span class="kicker">Occasions vérifiées maintenant</span><h3>Une meilleure possibilité vient de se libérer.</h3>${alertToggle}${state.flashOffers.slice(0,3).map(offer=>`<article><div><b>-${offer.savingPercent}%</b><span>${esc(offer.title)}</span><small>${offer.distance!=null?`${offer.distance.toFixed(1)} km · `:''}${offer.quantity_remaining} place${offer.quantity_remaining>1?'s':''} · expire ${new Date(offer.expires_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div><div><del>${Number(offer.original_price).toFixed(0)} €</del><strong>${Number(offer.dolcia_price).toFixed(0)} €</strong><button onclick="proposeFlashOffer('${offer.id}')">Proposer au groupe</button></div></article>`).join('')}</section>`:`<div class="no-flash-offer"><span class="kicker">Veille Dolcia</span><strong>Aucune offre exceptionnelle vérifiée pour le moment.</strong><p>Votre programme reste inchangé. Dolcia ne fabrique jamais de réduction.</p>${alertToggle}</div>`}catch(_){zone.innerHTML='<div class="no-flash-offer"><strong>La veille des offres est momentanément indisponible.</strong><p>Votre programme reste intact.</p></div>'}}
+// Alertes push : jamais activées sans un geste explicite sur ce bouton. Une seule offre réelle et
+// vérifiée déclenche une seule notification par personne abonnée et proche — jamais de répétition,
+// jamais d'alerte fabriquée. Repli silencieux si le navigateur ou la configuration ne suivent pas.
+function urlBase64ToUint8Array(base64){const padding='='.repeat((4-base64.length%4)%4),base64Safe=(base64+padding).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(base64Safe);return Uint8Array.from([...raw].map(char=>char.charCodeAt(0)))}
+async function toggleFlashAlerts(){if(state.flashAlertsEnabled)return disableFlashAlerts();return enableFlashAlerts()}
+async function enableFlashAlerts(){
+  if(!('serviceWorker'in navigator)||!('PushManager'in window))return showToast('Les alertes ne sont pas disponibles sur ce navigateur.');
+  if(!VAPID_PUBLIC_KEY)return showToast('Les alertes ne sont pas encore configurées.');
   try{
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.type = type; osc.frequency.value = freq;
-    gain.gain.setValueAtTime(gainStart, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + duration);
-  }catch(e){}
+    const permission=await Notification.requestPermission();
+    if(permission!=='granted')return showToast('Vous pourrez activer les alertes plus tard, quand vous le souhaitez.');
+    const registration=await navigator.serviceWorker.register('/sw.js');
+    const subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+    const response=await fetch('/api/events?service=push-subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:subscription.toJSON(),lat:state.location.lat,lng:state.location.lng})});
+    if(!response.ok)throw new Error('save failed');
+    localStorage.setItem('dolcia_flash_alerts_endpoint',subscription.endpoint);
+    state.flashAlertsEnabled=true;
+    showToast('Alertes activées · uniquement pour des occasions réelles et proches');
+    loadFlashOffers();
+  }catch(_){showToast('Impossible d’activer les alertes pour le moment.')}
 }
-function playCountBeep(){ playTone(520, 0.15, 'triangle', 0.2); }
-function playGoBeep(){ playTone(720, 0.35, 'triangle', 0.22); }
-function playAdvanceChime(){ playTone(660, 0.12, 'sine', 0.14); setTimeout(()=>playTone(880, 0.16, 'sine', 0.12), 90); }
-function playClapSound(){
-  if (liveState.muted) return;
+async function disableFlashAlerts(){
   try{
-    const ctx = getAudioCtx();
-    const bufferSize = ctx.sampleRate * 0.12;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
-    const noise = ctx.createBufferSource(); noise.buffer = buffer;
-    const gain = ctx.createGain(); gain.gain.value = 0.35;
-    noise.connect(gain); gain.connect(ctx.destination);
-    noise.start();
-  }catch(e){}
+    const endpoint=localStorage.getItem('dolcia_flash_alerts_endpoint');
+    const registration=await navigator.serviceWorker?.getRegistration?.();
+    const subscription=await registration?.pushManager?.getSubscription?.();
+    await subscription?.unsubscribe?.();
+    if(endpoint)await fetch('/api/events?service=push-subscribe',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint})}).catch(()=>{});
+  }catch(_){}
+  localStorage.removeItem('dolcia_flash_alerts_endpoint');
+  state.flashAlertsEnabled=false;
+  showToast('Alertes désactivées');
+  loadFlashOffers();
 }
-function playTadaChime(){
-  [523,659,784,1047].forEach((f,i)=> setTimeout(()=>playTone(f, 0.5, 'triangle', 0.16), i*120));
-}
-
-/* ---------------- Confettis (canvas 2D, aucune dépendance) ---------------- */
-function launchConfetti(canvasId, count=90){
-  const canvas = document.getElementById(canvasId); if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width; canvas.height = rect.height;
-  const colors = ['#E8CC72','#C9A84C','#F5E6B8','#ffffff'];
-  const particles = Array.from({length:count}).map(()=>({
-    x: canvas.width/2, y: canvas.height*0.35,
-    vx: (Math.random()-0.5)*9, vy: Math.random()*-8-3,
-    size: Math.random()*5+3, color: colors[Math.floor(Math.random()*colors.length)],
-    rot: Math.random()*Math.PI, vrot:(Math.random()-0.5)*0.3, life:1
-  }));
-  let frame = 0;
-  function tick(){
-    frame++;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    particles.forEach(p=>{
-      p.vy += 0.25; p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.life -= 0.012;
-      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha = Math.max(p.life,0);
-      ctx.fillStyle = p.color; ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
-      ctx.restore();
-    });
-    if (frame < 140) requestAnimationFrame(tick); else ctx.clearRect(0,0,canvas.width,canvas.height);
-  }
-  tick();
-}
-function clapBurst(){
-  const btn = $('clapBtn'); if(!btn) return;
-  btn.classList.remove('clapped'); void btn.offsetWidth; btn.classList.add('clapped');
-  playClapSound();
-  launchConfetti('confettiCanvas', 26);
-  bumpEnergy(20);
-  showDReaction(CLAP_REACTIONS[Math.floor(Math.random()*CLAP_REACTIONS.length)]);
-  const wasDancing = eclat3D.dancing;
-  setEclat3DDancing(true);
-  setTimeout(()=> setEclat3DDancing(wasDancing), 1800);
-}
-
-/* ---------------------------------------------------------------
-   DISCUTER AVEC D — la mascotte vivante de Dolcia
-   L'IA tient une place centrale : chaque message tente d'abord la
-   vraie IA via ta route existante (POST /api/events?service=chat,
-   respecte ta règle "jamais de nouveau fichier API" — voir le
-   README pour le code serveur à ajouter dans events.js). Si la
-   route ne répond pas (hors ligne, pas encore branchée, ou dans cet
-   environnement de démonstration sans accès réseau), un moteur
-   conversationnel local prend le relais — jamais un silence, jamais
-   un message d'erreur technique affiché à l'utilisateur.
-   --------------------------------------------------------------- */
-const dChat = { history: [], open:false, muted:false };
-
-async function askDReal(userText){
-  const payload = {
-    message: userText,
-    context: {
-      screen: state.currentDepth,
-      budgetRemaining: Math.max(0, state.budgetTotal - state.budgetSpent),
-      agendaCount: state.agenda.length,
-      currentActivity: liveState.item ? liveState.item.title : null,
-      brief: state.understood
-    }
-  };
-  for (const base of apiBases()){
-    try{
-      const r = await fetch(`${base}/events?service=chat`, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
-      });
-      if (!r.ok) throw new Error('chat api ' + r.status);
-      const d = await r.json();
-      if (d && d.reply) return d.reply;
-      throw new Error('réponse vide');
-    }catch(e){ /* on tente la base suivante, puis le repli local */ }
-  }
-  return null;
-}
-
-/* Repli local : une vraie personnalité, pas un mur d'erreur.
-   Ton chaleureux, précis sur ce que Dolcia sait réellement, jamais
-   d'invention de fait (prix, horaires, disponibilité) — conforme
-   au principe "zéro donnée fabriquée" même en conversation. */
-function localDReply(userText){
-  const low = userText.toLowerCase();
-  const budgetRemaining = Math.max(0, state.budgetTotal - state.budgetSpent);
-
-  if (/ennui|s'ennuie|rien à faire|je m'ennuie/.test(low))
-    return `Je comprends, ce n'est jamais agréable de s'ennuyer. Dites-moi juste si vous avez envie de bouger, de rire, ou de souffler — je m'occupe du reste.`;
-
-  if (/fatigu|épuisé|crevé|plus de force/.test(low) && !liveState.item)
-    return `Alors on ralentit le rythme. Une pause détente, ou quelque chose de tout doux à proximité ?`;
-
-  if (/triste|pas le moral|déprim|dur/.test(low))
-    return `Je suis désolée que ce soit difficile. Je ne remplace pas une vraie oreille attentive, mais si un bon bol d'air ou un moment simple peut aider, dites-le-moi.`;
-
-  if (/génial|super|trop bien|j'adore|incroyable/.test(low) && !liveState.item)
-    return `Ça me fait vraiment plaisir ! C'est exactement pour ça que j'existe.`;
-
-  if (/budget|combien.*reste|argent|prix/.test(low))
-    return `Il vous reste ${budgetRemaining} € sur les ${state.budgetTotal} € prévus. Je recalcule à chaque activité ajoutée — vous ne dépasserez jamais sans me le dire explicitement.`;
-
-  if (/bonjour|salut|coucou|hello/.test(low))
-    return `Bonjour ! Je suis D, votre concierge et animateur. Dites-moi votre envie du moment, ou demandez-moi où en est votre programme.`;
-
-  if (/comment (ça|tu) va|ça va\b/.test(low))
-    return `Toujours prête à composer votre prochain moment ! Et vous, plutôt envie de bouger ou de souffler aujourd'hui ?`;
-
-  if (liveState.item && /fatigu|pause|trop dur|difficile|ralent/.test(low))
-    return `On peut ralentir le rythme, ce n'est pas une compétition. Je mets l'étape en pause si vous voulez — dites simplement "pause".`;
-
-  if (liveState.item && /(c'est|super|génial|top|adoré|aimé)/.test(low))
-    return `Ravie que ça vous plaise ! Je m'en souviens pour vous proposer des moments similaires la prochaine fois.`;
-
-  if (/pluie|météo|temps qu'il fait/.test(low))
-    return `Je surveille la météo en continu. S'il pleut, je recompose automatiquement vers une option abritée sans casser votre programme.`;
-
-  if (/agenda|programme|prochain/.test(low)){
-    const next = state.agenda[0];
-    return next ? `Votre prochaine étape : ${next.title}. Je peux la déplacer ou en proposer une autre si vous voulez.` : `Votre agenda est vide pour l'instant — dites-moi votre envie et je compose quelque chose.`;
-  }
-
-  if (/pépite|caché|secret|local/.test(low))
-    return `Les pépites locales sont mon terrain de jeu préféré — allez voir l'onglet "Pépites locales" dans Dolcia Anime, ce sont des trouvailles qu'on ne voit que sur une affiche de village.`;
-
-  if (/merci/.test(low))
-    return `Avec plaisir ! C'est exactement pour ça que j'existe.`;
-
-  return `Je note. Pour que je vous propose la bonne chose, dites-moi : plutôt envie de bouger, de vous détendre, ou de découvrir quelque chose de nouveau ?`;
-}
-
-function appendDMessage(role, text){
-  dChat.history.push({role, text});
-  const el = $('dChatMessages');
-  const bubble = document.createElement('div');
-  bubble.className = 'd-msg ' + (role === 'd' ? 'from-d' : 'from-user');
-  bubble.textContent = text;
-  el.appendChild(bubble);
-  el.scrollTop = el.scrollHeight;
-}
-function showTyping(){
-  const el = $('dChatMessages');
-  const t = document.createElement('div');
-  t.className = 'd-typing'; t.id = 'dTypingIndicator';
-  t.innerHTML = '<span></span><span></span><span></span>';
-  el.appendChild(t); el.scrollTop = el.scrollHeight;
-}
-function hideTyping(){ document.getElementById('dTypingIndicator')?.remove(); }
-
-/* D pendant l'animation : écoute réelle, pas juste un chat à côté.
-   Quelques commandes sont exécutées directement (pause, suivant, répète) —
-   c'est la vraie différence entre "parler" et "écouter et agir". Le reste
-   passe par le même moteur conversationnel que le chat général. */
-async function talkToDLive(userText){
-  if (!userText.trim()) return;
-  const low = userText.toLowerCase();
-
-  if (/pause|stop|arrête/.test(low) && !liveState.paused){
-    toggleLivePause();
-    showDReaction('Je mets en pause !');
-    speakLive('Pas de souci, je mets l\'étape en pause.');
-    return;
-  }
-  if (/reprend|continue|repars/.test(low) && liveState.paused){
-    toggleLivePause();
-    showDReaction('On reprend !');
-    speakLive('C\'est reparti !');
-    return;
-  }
-  if (/suivant|passe|next|étape d'après/.test(low)){
-    showDReaction('On enchaîne !');
-    advanceLive();
-    return;
-  }
-  if (/répète|répéter|recommence|redis/.test(low) && liveState.item){
-    const step = liveState.item.steps[liveState.stepIndex];
-    if (step){ speakLive(step.instruction); showDReaction('Je répète !'); }
-    return;
-  }
-
-  showDReaction('…');
-  let reply = await askDReal(userText);
-  if (!reply) reply = localDReply(userText);
-  showDReaction(reply.length > 60 ? reply.slice(0,58) + '…' : reply);
-  speakLive(reply);
-}
-
-function initLiveTalk(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = $('liveTalkBtn');
-  if (!SR){ btn.style.opacity = .35; return; }
-  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
-  let listening = false;
-  btn.addEventListener('click', ()=>{
-    if (listening){ rec.stop(); return; }
-    rec.start(); listening = true; btn.classList.add('listening');
-  });
-  rec.onresult = e => talkToDLive(e.results[0][0].transcript);
-  rec.onend = () => { listening = false; btn.classList.remove('listening'); };
-}
-
-async function sendToD(userText){
-  if (!userText.trim()) return;
-  appendDMessage('user', userText);
-  $('dChatInput').value = '';
-  showTyping();
-  const start = Date.now();
-  let reply = await askDReal(userText);
-  if (!reply) reply = localDReply(userText);
-  // Un temps de "frappe" réaliste, jamais instantané comme un robot, jamais trop long non plus.
-  const elapsed = Date.now() - start;
-  const wait = Math.max(0, Math.min(1400, 500 + userText.length*8) - elapsed);
-  setTimeout(()=>{
-    hideTyping();
-    appendDMessage('d', reply);
-    if (!dChat.muted) speakLive(reply);
-  }, wait);
-}
-
-/* ---------------------------------------------------------------
-   SESSION VOCALE CONTINUE — l'esprit de Speak, appliqué à D.
-   Pas de code copié (je n'y ai jamais eu accès et ce serait interdit
-   de toute façon) — juste les mêmes qualités d'expérience : on parle,
-   D écoute vraiment (visualisation réelle du volume du micro via
-   l'API Web Audio), D répond avec chaleur, puis réécoute automatique-
-   ment sans qu'on ait à retaper sur le micro à chaque tour.
-   --------------------------------------------------------------- */
-const voiceSession = { active:false, listening:false, audioCtx:null, analyser:null, stream:null, rafId:null, recognition:null };
-
-function initVoiceSessionAudio(){
-  return new Promise((resolve)=>{
-    if (!navigator.mediaDevices?.getUserMedia){ resolve(false); return; }
-    navigator.mediaDevices.getUserMedia({ audio:true }).then(stream=>{
-      try{
-        voiceSession.stream = stream;
-        voiceSession.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const source = voiceSession.audioCtx.createMediaStreamSource(stream);
-        voiceSession.analyser = voiceSession.audioCtx.createAnalyser();
-        voiceSession.analyser.fftSize = 64;
-        source.connect(voiceSession.analyser);
-        resolve(true);
-      }catch(e){ resolve(false); }
-    }).catch(()=> resolve(false));
-  });
-}
-function drawWaveform(){
-  const bars = document.querySelectorAll('#voiceWaveform span');
-  if (!voiceSession.analyser){
-    voiceSession.rafId = requestAnimationFrame(drawWaveform);
-    return;
-  }
-  const data = new Uint8Array(voiceSession.analyser.frequencyBinCount);
-  voiceSession.analyser.getByteFrequencyData(data);
-  const step = Math.floor(data.length / bars.length) || 1;
-  bars.forEach((bar,i)=>{
-    const v = data[i*step] || 0;
-    bar.style.height = Math.max(6, (v/255)*30) + 'px';
-  });
-  voiceSession.rafId = requestAnimationFrame(drawWaveform);
-}
-function stopWaveform(){
-  if (voiceSession.rafId) cancelAnimationFrame(voiceSession.rafId);
-  document.querySelectorAll('#voiceWaveform span').forEach(bar=> bar.style.height = '6px');
-}
-
-async function toggleVoiceMode(){
-  const on = $('voiceSession').classList.contains('hidden');
-  $('voiceSession').classList.toggle('hidden', !on);
-  $('dChatMessages').classList.toggle('hidden', on);
-  $('dChatInputRow').classList.toggle('hidden', on);
-  $('voiceModeToggle').classList.toggle('active', on);
-  if (on){
-    const ok = await initVoiceSessionAudio();
-    if (ok){ $('voiceWaveform').classList.add('active'); drawWaveform(); }
-    voiceSession.active = true;
-  } else {
-    voiceSession.active = false;
-    stopWaveform();
-    voiceSession.stream?.getTracks().forEach(t=>t.stop());
-    voiceSession.audioCtx?.close().catch(()=>{});
-    voiceSession.analyser = null;
-  }
-}
-
-function startVoiceListening(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR){ $('voiceStatus').textContent = 'La dictée vocale n\'est pas disponible sur ce navigateur.'; return; }
-  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
-  voiceSession.recognition = rec;
-  voiceSession.listening = true;
-  $('eclatVoice').classList.add('listening');
-  $('voiceMicBtn').classList.add('listening');
-  $('voiceStatus').textContent = 'D vous écoute…';
-  $('voiceTranscript').textContent = '';
-
-  rec.onresult = async e => {
-    const text = e.results[0][0].transcript;
-    $('voiceTranscript').textContent = '« ' + text + ' »';
-    $('voiceStatus').textContent = 'D réfléchit…';
-    $('eclatVoice').classList.remove('listening');
-    $('eclatVoice').classList.add('talking');
-
-    let reply = await askDReal(text);
-    if (!reply) reply = localDReply(text);
-
-    $('voiceStatus').textContent = 'D vous répond';
-    $('voiceTranscript').textContent = reply;
-    appendDMessage('user', text);
-    appendDMessage('d', reply);
-
-    if (window.speechSynthesis){
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(reply);
-      u.lang = 'fr-FR'; u.rate = 0.98; u.pitch = 1.05;
-      u.onend = () => {
-        $('eclatVoice').classList.remove('talking');
-        // Conversation continue, comme sur Speak : D réécoute automatiquement.
-        if (voiceSession.active) setTimeout(()=>{ $('voiceStatus').textContent = 'Touchez le micro pour continuer'; }, 200);
-      };
-      window.speechSynthesis.speak(u);
-    } else {
-      $('eclatVoice').classList.remove('talking');
-    }
-  };
-  rec.onerror = () => {
-    voiceSession.listening = false;
-    $('eclatVoice').classList.remove('listening');
-    $('voiceMicBtn').classList.remove('listening');
-    $('voiceStatus').textContent = 'Je n\'ai pas bien entendu — touchez pour réessayer.';
-  };
-  rec.onend = () => {
-    voiceSession.listening = false;
-    $('voiceMicBtn').classList.remove('listening');
-  };
-  rec.start();
-}
-
-function openDChat(){
-  dChat.open = true;
-  $('dChatDrawer').classList.remove('hidden');
-  $('dChatFab').classList.add('hidden');
-  if (!dChat.history.length){
-    showTyping();
-    setTimeout(()=>{ hideTyping(); appendDMessage('d', 'Je suis là. Une question sur votre programme, votre budget, ou juste envie de papoter ?'); }, 700);
-  }
-}
-function closeDChat(){
-  dChat.open = false;
-  $('dChatDrawer').classList.add('hidden');
-  $('dChatFab').classList.remove('hidden');
-  if (voiceSession.active) toggleVoiceMode();
-}
-function updateDChatVisibility(screenId){
-  const fab = $('dChatFab');
-  if (!fab) return;
-  const eligible = ['results','detail','agenda'].includes(screenId) || screenId === undefined;
-  if (screenId === 'splash' || screenId === 'brief' || screenId === 'clarify' || screenId === 'loading'){
-    fab.classList.add('hidden');
-    $('dChatDrawer').classList.add('hidden');
-  } else if (!dChat.open){
-    fab.classList.remove('hidden');
-  }
-}
-
-/* ---------------- Animation en direct : D anime vraiment ---------------- */
-/* ---------------------------------------------------------------
-   L'ÉCLAT EN 3D — la mascotte qui danse vraiment, dans son propre
-   langage (lumière), pas un pantin humanoïde qui aurait l'air raté.
-   Repli automatique et silencieux sur l'orbe 2D CSS si Three.js ne
-   charge pas ou si le rendu échoue pour une raison quelconque —
-   jamais un écran cassé pour l'utilisateur.
-   --------------------------------------------------------------- */
-const eclat3D = { ready:false, renderer:null, scene:null, camera:null, mesh:null, particles:null, clock:null, dancing:false, beat:0 };
-
-function initEclat3D(){
-  try{
-    if (typeof THREE === 'undefined' || window.__THREE_FAILED__) return false;
-    const canvas = document.getElementById('eclat3dCanvas');
-    if (!canvas) return false;
-
-    eclat3D.renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
-    eclat3D.renderer.setSize(160, 160, false);
-    eclat3D.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
-
-    eclat3D.scene = new THREE.Scene();
-    eclat3D.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-    eclat3D.camera.position.z = 4.2;
-
-    const light1 = new THREE.PointLight(0xE8CC72, 2.2, 20); light1.position.set(2,2,3);
-    const light2 = new THREE.PointLight(0xC9A84C, 1, 20); light2.position.set(-2,-1,2);
-    const ambient = new THREE.AmbientLight(0x332211, 0.9);
-    eclat3D.scene.add(light1, light2, ambient);
-
-    const geo = new THREE.IcosahedronGeometry(1, 2);
-    const mat = new THREE.MeshStandardMaterial({ color:0xC9A84C, emissive:0x7B4D10, emissiveIntensity:0.6, metalness:0.35, roughness:0.25 });
-    eclat3D.mesh = new THREE.Mesh(geo, mat);
-    eclat3D.scene.add(eclat3D.mesh);
-
-    // halo de particules dorées — la traîne de lumière quand D danse
-    const pGeo = new THREE.BufferGeometry();
-    const count = 60;
-    const positions = new Float32Array(count*3);
-    for (let i=0;i<count;i++){
-      const r = 1.5 + Math.random()*0.6;
-      const theta = Math.random()*Math.PI*2, phi = Math.acos(2*Math.random()-1);
-      positions[i*3] = r*Math.sin(phi)*Math.cos(theta);
-      positions[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
-      positions[i*3+2] = r*Math.cos(phi);
-    }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
-    const pMat = new THREE.PointsMaterial({ color:0xF5E6B8, size:0.045, transparent:true, opacity:0.55 });
-    eclat3D.particles = new THREE.Points(pGeo, pMat);
-    eclat3D.scene.add(eclat3D.particles);
-
-    eclat3D.clock = new THREE.Clock();
-    eclat3D.ready = true;
-    animateEclat3D();
-    return true;
-  }catch(e){
-    console.warn('Éclat 3D indisponible, repli sur l\'orbe 2D :', e.message);
-    eclat3D.ready = false;
-    return false;
-  }
-}
-
-function animateEclat3D(){
-  if (!eclat3D.ready) return;
-  requestAnimationFrame(animateEclat3D);
-  try{
-    const t = eclat3D.clock.getElapsedTime();
-    const danceBoost = eclat3D.dancing ? 1 : 0.25;
-    eclat3D.mesh.rotation.y = t * 0.6 * (eclat3D.dancing ? 2.2 : 1);
-    eclat3D.mesh.rotation.x = Math.sin(t*0.7) * 0.15;
-    eclat3D.mesh.position.y = Math.sin(t * (eclat3D.dancing ? 4.5 : 1.8)) * 0.16 * danceBoost;
-    const scalePulse = 1 + Math.sin(t * (eclat3D.dancing ? 6 : 2)) * (eclat3D.dancing ? 0.09 : 0.03);
-    eclat3D.mesh.scale.setScalar(scalePulse);
-    eclat3D.particles.rotation.y = -t * 0.25;
-    eclat3D.particles.rotation.x = t * 0.12;
-    eclat3D.renderer.render(eclat3D.scene, eclat3D.camera);
-  }catch(e){ eclat3D.ready = false; }
-}
-
-function setEclat3DDancing(on){ eclat3D.dancing = on; }
-function showEclat3D(show){
-  const canvas = document.getElementById('eclat3dCanvas');
-  const flat = document.getElementById('eclatLive');
-  if (show && eclat3D.ready){
-    canvas.classList.remove('hidden');
-    flat.style.opacity = '0';
-  } else {
-    canvas.classList.add('hidden');
-    flat.style.opacity = '1';
-  }
-}
-
-const liveState = { item:null, stepIndex:0, timerId:null, remaining:0, paused:false, muted:false, energy:0 };
-
-/* Répliques d'ambiance — le vrai "banter" de mascotte, distinct de l'instruction pure.
-   Varie selon l'énergie de l'activité, pour que "vive" sonne comme un vrai animateur
-   Club Med et "calme" reste doux sans être plat. */
-const HYPE_PHRASES = {
-  vive: ['Allez, on y va !!', 'C\'est parti !', 'Encore un peu d\'énergie !', 'Tout le monde prêt ?', 'On va s\'amuser !'],
-  douce: ['On y va tranquillement', 'À votre rythme', 'C\'est un plaisir, pas une course', 'Doucement, on savoure'],
-  calme: ['Respirez, on est bien', 'Prenez votre temps', 'Rien à prouver, juste à vivre']
-};
-const CLAP_REACTIONS = ['Woohoo !', 'Voilà l\'esprit !', 'J\'adore cette énergie !', 'Allez l\'équipe !', 'Encore !'];
-
-function showDReaction(text){
-  const el = $('dReaction');
-  el.textContent = text;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-}
-function bumpEnergy(amount){
-  liveState.energy = Math.min(100, liveState.energy + amount);
-  const fill = $('energyMeterFill');
-  fill.style.width = liveState.energy + '%';
-  if (liveState.energy >= 100){
-    fill.classList.add('maxed');
-    launchConfetti('confettiCanvas', 60);
-    playTadaChime();
-    setTimeout(()=>{ liveState.energy = 0; fill.style.width = '0%'; fill.classList.remove('maxed'); }, 1200);
-  }
-}
-
-function speakLive(text){
-  if (liveState.muted) return;
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'fr-FR'; u.rate = 0.98; u.pitch = 1.05;
-  window.speechSynthesis.speak(u);
-}
-
-function launchLive(id){
-  const x = state.animeItems.find(i=>i.id===id);
-  if (!x || !x.steps || !x.steps.length){ flash('Cette activité n\'a pas encore de script d\'animation.'); return; }
-  liveState.item = x; liveState.stepIndex = 0; liveState.paused = false; liveState.energy = 0;
-  $('energyMeterFill').style.width = '0%';
-  $('liveEnd').classList.add('hidden');
-  $('liveAnim').classList.remove('hidden');
-  $('liveBg').className = 'live-bg energy-' + (x.energy === 'vive' ? 'vive' : (x.energy === 'calme' ? 'calme' : 'douce'));
-  if (!eclat3D.ready && typeof THREE !== 'undefined') initEclat3D();
-  showEclat3D(true);
-  setEclat3DDancing(x.energy === 'vive');
-  const eclat = $('eclatLive');
-  eclat.classList.remove('bounce-in'); void eclat.offsetWidth; eclat.classList.add('bounce-in');
-  renderLiveProgress();
-  runLiveStep();
-}
-
-function renderLiveProgress(){
-  const total = liveState.item.steps.length;
-  $('liveProgress').innerHTML = Array.from({length: total}).map((_,i)=>{
-    const cls = i < liveState.stepIndex ? 'done' : (i === liveState.stepIndex ? 'current' : '');
-    return `<span class="${cls}"></span>`;
-  }).join('');
-}
-
-function runLiveStep(){
-  clearInterval(liveState.timerId);
-  const step = liveState.item.steps[liveState.stepIndex];
-  if (!step){ endLive(); return; }
-
-  const energyKey = liveState.item.energy === 'vive' ? 'vive' : (liveState.item.energy === 'calme' ? 'calme' : 'douce');
-  const hype = HYPE_PHRASES[energyKey][Math.floor(Math.random()*HYPE_PHRASES[energyKey].length)];
-  showDReaction(hype);
-
-  $('liveStepLabel').textContent = step.title;
-  $('liveInstruction').textContent = step.instruction;
-  $('eclatLive').classList.add('talking');
-  if (energyKey === 'vive'){
-    const eclat = $('eclatLive');
-    eclat.classList.remove('jump'); void eclat.offsetWidth; eclat.classList.add('jump');
-  }
-  $('liveBubble').classList.remove('pulse'); void $('liveBubble').offsetWidth; $('liveBubble').classList.add('pulse');
-  if (liveState.stepIndex > 0){ playAdvanceChime(); bumpEnergy(12); }
-  speakLive(step.instruction);
-  setTimeout(()=> $('eclatLive').classList.remove('talking'), Math.min(4000, step.instruction.length*55));
-
-  renderLiveProgress();
-
-  if (step.seconds){
-    liveState.remaining = step.seconds;
-    $('liveTimerWrap').classList.remove('hidden-timer');
-    updateLiveTimerDisplay(step.seconds);
-    liveState.timerId = setInterval(()=>{
-      if (liveState.paused) return;
-      liveState.remaining--;
-      updateLiveTimerDisplay(step.seconds);
-      if (liveState.remaining <= 0){
-        clearInterval(liveState.timerId);
-        advanceLive();
-      }
-    }, 1000);
-  } else {
-    $('liveTimerWrap').classList.add('hidden-timer');
-  }
-}
-function updateLiveTimerDisplay(total){
-  const circumference = 377;
-  const pct = liveState.remaining / total;
-  $('liveTimerFill').style.strokeDashoffset = circumference * (1 - pct);
-  const m = Math.floor(liveState.remaining/60), s = liveState.remaining%60;
-  $('liveTimerText').textContent = m>0 ? `${m}:${String(s).padStart(2,'0')}` : `${s}s`;
-
-  if (liveState.remaining <= 3 && liveState.remaining >= 1){
-    const el = $('liveCountdown');
-    el.classList.remove('hidden');
-    el.innerHTML = `<span>${liveState.remaining}</span>`;
-    void el.offsetWidth;
-    playCountBeep();
-  } else if (liveState.remaining === 0){
-    const el = $('liveCountdown');
-    el.classList.remove('hidden');
-    el.innerHTML = `<span>Go !</span>`;
-    playGoBeep();
-    setTimeout(()=> el.classList.add('hidden'), 700);
-  } else {
-    $('liveCountdown').classList.add('hidden');
-  }
-}
-function advanceLive(){
-  liveState.stepIndex++;
-  if (liveState.stepIndex >= liveState.item.steps.length){ endLive(); return; }
-  runLiveStep();
-}
-function endLive(){
-  clearInterval(liveState.timerId);
-  window.speechSynthesis?.cancel();
-  $('liveEnd').classList.remove('hidden');
-  playTadaChime();
-  setTimeout(()=> launchConfetti('confettiCanvasEnd', 130), 100);
-  speakLive('Bravo à toute l\'équipe, quel beau moment !');
-}
-function closeLive(){
-  clearInterval(liveState.timerId);
-  window.speechSynthesis?.cancel();
-  $('liveAnim').classList.add('hidden');
-  $('liveEnd').classList.add('hidden');
-  $('liveCountdown').classList.add('hidden');
-  setEclat3DDancing(false);
-}
-function toggleLivePause(){
-  liveState.paused = !liveState.paused;
-  $('livePauseBtn').textContent = liveState.paused ? 'Reprendre' : 'Pause';
-}
-function toggleLiveSound(){
-  liveState.muted = !liveState.muted;
-  $('soundToggle').classList.toggle('muted', liveState.muted);
-  if (liveState.muted) window.speechSynthesis?.cancel();
-}
-
-/* ---------------- Reconnaissance vocale (accélérateur, jamais imposé) ---------------- */
-function initVoice(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = $('micBtn');
-  if (!SR){ btn.style.opacity = .35; btn.title = 'Dictée non disponible sur ce navigateur'; return; }
-  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
-  let listening = false;
-  btn.addEventListener('click', ()=>{
-    if (listening) { rec.stop(); return; }
-    rec.start(); listening = true; btn.classList.add('listening');
-  });
-  rec.onresult = e => {
-    const text = e.results[0][0].transcript;
-    $('briefText').value = ($('briefText').value + ' ' + text).trim();
-    state.understood = { ...state.understood, ...analyzeBrief($('briefText').value) };
-    renderUnderstood();
-  };
-  rec.onend = () => { listening = false; btn.classList.remove('listening'); };
-}
-
-function initParallax(){
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const finePointer = window.matchMedia('(pointer: fine)').matches;
-  if (reduced || !finePointer) return;
-  document.addEventListener('mousemove', e => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2;
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    const target = document.querySelector('.screen.active .spatial-window, .screen.active .brief-wrap');
-    if (target) target.style.transform = `translate(${x*4}px, ${y*4}px)`;
-  }, { passive:true });
-}
-
-function initCardTilt(){
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const finePointer = window.matchMedia('(pointer: fine)').matches;
-  if (reduced || !finePointer) return;
-  document.addEventListener('mousemove', e=>{
-    const card = e.target.closest('.experience-card, .pepite-card');
-    document.querySelectorAll('.experience-card.tilting, .pepite-card.tilting').forEach(c=>{
-      if (c !== card){ c.style.transform=''; c.classList.remove('tilting'); }
-    });
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    card.classList.add('tilting');
-    card.style.transform = `perspective(700px) rotateX(${py*-6}deg) rotateY(${px*6}deg) translateY(-5px)`;
-  }, { passive:true });
-  document.addEventListener('mouseleave', ()=>{
-    document.querySelectorAll('.tilting').forEach(c=>{ c.style.transform=''; c.classList.remove('tilting'); });
-  }, true);
-}
-
-function initDChatVoice(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = $('dChatMic');
-  if (!SR){ btn.style.opacity = .35; return; }
-  const rec = new SR(); rec.lang = 'fr-FR'; rec.interimResults = false;
-  let listening = false;
-  btn.addEventListener('click', ()=>{
-    if (listening){ rec.stop(); return; }
-    rec.start(); listening = true; btn.classList.add('listening');
-  });
-  rec.onresult = e => sendToD(e.results[0][0].transcript);
-  rec.onend = () => { listening = false; btn.classList.remove('listening'); };
-}
-
-/* ---------------- Init ---------------- */
-function init(){
-  initChips();
-  initVoice();
-  initParallax();
-  initCardTilt();
-  $('splashBgImg').src = AMBIANCE.start;
-
-  $('startBtn').addEventListener('click', goToMoodPick);
-  $('moodBack').addEventListener('click', ()=>showScreen('splash'));
-  $('moodGrid').addEventListener('click', e=>{
-    const tile = e.target.closest('[data-vibe]'); if(!tile) return;
-    pickMood(tile.dataset.vibe);
-  });
-  $('describeInsteadBtn').addEventListener('click', goToBrief);
-  $('briefBack').addEventListener('click', backFromBrief);
-  $('toggleRefine').addEventListener('click', toggleRefine);
-  $('briefText').addEventListener('input', e=>{
-    state.brief.text = e.target.value;
-    state.understood = { ...state.understood, ...analyzeBrief(e.target.value) };
-    renderUnderstood();
-  });
-  $('sendBriefBtn').addEventListener('click', startClarifyOrLoad);
-  $('clarifySkip').addEventListener('click', skipClarify);
-  $('clarifySkipAll').addEventListener('click', skipAllClarify);
-  $('clarifyOptions').addEventListener('click', e=>{
-    const btn = e.target.closest('[data-clarify-val]'); if(!btn) return;
-    answerClarify(btn.dataset.clarifyVal);
-  });
-
-  $('resultsBack').addEventListener('click', ()=>showScreen('brief'));
-  $('restartResults').addEventListener('click', ()=>{ state.brief={text:'',when:null,who:null,budget:null}; state.understood={}; showScreen('splash'); });
-  $('diagBtn').addEventListener('click', ()=>{ if(state.diagnostics.length) alert(JSON.stringify(state.diagnostics,null,2)); else alert('Le diagnostic apparaît après une recherche.'); });
-
-  document.querySelectorAll('.depth-tab').forEach(t=>t.addEventListener('click', ()=>switchDepth(t.dataset.depth)));
-  $('regenProgramBtn').addEventListener('click', ()=>{ state.agenda.sort(()=>Math.random()-0.5); renderProgram(); flash('Programme régénéré'); });
-
-  $('filterToggleBtn').addEventListener('click', ()=>{
-    $('filterPanel').classList.toggle('hidden');
-    $('filterToggleBtn').classList.toggle('active');
-  });
-  $('filterDist').addEventListener('input', e=>{
-    state.filters.maxDist = Number(e.target.value);
-    $('filterDistLabel').textContent = state.filters.maxDist + ' km';
-    renderExplore();
-  });
-  $('filterToggles').addEventListener('click', e=>{
-    const chip = e.target.closest('[data-toggle]'); if(!chip) return;
-    const key = chip.dataset.toggle;
-    state.filters[key] = !state.filters[key];
-    chip.classList.toggle('toggle-on', state.filters[key]);
-    renderExplore();
-  });
-  $('filterSort').addEventListener('click', e=>{
-    const chip = e.target.closest('[data-sort]'); if(!chip) return;
-    document.querySelectorAll('#filterSort .chip').forEach(c=>c.classList.toggle('selected', c===chip));
-    state.filters.sort = chip.dataset.sort;
-    renderExplore();
-  });
-
-  document.querySelectorAll('.anime-subtab').forEach(t=>t.addEventListener('click', ()=>switchAnimeSub(t.dataset.sub)));
-
-  $('generateProcBtn').addEventListener('click', ()=>{
-    const activity = generateProceduralActivity();
-    state.animeItems.unshift(activity);
-    const el = $('animeSection');
-    el.insertAdjacentHTML('afterbegin', `<div class="cards-grid" style="margin-bottom:16px">${(()=>{
-      const x = activity;
-      return `<article class="experience-card" data-open="${x.id}">
-        <div class="experience-photo"><img src="${AMBIANCE.festive}" alt="" loading="lazy" onerror="this.style.display='none'"></div>
-        <div class="experience-shade"></div>
-        ${heartHtml(x.id)}
-        <div class="experience-content">
-          <div class="source-badge anime">Sur mesure · énergie ${x.energy}</div>
-          <h3>${x.title}</h3>
-          <p>${x.desc}</p>
-          <div class="card-actions">
-            <button class="mini-btn gold" data-launch="${x.id}">Lancer avec D</button>
-            <button class="mini-btn dark" data-agenda="${x.id}">Agenda</button>
-          </div>
-        </div>
-      </article>`;
-    })()}</div>`);
-    flash('Nouvelle animation composée pour votre groupe');
-  });
-  $('animeContextRow').addEventListener('click', e=>{
-    const chip = e.target.closest('[data-ctx]'); if(!chip) return;
-    document.querySelectorAll('#animeContextRow .chip').forEach(c=>c.classList.toggle('selected', c===chip));
-    renderAnime(chip.dataset.ctx);
-  });
-
-  $('closeDetail').addEventListener('click', closeOverlays);
-  $('closeAgenda').addEventListener('click', closeOverlays);
-  $('clearAgenda').addEventListener('click', ()=>{ state.agenda=[]; state.budgetSpent=0; saveAgenda(); renderAgendaList(); renderProgram(); updateBudgetRing(); });
-  $('addAgendaBtn').addEventListener('click', ()=> state.current && addToAgenda(state.current.id));
-  $('routeBtn').addEventListener('click', ()=>{
-    const x = state.current; if(!x) return;
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.title+' '+state.city.name)}`,'_blank');
-  });
-  $('detailFav').addEventListener('click', ()=>{
-    const x = state.current; if(!x) return;
-    if (state.favs.includes(x.id)) state.favs = state.favs.filter(k=>k!==x.id); else state.favs.push(x.id);
-    saveFavs(); flash(state.favs.includes(x.id)?'Ajouté aux favoris':'Retiré des favoris');
-  });
-
-  $('dChatFab').addEventListener('click', openDChat);
-  $('dChatClose').addEventListener('click', closeDChat);
-  $('dChatSend').addEventListener('click', ()=> sendToD($('dChatInput').value));
-  $('dChatInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendToD($('dChatInput').value); });
-  $('voiceModeToggle').addEventListener('click', toggleVoiceMode);
-  $('voiceMicBtn').addEventListener('click', ()=>{ if(!voiceSession.listening) startVoiceListening(); });
-  initDChatVoice();
-  initLiveTalk();
-  $('liveEndClose').addEventListener('click', closeLive);
-  $('livePauseBtn').addEventListener('click', toggleLivePause);
-  $('liveNextBtn').addEventListener('click', advanceLive);
-  $('soundToggle').addEventListener('click', toggleLiveSound);
-  $('clapBtn').addEventListener('click', clapBurst);
-  $('liveEnd').addEventListener('click', e=>{
-    const chip = e.target.closest('[data-feeling]'); if(!chip) return;
-    document.querySelectorAll('#liveEnd .chip').forEach(c=>c.classList.toggle('selected', c===chip));
-    flash('Merci, Dolcia s\'en souviendra pour la prochaine fois');
-  });
-
-  document.addEventListener('click', e=>{
-    const open = e.target.closest('[data-open]');
-    if (open && !e.target.closest('button')) openItem(open.dataset.open);
-    const launch = e.target.closest('[data-launch]');
-    if (launch){ e.stopPropagation(); launchLive(launch.dataset.launch); }
-    const ag = e.target.closest('[data-agenda]');
-    if (ag){ e.stopPropagation(); addToAgenda(ag.dataset.agenda); }
-    const like = e.target.closest('[data-like]');
-    if (like){ e.stopPropagation(); toggleLike(like.dataset.like); }
-    const unlike = e.target.closest('[data-unlike]');
-    if (unlike){ e.stopPropagation(); toggleLike(unlike.dataset.unlike); renderConstellation(); }
-    const rm = e.target.closest('[data-remove]');
-    if (rm){ e.stopPropagation(); removeFromAgenda(rm.dataset.remove); }
-    const nav = e.target.closest('[data-tab]');
-    if (nav){
-      if (nav.dataset.tab==='agenda'){ renderAgendaList(); renderConstellation(); $('agenda').classList.remove('hidden'); }
-      if (nav.dataset.tab==='surprise'){ switchDepth('anime'); }
-      if (nav.dataset.tab==='discover'){ switchDepth('explore'); }
-      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b===nav));
-    }
-  });
-}
-init();
+function proposeFlashOffer(id){const offer=state.flashOffers.find(item=>String(item.id)===String(id));if(!offer)return;state.agendaProposals.unshift({id:`offer-${offer.id}`,offerId:offer.id,title:`Remplacer un moment par ${offer.title}`,createdAt:new Date().toISOString(),status:'voting',votes:{yes:1,maybe:0,no:0}});save();renderAgenda();showToast('La proposition est visible par le groupe')}
+function voteProposal(id,value){const proposal=state.agendaProposals.find(item=>item.id===id);if(!proposal)return;proposal.votes[value]=(proposal.votes[value]||0)+1;save();renderAgenda()}
+function updateAgendaTime(id,value){const item=state.agenda.find(x=>x.id===id);if(!item||!value)return;const [hours,minutes]=value.split(':').map(Number),date=new Date(item.agendaDate||state.dateStart);date.setHours(hours,minutes,0,0);item.agendaDate=date.toISOString();save();showToast(`Horaire enregistré : ${value}`)}
+function updateAgendaDate(id,value){const item=state.agenda.find(x=>x.id===id);if(!item||!value)return;const current=new Date(item.agendaDate||state.dateStart),[year,month,day]=value.split('-').map(Number);current.setFullYear(year,month-1,day);item.agendaDate=current.toISOString();save();showToast('Date enregistrée')}
+function moveAgenda(index,direction){const next=index+direction;if(next<0||next>=state.agenda.length)return;[state.agenda[index],state.agenda[next]]=[state.agenda[next],state.agenda[index]];save();renderAgenda()}
+function removeAgenda(id){state.agenda=state.agenda.filter(x=>x.id!==id);save();renderAgenda()}
+function showToast(message){const t=document.querySelector('#toast');t.textContent=message;t.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove('show'),2400)}
+
+window.home=home;window.startCompose=startCompose;window.renderComposer=renderComposer;window.pick=pick;window.nextStep=nextStep;window.backStep=backStep;window.setDate=setDate;window.setDestination=setDestination;window.moveMonth=moveMonth;window.pickDate=pickDate;window.selectDuration=selectDuration;window.useLocation=useLocation;window.compose=compose;window.renderResults=renderResults;window.renderSurprise=renderSurprise;window.renderAgenda=renderAgenda;window.renderServices=renderServices;window.serviceInterest=serviceInterest;window.moveAgenda=moveAgenda;window.openDetail=openDetail;window.selectPhoto=selectPhoto;window.closeDetail=closeDetail;window.addAgenda=addAgenda;window.adoptSurprise=adoptSurprise;window.surprise=surprise;window.regenerateSlot=regenerateSlot;window.openSlotRefinement=openSlotRefinement;window.applySlotRefinement=applySlotRefinement;window.rate=rate;window.saveFeeling=saveFeeling;window.toggleExperienceTag=toggleExperienceTag;window.chooseMajorMoment=chooseMajorMoment;window.dismissMajorMoment=dismissMajorMoment;window.acceptHomeMajor=acceptHomeMajor;window.dismissHomeMajor=dismissHomeMajor;window.toggleOutdoor=toggleOutdoor;window.removeAgenda=removeAgenda;window.showToast=showToast;window.state=state;
+window.toggleAdaptiveLens=toggleAdaptiveLens;window.clearAdaptiveLenses=clearAdaptiveLenses;
+window.setGroupDetail=setGroupDetail;
+window.openParticipantModal=openParticipantModal;window.addParticipant=addParticipant;window.shareAgenda=shareAgenda;window.proposeFlashOffer=proposeFlashOffer;window.voteProposal=voteProposal;
+window.openFuture=openFuture;window.composeFuture=composeFuture;
+window.openEclatDialogue=openEclatDialogue;window.answerEclat=answerEclat;window.answerEclatFree=answerEclatFree;window.startEclatVoice=startEclatVoice;window.openMyMoment=openMyMoment;window.openMeHub=openMeHub;window.openAccount=openAccount;window.saveAccount=saveAccount;
+window.answerEclatCustomDate=answerEclatCustomDate;
+window.answerStayRhythm=answerStayRhythm;
+window.startLocalDiscovery=startLocalDiscovery;window.openConstellation=openConstellation;window.resetTaste=resetTaste;window.forgetExperience=forgetExperience;window.rememberExperience=rememberExperience;
+window.openReactionMenu=openReactionMenu;window.contextualRate=contextualRate;
+window.reserveWithDolcia=reserveWithDolcia;window.renderPass=renderPass;
+window.openBudgetEditor=openBudgetEditor;window.saveBudgetPlan=saveBudgetPlan;
+window.openCirclePerson=openCirclePerson;window.saveCirclePerson=saveCirclePerson;window.toggleCirclePerson=toggleCirclePerson;window.removeCirclePerson=removeCirclePerson;
+window.openSensitivity=openSensitivity;window.saveSensitivity=saveSensitivity;
+window.openDolciaAnimate=openDolciaAnimate;window.previewDolciaAnimate=previewDolciaAnimate;window.addDolciaAnimate=addDolciaAnimate;window.startDolciaAnimate=startDolciaAnimate;window.speakAnimateStep=speakAnimateStep;window.nextDolciaAnimate=nextDolciaAnimate;window.stopDolciaAnimate=stopDolciaAnimate;
+window.openDCoach=openDCoach;window.closeDCoach=closeDCoach;window.dCoachChoose=dCoachChoose;window.renderDCoachAdjustments=renderDCoachAdjustments;window.applyDCoachAdjustment=applyDCoachAdjustment;window.askDCoach=askDCoach;window.startDCoachVoice=startDCoachVoice;
+window.reactDolciaAnimate=reactDolciaAnimate;window.completeDolciaAnimateStep=completeDolciaAnimateStep;window.pauseDolciaAnimate=pauseDolciaAnimate;
+home();

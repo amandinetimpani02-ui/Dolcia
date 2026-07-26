@@ -1,0 +1,171 @@
+/* Dolcia v20.20 — une présence lumineuse, pas une succession de panneaux noirs. */
+:root{
+  --vision-gold:#e7c77f;
+  --vision-ivory:#f8f3e8;
+  --vision-glass:rgba(18,22,21,.62);
+  --vision-line:rgba(255,255,255,.13);
+  --vision-shadow:0 28px 90px rgba(0,0,0,.46);
+}
+body{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(99,135,124,.13),transparent 26rem),
+    radial-gradient(circle at 90% 30%,rgba(224,190,112,.09),transparent 28rem),
+    #070908;
+}
+body:before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.025),transparent 38%,rgba(221,190,118,.025));
+}
+
+/* Accueil : une seule scène, un seul choix principal. */
+.eclat-home{
+  min-height:100svh;position:relative;overflow:hidden;isolation:isolate;
+  border-radius:0 0 clamp(32px,5vw,72px) clamp(32px,5vw,72px);
+  background:#0a0d0c;
+}
+.eclat-home-atmosphere{
+  position:absolute;inset:0;z-index:-3;
+  background:
+    linear-gradient(90deg,rgba(5,8,7,.93) 0%,rgba(5,8,7,.66) 48%,rgba(5,8,7,.2) 100%),
+    linear-gradient(0deg,rgba(5,8,7,.78),transparent 55%),
+    url('/assets/hero-le-touquet.png') center/cover;
+  transform:scale(1.015);
+}
+.eclat-home:after{
+  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(circle at 74% 35%,rgba(239,211,146,.18),transparent 18rem),
+    linear-gradient(180deg,transparent 72%,#070908);
+}
+.eclat-home-copy{width:min(1180px,calc(100% - 44px));margin:auto;padding:clamp(110px,17vh,190px) 0 110px}
+.eclat-home-mark{display:flex;align-items:center;gap:12px;margin:20px 0 34px}
+.eclat-home-mark>span{
+  width:64px;height:64px;display:grid;place-items:center;position:relative;border-radius:50%;
+  color:#17130b;font:500 38px/1 var(--display);
+  background:radial-gradient(circle at 34% 25%,#fff8d9 0 7%,#edd08b 30%,#b88432 72%,#704411);
+  box-shadow:0 0 0 1px rgba(255,239,189,.7),0 12px 42px rgba(224,185,88,.28);
+}
+.eclat-home-mark i{position:absolute;right:9px;top:8px;font:12px/1 sans-serif;color:white}
+.eclat-home-mark small{color:rgba(255,255,255,.68);letter-spacing:.06em}
+.eclat-home h1{max-width:880px;font-size:clamp(58px,8vw,118px);line-height:.86;letter-spacing:-.055em;text-wrap:balance}
+.eclat-home h1 em{color:var(--vision-gold);font-weight:500}
+.eclat-home-copy>p{max-width:630px;margin:30px 0;color:rgba(255,255,255,.72);font-size:clamp(15px,1.4vw,19px);line-height:1.65}
+.eclat-home-actions{display:flex;gap:12px;flex-wrap:wrap}
+.eclat-home-actions button{min-height:64px;padding:0 24px;border-radius:20px;backdrop-filter:blur(24px) saturate(1.2)}
+.eclat-home-actions .primary{
+  background:linear-gradient(125deg,#f1dca5,#c99d50);color:#171209;
+  box-shadow:0 18px 52px rgba(196,148,65,.2);
+}
+.eclat-home-actions .secondary{border:1px solid var(--vision-line);background:rgba(17,20,19,.5);color:#fff}
+.eclat-prompts{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
+.eclat-prompts button{
+  padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:999px;
+  color:rgba(255,255,255,.67);background:rgba(12,15,14,.34);backdrop-filter:blur(18px);
+}
+
+/* Ornement de navigation : compact et toujours lisible. */
+.bottom-nav.essential-nav{
+  bottom:max(14px,env(safe-area-inset-bottom));gap:3px;padding:5px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(11,14,13,.7)!important;backdrop-filter:blur(28px) saturate(1.35);
+  box-shadow:0 20px 70px rgba(0,0,0,.48);border-radius:999px;
+}
+.bottom-nav .nav-item{min-width:92px;height:52px;padding:0 16px;border-radius:999px}
+.bottom-nav .nav-item.active{background:rgba(242,218,161,.95);color:#18140c}
+.bottom-nav .nav-item.signature{display:flex;align-items:center;gap:8px}
+.bottom-nav .nav-item.signature b{
+  width:32px;height:32px;display:grid;place-items:center;position:relative;border-radius:50%;
+  font:500 20px var(--display);background:linear-gradient(135deg,#f4dda2,#b98735);color:#18130b
+}
+.bottom-nav .nav-item.signature i{position:absolute;right:4px;top:2px;font:7px sans-serif;color:white}
+
+/* D : une conversation vivante dans une scène, et non un formulaire modal. */
+.d-coach{background:rgba(2,4,4,.34);backdrop-filter:blur(34px) saturate(1.25)}
+.d-coach-scene{
+  background:
+    linear-gradient(90deg,rgba(3,6,5,.95),rgba(3,6,5,.64) 54%,rgba(3,6,5,.16)),
+    linear-gradient(0deg,rgba(3,6,5,.88),transparent 58%),
+    url('/assets/hero-le-touquet.png') center/cover;
+  filter:saturate(.92) contrast(1.04);
+}
+.d-coach>article{
+  width:min(1160px,94vw);padding:clamp(30px,5vw,68px);
+  border:1px solid rgba(248,225,171,.3);border-radius:42px;
+  background:linear-gradient(135deg,rgba(16,20,18,.82),rgba(7,10,9,.62));
+  backdrop-filter:blur(30px) saturate(1.3);box-shadow:var(--vision-shadow);
+}
+.d-coach header .eclat-d.large{box-shadow:0 0 0 1px rgba(255,236,183,.72),0 18px 60px rgba(220,179,82,.28)}
+.d-coach-known span{background:rgba(255,255,255,.055);backdrop-filter:blur(14px)}
+.d-coach-dialogue h2{text-wrap:balance}
+.d-coach-actions>button{
+  min-height:86px;border-radius:24px;background:rgba(255,255,255,.055);
+  backdrop-filter:blur(18px);box-shadow:inset 0 1px rgba(255,255,255,.07);
+}
+.d-coach-actions>button:hover{transform:translateY(-2px) scale(1.006)}
+.d-coach-free input,.d-coach-live-voice{
+  background:rgba(7,10,9,.55);backdrop-filter:blur(20px);box-shadow:inset 0 1px rgba(255,255,255,.05)
+}
+.d-coach-live-voice i{
+  box-shadow:0 0 0 5px rgba(228,199,127,.08),0 0 18px rgba(228,199,127,.25)
+}
+
+/* Explorer : images éditoriales et contenu superposé, sans murs de noir. */
+.program{max-width:1240px}
+.experience{
+  position:relative;overflow:hidden;isolation:isolate;min-height:360px;margin:18px 0;padding:0;
+  display:flex!important;align-items:flex-end!important;border:1px solid rgba(255,255,255,.11)!important;
+  border-radius:30px;background:#121614;box-shadow:0 20px 60px rgba(0,0,0,.22);
+}
+.experience .exp-image{
+  position:absolute;inset:0;z-index:-2;width:100%!important;height:100%!important;border-radius:0!important;
+  object-fit:cover;filter:saturate(.92) contrast(1.04);transition:transform .7s cubic-bezier(.2,.7,.2,1);
+}
+.experience:after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(5,8,7,.95),rgba(5,8,7,.66) 56%,rgba(5,8,7,.22)),
+             linear-gradient(0deg,rgba(5,8,7,.85),transparent 72%);
+}
+.experience:hover .exp-image{transform:scale(1.025)}
+.experience .exp-copy{width:min(720px,72%);padding:34px 34px 30px;color:white}
+.experience .exp-copy h3{font-size:clamp(30px,3.4vw,49px);line-height:.98;color:var(--vision-ivory);text-wrap:balance}
+.experience .exp-copy>p:not(.dolcia-voice){color:rgba(255,255,255,.68)}
+.experience .exp-meta span{background:rgba(11,14,13,.55);color:#e8e2d8;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(14px)}
+.experience .dolcia-voice{border-top:1px solid rgba(255,255,255,.12);color:#ead39d}
+.experience .exp-actions{position:absolute;right:28px;bottom:28px;z-index:2}
+.experience .exp-actions button{min-height:52px;border-radius:17px;backdrop-filter:blur(18px)}
+.experience .detail-button{background:rgba(9,12,11,.62);border:1px solid rgba(255,255,255,.18);color:white}
+.experience .agenda-button{background:linear-gradient(125deg,#efd99f,#c99e51);color:#171208}
+.experience .quick-heart{top:22px;right:22px;background:rgba(6,9,8,.5);backdrop-filter:blur(18px);border-color:rgba(255,255,255,.2)}
+
+/* Agenda : carnet de voyage en verre, rythme clairement visible. */
+.agenda-day-header{
+  position:sticky;top:12px;z-index:4;padding:14px 18px;margin-top:44px;border:1px solid rgba(255,255,255,.1)!important;
+  border-radius:18px;background:rgba(10,13,12,.72);backdrop-filter:blur(24px) saturate(1.2);
+}
+.travel-between{color:#cdb77f}
+
+@media(max-width:760px){
+  .eclat-home-copy{width:calc(100% - 34px);padding-top:104px}
+  .eclat-home h1{font-size:clamp(52px,16vw,72px)}
+  .eclat-home-copy>p{margin:22px 0}
+  .eclat-prompts{overflow:auto;flex-wrap:nowrap;margin-right:-17px;padding-right:17px}
+  .eclat-prompts button{flex:none}
+  .d-coach>article{border-radius:0}
+  .d-coach-dialogue h2{font-size:clamp(42px,13vw,62px)}
+  .experience{min-height:480px;align-items:flex-end!important}
+  .experience:after{background:linear-gradient(0deg,rgba(5,8,7,.97) 0%,rgba(5,8,7,.75) 47%,rgba(5,8,7,.08) 82%)}
+  .experience .exp-copy{width:100%;padding:170px 20px 92px}
+  .experience .exp-copy h3{font-size:34px}
+  .experience .exp-actions{left:20px;right:20px;bottom:18px;display:grid;grid-template-columns:1fr 1.25fr}
+  .experience .exp-actions button{padding:0 10px}
+  .bottom-nav .nav-item{min-width:0;padding:0 13px}
+  .bottom-nav .nav-item>span:not(.signature span){font-size:10px}
+}
+@media(max-width:430px){
+  .eclat-home-actions{display:grid}.eclat-home-actions button{width:100%}
+  .bottom-nav{width:calc(100% - 22px);justify-content:stretch}.bottom-nav .nav-item{flex:1}
+  .experience .exp-copy{padding-left:17px;padding-right:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .experience .exp-image,.d-coach-actions>button{transition:none!important}
+}
