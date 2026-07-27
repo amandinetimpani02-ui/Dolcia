@@ -1,0 +1,287 @@
+/* Dolcia v20.20 — une présence lumineuse, pas une succession de panneaux noirs. */
+:root{
+  --vision-gold:#e7c77f;
+  --vision-ivory:#f8f3e8;
+  --vision-glass:rgba(18,22,21,.62);
+  --vision-line:rgba(255,255,255,.13);
+  --vision-shadow:0 28px 90px rgba(0,0,0,.46);
+}
+body{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(99,135,124,.13),transparent 26rem),
+    radial-gradient(circle at 90% 30%,rgba(224,190,112,.09),transparent 28rem),
+    #070908;
+}
+body:before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.025),transparent 38%,rgba(221,190,118,.025));
+}
+
+/* Accueil : une seule scène, un seul choix principal. */
+.eclat-home{
+  min-height:100svh;position:relative;overflow:hidden;isolation:isolate;
+  border-radius:0 0 clamp(32px,5vw,72px) clamp(32px,5vw,72px);
+  background:#0a0d0c;
+}
+.eclat-home-atmosphere{
+  position:absolute;inset:0;z-index:-3;
+  background:
+    linear-gradient(90deg,rgba(5,8,7,.93) 0%,rgba(5,8,7,.66) 48%,rgba(5,8,7,.2) 100%),
+    linear-gradient(0deg,rgba(5,8,7,.78),transparent 55%),
+    url('/assets/hero-le-touquet.png') center/cover;
+  transform:scale(1.015);
+}
+.eclat-home:after{
+  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(circle at 74% 35%,rgba(239,211,146,.18),transparent 18rem),
+    linear-gradient(180deg,transparent 72%,#070908);
+}
+.eclat-home-copy{width:min(1180px,calc(100% - 44px));margin:auto;padding:clamp(110px,17vh,190px) 0 110px}
+.eclat-home-mark{display:flex;align-items:center;gap:12px;margin:20px 0 34px}
+.eclat-home-mark>span{
+  width:64px;height:64px;display:grid;place-items:center;position:relative;border-radius:50%;
+  color:#17130b;font:500 38px/1 var(--display);
+  background:radial-gradient(circle at 34% 25%,#fff8d9 0 7%,#edd08b 30%,#b88432 72%,#704411);
+  box-shadow:0 0 0 1px rgba(255,239,189,.7),0 12px 42px rgba(224,185,88,.28);
+}
+.eclat-home-mark i{position:absolute;right:9px;top:8px;font:12px/1 sans-serif;color:white}
+.eclat-home-mark small{color:rgba(255,255,255,.68);letter-spacing:.06em}
+.eclat-home h1{max-width:880px;font-size:clamp(58px,8vw,118px);line-height:.86;letter-spacing:-.055em;text-wrap:balance}
+.eclat-home h1 em{color:var(--vision-gold);font-weight:500}
+.eclat-home-copy>p{max-width:630px;margin:30px 0;color:rgba(255,255,255,.72);font-size:clamp(15px,1.4vw,19px);line-height:1.65}
+.eclat-home-actions{display:flex;gap:12px;flex-wrap:wrap}
+.eclat-home-actions button{min-height:64px;padding:0 24px;border-radius:20px;backdrop-filter:blur(24px) saturate(1.2)}
+.eclat-home-actions .primary{
+  background:linear-gradient(125deg,#f1dca5,#c99d50);color:#171209;
+  box-shadow:0 18px 52px rgba(196,148,65,.2);
+}
+.eclat-home-actions .secondary{border:1px solid var(--vision-line);background:rgba(17,20,19,.5);color:#fff}
+.eclat-prompts{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}
+.eclat-prompts button{
+  padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:999px;
+  color:rgba(255,255,255,.67);background:rgba(12,15,14,.34);backdrop-filter:blur(18px);
+}
+
+/* Ornement de navigation : compact et toujours lisible. */
+.bottom-nav.essential-nav{
+  bottom:max(14px,env(safe-area-inset-bottom));gap:3px;padding:5px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(11,14,13,.7)!important;backdrop-filter:blur(28px) saturate(1.35);
+  box-shadow:0 20px 70px rgba(0,0,0,.48);border-radius:999px;
+}
+.bottom-nav .nav-item{min-width:92px;height:52px;padding:0 16px;border-radius:999px}
+.bottom-nav .nav-item.active{background:rgba(242,218,161,.95);color:#18140c}
+.bottom-nav .nav-item.signature{display:flex;align-items:center;gap:8px}
+.bottom-nav .nav-item.signature b{
+  width:32px;height:32px;display:grid;place-items:center;position:relative;border-radius:50%;
+  font:500 20px var(--display);background:linear-gradient(135deg,#f4dda2,#b98735);color:#18130b
+}
+.bottom-nav .nav-item.signature i{position:absolute;right:4px;top:2px;font:7px sans-serif;color:white}
+
+/* D : une conversation vivante dans une scène, et non un formulaire modal. */
+.d-coach{background:rgba(2,4,4,.34);backdrop-filter:blur(34px) saturate(1.25)}
+.d-coach-scene{
+  background:
+    linear-gradient(90deg,rgba(3,6,5,.95),rgba(3,6,5,.64) 54%,rgba(3,6,5,.16)),
+    linear-gradient(0deg,rgba(3,6,5,.88),transparent 58%),
+    url('/assets/hero-le-touquet.png') center/cover;
+  filter:saturate(.92) contrast(1.04);
+}
+.d-coach>article{
+  width:min(1160px,94vw);padding:clamp(30px,5vw,68px);
+  border:1px solid rgba(248,225,171,.3);border-radius:42px;
+  background:linear-gradient(135deg,rgba(16,20,18,.82),rgba(7,10,9,.62));
+  backdrop-filter:blur(30px) saturate(1.3);box-shadow:var(--vision-shadow);
+}
+.d-coach header .eclat-d.large{box-shadow:0 0 0 1px rgba(255,236,183,.72),0 18px 60px rgba(220,179,82,.28)}
+.d-coach-known span{background:rgba(255,255,255,.055);backdrop-filter:blur(14px)}
+.d-coach-dialogue h2{text-wrap:balance}
+.d-coach-actions>button{
+  min-height:86px;border-radius:24px;background:rgba(255,255,255,.055);
+  backdrop-filter:blur(18px);box-shadow:inset 0 1px rgba(255,255,255,.07);
+}
+.d-coach-actions>button:hover{transform:translateY(-2px) scale(1.006)}
+.d-coach-free input,.d-coach-live-voice{
+  background:rgba(7,10,9,.55);backdrop-filter:blur(20px);box-shadow:inset 0 1px rgba(255,255,255,.05)
+}
+.d-coach-live-voice i{
+  box-shadow:0 0 0 5px rgba(228,199,127,.08),0 0 18px rgba(228,199,127,.25)
+}
+
+/* Explorer : images éditoriales et contenu superposé, sans murs de noir. */
+.program{max-width:1240px}
+.experience{
+  position:relative;overflow:hidden;isolation:isolate;min-height:360px;margin:18px 0;padding:0;
+  display:flex!important;align-items:flex-end!important;border:1px solid rgba(255,255,255,.11)!important;
+  border-radius:30px;background:#121614;box-shadow:0 20px 60px rgba(0,0,0,.22);
+}
+.experience .exp-image{
+  position:absolute;inset:0;z-index:-2;width:100%!important;height:100%!important;border-radius:0!important;
+  object-fit:cover;filter:saturate(.92) contrast(1.04);transition:transform .7s cubic-bezier(.2,.7,.2,1);
+}
+.experience:after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(5,8,7,.95),rgba(5,8,7,.66) 56%,rgba(5,8,7,.22)),
+             linear-gradient(0deg,rgba(5,8,7,.85),transparent 72%);
+}
+.experience:hover .exp-image{transform:scale(1.025)}
+.experience .exp-copy{width:min(720px,72%);padding:34px 34px 30px;color:white}
+.experience .exp-copy h3{font-size:clamp(30px,3.4vw,49px);line-height:.98;color:var(--vision-ivory);text-wrap:balance}
+.experience .exp-copy>p:not(.dolcia-voice){color:rgba(255,255,255,.68)}
+.experience .exp-meta span{background:rgba(11,14,13,.55);color:#e8e2d8;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(14px)}
+.experience .dolcia-voice{border-top:1px solid rgba(255,255,255,.12);color:#ead39d}
+.experience .exp-actions{position:absolute;right:28px;bottom:28px;z-index:2}
+.experience .exp-actions button{min-height:52px;border-radius:17px;backdrop-filter:blur(18px)}
+.experience .detail-button{background:rgba(9,12,11,.62);border:1px solid rgba(255,255,255,.18);color:white}
+.experience .agenda-button{background:linear-gradient(125deg,#efd99f,#c99e51);color:#171208}
+.experience .quick-heart{top:22px;right:22px;background:rgba(6,9,8,.5);backdrop-filter:blur(18px);border-color:rgba(255,255,255,.2)}
+
+/* Agenda : carnet de voyage en verre, rythme clairement visible. */
+.agenda-day-header{
+  position:sticky;top:12px;z-index:4;padding:14px 18px;margin-top:44px;border:1px solid rgba(255,255,255,.1)!important;
+  border-radius:18px;background:rgba(10,13,12,.72);backdrop-filter:blur(24px) saturate(1.2);
+}
+.travel-between{color:#cdb77f}
+
+@media(max-width:760px){
+  .eclat-home-copy{width:calc(100% - 34px);padding-top:104px}
+  .eclat-home h1{font-size:clamp(52px,16vw,72px)}
+  .eclat-home-copy>p{margin:22px 0}
+  .eclat-prompts{overflow:auto;flex-wrap:nowrap;margin-right:-17px;padding-right:17px}
+  .eclat-prompts button{flex:none}
+  .d-coach>article{border-radius:0}
+  .d-coach-dialogue h2{font-size:clamp(42px,13vw,62px)}
+  .experience{min-height:480px;align-items:flex-end!important}
+  .experience:after{background:linear-gradient(0deg,rgba(5,8,7,.97) 0%,rgba(5,8,7,.75) 47%,rgba(5,8,7,.08) 82%)}
+  .experience .exp-copy{width:100%;padding:170px 20px 92px}
+  .experience .exp-copy h3{font-size:34px}
+  .experience .exp-actions{left:20px;right:20px;bottom:18px;display:grid;grid-template-columns:1fr 1.25fr}
+  .experience .exp-actions button{padding:0 10px}
+  .bottom-nav .nav-item{min-width:0;padding:0 13px}
+  .bottom-nav .nav-item>span:not(.signature span){font-size:10px}
+}
+@media(max-width:430px){
+  .eclat-home-actions{display:grid}.eclat-home-actions button{width:100%}
+  .bottom-nav{width:calc(100% - 22px);justify-content:stretch}.bottom-nav .nav-item{flex:1}
+  .experience .exp-copy{padding-left:17px;padding-right:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .experience .exp-image,.d-coach-actions>button{transition:none!important}
+}
+
+/* V20.6 — une seule présence D, une question décisive et trois chemins équivalents. */
+.d-coach>article{
+  opacity:0;transform:translateY(14px) scale(.992);
+  transition:opacity .42s ease,transform .55s cubic-bezier(.2,.75,.2,1),border-color .45s ease
+}
+.d-coach>article.question-visible{opacity:1;transform:none}
+.d-coach>article.answering{opacity:.45;transform:translateY(-8px) scale(.995)}
+.d-coach-eyebrow{
+  display:block;margin:2px 0 12px;color:#e2c77f;font-size:9px;font-weight:700;
+  letter-spacing:.17em;text-transform:uppercase
+}
+.d-coach.mood-tempo .d-coach-scene:after{background:radial-gradient(circle at 75% 24%,rgba(215,178,91,.23),transparent 25%)}
+.d-coach.mood-group .d-coach-scene:after{background:radial-gradient(circle at 74% 24%,rgba(176,116,86,.22),transparent 27%)}
+.d-coach.mood-inspire .d-coach-scene:after{background:radial-gradient(circle at 72% 22%,rgba(81,145,131,.2),transparent 29%)}
+.d-coach.mood-ready .d-coach-scene:after{background:radial-gradient(circle at 72% 22%,rgba(230,195,111,.27),transparent 26%)}
+.d-coach.mood-ready .eclat-d.d-companion:after{border-color:rgba(242,214,145,.55);box-shadow:0 0 42px rgba(222,184,91,.2)}
+.d-coach-actions{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  max-width:920px
+}
+.d-coach-actions>button{
+  min-height:80px;grid-template-columns:28px 1fr auto;
+  border-color:rgba(255,255,255,.13)
+}
+.d-coach-actions>button>b{opacity:.72}
+.d-coach-actions>button:focus-visible{outline:2px solid #efd48e;outline-offset:3px}
+.d-coach-actions.ready-actions>button:first-child{
+  border-color:rgba(235,205,132,.66);
+  background:linear-gradient(135deg,rgba(229,195,113,.22),rgba(255,255,255,.045));
+  box-shadow:inset 0 1px rgba(255,255,255,.13),0 20px 55px rgba(0,0,0,.22)
+}
+.d-coach-free{max-width:920px}
+.d-coach-live-voice{max-width:920px}
+.d-coach-live-impact{
+  display:flex;align-items:center;gap:10px;max-width:920px;margin-top:14px;padding:11px 14px;
+  border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.035);
+  color:#c8c1b5;font-size:10px;backdrop-filter:blur(18px)
+}
+.d-coach-live-impact i{width:7px;height:7px;flex:none;border-radius:50%;background:#dfc477;box-shadow:0 0 16px rgba(223,196,119,.6)}
+.d-coach-live-impact b{margin-left:auto;color:#817d75;font-size:9px;font-weight:500}
+.d-results-reordering .app{filter:saturate(1.08) brightness(1.025);transition:filter .5s ease}
+
+@media(max-width:760px){
+  .d-coach>article{padding-top:62px}
+  .d-coach header{gap:13px}
+  .d-coach-known{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}
+  .d-coach-known span{flex:none}
+  .d-coach-actions{grid-template-columns:1fr}
+  .d-coach-actions>button{min-height:70px;border-radius:19px}
+  .d-coach-actions strong{font-size:20px}
+  .d-coach-live-impact{align-items:flex-start;flex-wrap:wrap}
+  .d-coach-live-impact b{width:100%;margin-left:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .d-coach>article,.d-results-reordering .app{transition:none!important}
+}
+
+/* D vivant : une présence prestigieuse, expressive sans devenir un personnage enfantin. */
+.eclat-d.d-companion{isolation:isolate;overflow:visible;animation:dCompanionBreathe 4.8s ease-in-out infinite}
+.eclat-d.d-companion>b{position:relative;z-index:2;font:inherit;color:inherit}
+.eclat-d.d-companion>.d-star{right:7px;top:5px;z-index:4}
+.eclat-d.d-companion .d-face{position:absolute;z-index:3;inset:0;pointer-events:none}
+.eclat-d.d-companion .d-face>i{position:absolute;top:34%;width:3px;height:4px;border-radius:50%;background:#1c160d;box-shadow:none;animation:dCompanionBlink 6.4s infinite}
+.eclat-d.d-companion .d-face>i:first-child{left:24%}
+.eclat-d.d-companion .d-face>i:nth-child(2){right:24%}
+.eclat-d.d-companion .d-face>em{position:absolute;left:50%;bottom:20%;width:12%;height:6%;border-bottom:1.5px solid rgba(24,18,9,.78);border-radius:0 0 50% 50%;transform:translateX(-50%)}
+.eclat-d.d-companion:after{content:"";position:absolute;z-index:-1;inset:-13px;border:1px solid rgba(232,201,126,.18);border-radius:50%;animation:dCompanionAura 4.8s ease-in-out infinite}
+.eclat-d.d-companion.decision{width:58px;height:58px;font-size:37px;flex:0 0 auto}
+@keyframes dCompanionBreathe{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-2px);filter:brightness(1.08)}}
+@keyframes dCompanionAura{0%,100%{transform:scale(.9);opacity:.22}50%{transform:scale(1.08);opacity:.62}}
+@keyframes dCompanionBlink{0%,45%,49%,100%{transform:scaleY(1)}47%{transform:scaleY(.12)}}
+
+/* Les moments charnières : D explique, propose, l'utilisateur tranche. */
+.d-decision{position:relative;display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(280px,1.15fr);gap:22px;align-items:center;margin:14px 0 34px;padding:24px 26px;border:1px solid rgba(222,193,126,.34);border-radius:26px;background:radial-gradient(circle at 8% 20%,rgba(226,191,106,.13),transparent 28%),linear-gradient(135deg,rgba(18,22,21,.96),rgba(7,9,9,.93));box-shadow:0 24px 70px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.045)}
+.d-decision-copy small{display:block;margin-bottom:7px;color:#d9bd79;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+.d-decision-copy strong{display:block;color:#f6efe2;font:500 clamp(24px,2.6vw,36px)/1 var(--display)}
+.d-decision-copy p{max-width:600px;margin:10px 0 0;color:#a9a398;font-size:11px;line-height:1.55}
+.d-decision-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.d-decision-options button{min-height:54px;padding:11px 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(255,255,255,.045);color:#eee7dc;text-align:left;font-size:11px;transition:.22s ease}
+.d-decision-options button:hover{transform:translateY(-2px);border-color:#dfc27d;background:linear-gradient(120deg,rgba(230,198,120,.22),rgba(255,255,255,.05));color:#fff}
+@media(max-width:820px){.d-decision{grid-template-columns:auto 1fr}.d-decision-options{grid-column:1/-1}}
+@media(max-width:540px){.d-decision{gap:15px;padding:20px 17px;border-radius:22px}.d-decision-options{grid-template-columns:1fr}.eclat-d.d-companion.decision{width:49px;height:49px;font-size:31px}}
+@media(prefers-reduced-motion:reduce){.eclat-d.d-companion,.eclat-d.d-companion:after,.eclat-d.d-companion .d-face>i{animation:none!important}}
+/* v20.5 — la vérité du moment, lisible comme une Live Activity */
+.moment-truth{
+  width:min(1190px,calc(100% - 32px));margin:92px auto 18px;padding:14px 16px;
+  display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:18px;
+  border:1px solid rgba(219,184,108,.28);border-radius:24px;
+  background:linear-gradient(115deg,rgba(27,25,21,.96),rgba(11,12,12,.94));
+  box-shadow:0 24px 70px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.05);
+  color:#f7f1e5;position:relative;z-index:3
+}
+.moment-truth-main{padding-right:18px;border-right:1px solid rgba(255,255,255,.1)}
+.moment-truth-main span{display:block;color:#c8a75e;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.moment-truth-main strong{display:block;margin-top:4px;font:600 20px/1.05 var(--serif,Georgia,serif)}
+.moment-truth-facts{display:flex;gap:8px;min-width:0;flex-wrap:wrap}
+.moment-truth-facts b{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.055);font-size:12px;font-weight:600;white-space:nowrap}
+.moment-truth-live{display:flex;align-items:center;gap:8px;color:#aaa49a;font-size:11px;max-width:245px}
+.moment-truth-live i{width:7px;height:7px;border-radius:50%;background:#67d39b;box-shadow:0 0 0 5px rgba(103,211,155,.1);flex:0 0 auto}
+.moment-truth-live.changed{color:#f5deb0}.moment-truth-live.changed i{background:#e8bd61;box-shadow:0 0 0 5px rgba(232,189,97,.12)}
+.moment-truth-decide{border:0;border-radius:16px;padding:12px 16px;background:linear-gradient(135deg,#f0d790,#cfa853);color:#17130c;font-weight:800;white-space:nowrap}
+.exp-label{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap}
+.exp-label small{color:#b6aa95;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.trust-badge{font-style:normal!important;border-radius:999px;padding:5px 9px!important;font-size:10px!important;font-weight:800!important;letter-spacing:.04em!important;text-transform:none!important}
+.trust-badge.confirmed{color:#a7edc5!important;background:rgba(65,178,113,.13)!important}
+.trust-badge.compatible{color:#f3d68e!important;background:rgba(219,177,79,.12)!important}
+.trust-badge.check{color:#c8c3ba!important;background:rgba(255,255,255,.07)!important}
+.clear-actions{gap:7px!important;flex-wrap:wrap}.clear-actions button{min-width:auto!important}
+
+@media(max-width:800px){
+  .moment-truth{margin-top:76px;grid-template-columns:1fr auto;gap:11px;padding:13px;border-radius:20px}
+  .moment-truth-main{border:0;padding:0}.moment-truth-facts{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+  .moment-truth-facts b:last-child{grid-column:1/-1}.moment-truth-live{grid-column:1/-1;max-width:none}
+  .moment-truth-decide{grid-column:2;grid-row:1}
+}

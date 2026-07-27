@@ -183,29 +183,23 @@ alter table public.partner_contracts enable row level security;
 alter table public.partner_establishments enable row level security;
 alter table public.event_programs enable row level security;
 
--- Notes communautaires Dolcia : avis courts et anonymes rattachés à un lieu réel.
--- Jamais un avis inventé par l'IA ; toujours écrit et partagé volontairement par une personne.
-create table if not exists community_notes (
+-- Attribution partenaire : chaque étape est distincte et une venue exige une preuve.
+create table if not exists public.partner_attribution_events (
   id uuid primary key default gen_random_uuid(),
-  item_id text not null,
-  item_name text not null,
-  note text not null,
-  city text,
-  created_at timestamptz not null default now()
+  organization_id uuid not null references public.partner_organizations(id) on delete cascade,
+  establishment_id uuid references public.partner_establishments(id) on delete set null,
+  event_type text not null check (event_type in ('impression','detail_open','agenda_add','booking','pass_validated','cancellation')),
+  anonymous_session_id text,
+  reservation_reference text,
+  people_count integer not null default 0 check (people_count >= 0),
+  attributed_revenue numeric(12,2) not null default 0 check (attributed_revenue >= 0),
+  proof_type text check (proof_type in ('client_action','booking_confirmation','partner_qr_scan','partner_short_code','system_cancellation')),
+  occurred_at timestamptz not null default now(),
+  metadata jsonb not null default '{}'
 );
-create index if not exists community_notes_item_id_idx on community_notes(item_id);
-
--- Animations personnalisées soumises par un partenaire (mode facultatif, en plus
--- du moteur générique universel — jamais une obligation de validation par lieu).
-create table if not exists partner_animations (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid references partner_organizations(id),
-  establishment_id uuid references partner_establishments(id),
-  establishment_name text not null,
-  title text not null,
-  seconds integer not null default 60,
-  text text not null,
-  venue_type text,
-  created_at timestamptz not null default now()
-);
-create index if not exists partner_animations_establishment_idx on partner_animations(establishment_name);
+create unique index if not exists partner_validated_reservation_unique
+  on public.partner_attribution_events (organization_id,reservation_reference,event_type)
+  where event_type='pass_validated' and reservation_reference is not null;
+create index if not exists partner_attribution_period_idx
+  on public.partner_attribution_events (organization_id,establishment_id,occurred_at,event_type);
+alter table public.partner_attribution_events enable row level security;
