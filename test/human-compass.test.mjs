@@ -27,7 +27,8 @@ test('une sortie éloignée doit mériter sa place', () => {
 });
 
 test('la version porte explicitement la vérité du moment', () => {
-  assert.match(client, /20\.5-verite-du-moment/);
+  assert.match(client, /20\.7\.0-d-gpt-realtime/);
+  assert.match(client, /function momentTruth/);
 });
 
 test('le programme rend visible sa courbe émotionnelle sans tableau comptable', () => {

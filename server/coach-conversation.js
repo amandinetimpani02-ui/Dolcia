@@ -179,4 +179,4 @@ export default async function handler(req, res) {
   return handleJsonReply(res, KEY, mode, context, messages);
 }
 
-export { systemPrompt, streamSystemPrompt, clampHistory, safeParseReply };
+export { personaCore, systemPrompt, streamSystemPrompt, clampHistory, safeParseReply };

@@ -7,12 +7,12 @@ const css=readFileSync(new URL('../premium.css',import.meta.url),'utf8');
 
 test('le D ouvre un coach contextuel au lieu de rejouer un parcours fixe',()=>{
   assert.match(app,/function openMyMoment\(\)\{openDCoach\(\)\}/);
-  assert.match(app,/Je connais déjà votre moment/);
-  assert.match(app,/Je ne vous ferai pas recommencer/);
+  assert.match(app,/function dCoachNextQuestion\(\)/);
+  assert.match(app,/Une question à la fois\. Jamais deux fois la même/);
 });
 
 test('coach, animateur, programme et budget restent quatre prises en charge claires',()=>{
-  for(const label of ['Choisissez pour moi','Animez ce moment','Réajustez mon rythme','Protégez mon budget']){
+  for(const label of ['Laisser D décider','D anime ce moment','Affiner une nuance','Protéger le budget']){
     assert.match(app,new RegExp(label));
   }
   assert.match(app,/openDolciaAnimate\(\)/);

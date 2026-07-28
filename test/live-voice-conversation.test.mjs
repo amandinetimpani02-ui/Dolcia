@@ -22,7 +22,7 @@ test('le D-Coach et Dolcia Anime proposent une conversation continue, sans rempl
 });
 
 test('la boucle vocale se coupe proprement à la fermeture du D-Coach et à la pause de Dolcia Anime', () => {
-  assert.match(app, /function closeDCoach\(\)\{stopLiveConversation\(\)/);
+  assert.match(app, /function closeDCoach\(\)\{\s*stopLiveConversation\(\)/);
   assert.match(app, /function pauseDolciaAnimate\(\)\{stopLiveConversation\(\)/);
 });
 
@@ -129,7 +129,7 @@ test('quand D doit poser une question, elle vise celle qui change le plus la ré
 });
 
 test('dès l’ouverture du D-Coach, il est dit explicitement que cliquer ou parler sont deux chemins équivalents', () => {
-  assert.match(app, /Cliquez un choix ci-dessous, ou dites-le-moi directement/);
+  assert.match(app, /Répondez d’un geste, écrivez ou parlez/);
   assert.match(css, /\.d-coach-hint\{/);
 });
 

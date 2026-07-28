@@ -30,12 +30,29 @@ body:before{
     linear-gradient(0deg,rgba(5,8,7,.78),transparent 55%),
     url('/assets/hero-le-touquet.png') center/cover;
   transform:scale(1.015);
+  animation:eclatBreath 14s ease-in-out infinite alternate;
+}
+.eclat-home:before{
+  content:"";position:absolute;inset:-24% -34%;z-index:-2;pointer-events:none;
+  background:linear-gradient(112deg,transparent 28%,rgba(255,239,198,.075) 47%,rgba(231,199,127,.025) 54%,transparent 70%);
+  transform:translateX(-26%) rotate(-2deg);
+  animation:eclatSweep 10s cubic-bezier(.45,0,.25,1) infinite;
 }
 .eclat-home:after{
   content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
   background:
     radial-gradient(circle at 74% 35%,rgba(239,211,146,.18),transparent 18rem),
     linear-gradient(180deg,transparent 72%,#070908);
+}
+@keyframes eclatSweep{
+  0%,18%{transform:translateX(-30%) rotate(-2deg);opacity:0}
+  34%{opacity:.72}
+  64%{opacity:.38}
+  82%,100%{transform:translateX(34%) rotate(-2deg);opacity:0}
+}
+@keyframes eclatBreath{
+  from{transform:scale(1.015)}
+  to{transform:scale(1.035)}
 }
 .eclat-home-copy{width:min(1180px,calc(100% - 44px));margin:auto;padding:clamp(110px,17vh,190px) 0 110px}
 .eclat-home-mark{display:flex;align-items:center;gap:12px;margin:20px 0 34px}
@@ -167,7 +184,97 @@ body:before{
   .experience .exp-copy{padding-left:17px;padding-right:17px}
 }
 @media(prefers-reduced-motion:reduce){
+  .eclat-home:before,.eclat-home-atmosphere{animation:none!important}
   .experience .exp-image,.d-coach-actions>button{transition:none!important}
+}
+
+/* V20.6.1 — récupération discrète : une panne de source ne devient jamais l'écran principal */
+.compact-recovery{
+  width:min(920px,calc(100% - 32px));
+  min-height:0!important;
+  margin:clamp(72px,12vh,150px) auto;
+  padding:clamp(28px,5vw,58px);
+  border:1px solid rgba(221,190,119,.32);
+  border-radius:34px;
+  background:
+    radial-gradient(circle at 12% 10%,rgba(221,190,119,.13),transparent 34%),
+    linear-gradient(145deg,rgba(24,24,22,.96),rgba(10,11,11,.98));
+  box-shadow:0 38px 100px rgba(0,0,0,.48);
+  overflow:hidden;
+}
+.compact-recovery:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 10%,rgba(255,255,255,.035) 48%,transparent 70%);
+}
+.recovery-visual{display:flex;align-items:flex-start;gap:22px;position:relative}
+.compact-recovery h1{font-size:clamp(38px,6vw,74px);line-height:.94;max-width:760px;margin:10px 0 22px}
+.compact-recovery h1 em{color:var(--gold,#dfc47e);font-weight:400}
+.compact-recovery>p{max-width:690px;color:rgba(247,242,231,.72);font-size:clamp(16px,2vw,20px);line-height:1.55}
+.recovery-actions{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 20px}
+.recovery-actions button{min-height:52px;border-radius:16px;padding:0 22px}
+.recovery-actions .ghost{background:transparent;border:0;color:rgba(247,242,231,.62)}
+.compact-recovery>small{display:block;color:rgba(247,242,231,.44)}
+@media(max-width:680px){
+  .compact-recovery{margin:34px auto 110px;border-radius:26px;padding:26px 20px}
+  .recovery-visual{gap:14px}.compact-recovery h1{font-size:42px}
+  .recovery-actions{display:grid}.recovery-actions button{width:100%}
+}
+
+/* V20.6 — une seule présence D, une question décisive et trois chemins équivalents. */
+.d-coach>article{
+  opacity:0;transform:translateY(14px) scale(.992);
+  transition:opacity .42s ease,transform .55s cubic-bezier(.2,.75,.2,1),border-color .45s ease
+}
+.d-coach>article.question-visible{opacity:1;transform:none}
+.d-coach>article.answering{opacity:.45;transform:translateY(-8px) scale(.995)}
+.d-coach-eyebrow{
+  display:block;margin:2px 0 12px;color:#e2c77f;font-size:9px;font-weight:700;
+  letter-spacing:.17em;text-transform:uppercase
+}
+.d-coach.mood-tempo .d-coach-scene:after{background:radial-gradient(circle at 75% 24%,rgba(215,178,91,.23),transparent 25%)}
+.d-coach.mood-group .d-coach-scene:after{background:radial-gradient(circle at 74% 24%,rgba(176,116,86,.22),transparent 27%)}
+.d-coach.mood-inspire .d-coach-scene:after{background:radial-gradient(circle at 72% 22%,rgba(81,145,131,.2),transparent 29%)}
+.d-coach.mood-ready .d-coach-scene:after{background:radial-gradient(circle at 72% 22%,rgba(230,195,111,.27),transparent 26%)}
+.d-coach.mood-ready .eclat-d.d-companion:after{border-color:rgba(242,214,145,.55);box-shadow:0 0 42px rgba(222,184,91,.2)}
+.d-coach-actions{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  max-width:920px
+}
+.d-coach-actions>button{
+  min-height:80px;grid-template-columns:28px 1fr auto;
+  border-color:rgba(255,255,255,.13)
+}
+.d-coach-actions>button>b{opacity:.72}
+.d-coach-actions>button:focus-visible{outline:2px solid #efd48e;outline-offset:3px}
+.d-coach-actions.ready-actions>button:first-child{
+  border-color:rgba(235,205,132,.66);
+  background:linear-gradient(135deg,rgba(229,195,113,.22),rgba(255,255,255,.045));
+  box-shadow:inset 0 1px rgba(255,255,255,.13),0 20px 55px rgba(0,0,0,.22)
+}
+.d-coach-free{max-width:920px}
+.d-coach-live-voice{max-width:920px}
+.d-coach-live-impact{
+  display:flex;align-items:center;gap:10px;max-width:920px;margin-top:14px;padding:11px 14px;
+  border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.035);
+  color:#c8c1b5;font-size:10px;backdrop-filter:blur(18px)
+}
+.d-coach-live-impact i{width:7px;height:7px;flex:none;border-radius:50%;background:#dfc477;box-shadow:0 0 16px rgba(223,196,119,.6)}
+.d-coach-live-impact b{margin-left:auto;color:#817d75;font-size:9px;font-weight:500}
+.d-results-reordering .app{filter:saturate(1.08) brightness(1.025);transition:filter .5s ease}
+
+@media(max-width:760px){
+  .d-coach>article{padding-top:62px}
+  .d-coach header{gap:13px}
+  .d-coach-known{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}
+  .d-coach-known span{flex:none}
+  .d-coach-actions{grid-template-columns:1fr}
+  .d-coach-actions>button{min-height:70px;border-radius:19px}
+  .d-coach-actions strong{font-size:20px}
+  .d-coach-live-impact{align-items:flex-start;flex-wrap:wrap}
+  .d-coach-live-impact b{width:100%;margin-left:17px}
+}
+@media(prefers-reduced-motion:reduce){
+  .d-coach>article,.d-results-reordering .app{transition:none!important}
 }
 
 /* D vivant : une présence prestigieuse, expressive sans devenir un personnage enfantin. */

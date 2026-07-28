@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '20.5-verite-du-moment';
+const APP_BUILD = '20.7.0-d-gpt-realtime';
 // Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
 // correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
 // vit jamais ici.
@@ -75,6 +75,7 @@ state.animateHistory=JSON.parse(localStorage.getItem('dolcia_animate_history_v1'
 state.companionMemory=JSON.parse(localStorage.getItem('dolcia_companion_memory_v1')||'{"interactions":0,"lastChoice":"","rituals":[],"tone":"warm"}');
 state.programPreferences=JSON.parse(localStorage.getItem('dolcia_program_preferences_v1')||'{"energy":"ask","dining":"ask","fatigue":"unknown"}');
 state.liveMoment={checkedAt:null,weatherKey:null,offerIds:[],changes:[],watcher:null};
+state.dDialogue={asked:[],dirty:false,mood:'concierge'};
 
 const esc = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
@@ -116,47 +117,103 @@ function dCoachContext(){
     sentence:state.answers.momentSentence||''
   };
 }
+function dCoachNextQuestion(){
+  const asked=new Set(state.dDialogue.asked||[]);
+  if(!state.answers.duration&&!asked.has('duration'))return{
+    id:'duration',mood:'tempo',eyebrow:'Le temps disponible',
+    voice:'Je commence par la seule information qui change vraiment tout.',
+    title:'Combien de temps avons-nous pour rendre ce moment mémorable ?',
+    choices:[['2h','Deux heures','Une respiration bien composée'],['afternoon_evening','Après-midi + soirée','Un vrai récit jusqu’à la nuit'],['day','Toute la journée','Plusieurs émotions, sans répétition'],['stay','Plusieurs jours','Un séjour vivant, jour après jour']]
+  };
+  if(!state.answers.who&&!asked.has('who'))return{
+    id:'who',mood:'group',eyebrow:'Les personnes qui comptent',
+    voice:'Le même lieu ne raconte pas la même histoire selon les personnes présentes.',
+    title:'Pour qui est-ce que je compose ce moment ?',
+    choices:[['solo','Pour moi','Je suis votre rythme'],['couple','À deux','Créer une vraie complicité'],['family','En famille','Chaque âge compte'],['friends','Entre amis','Du lien et de vrais souvenirs']]
+  };
+  if(!(state.answers.vibes||[]).length&&!state.answers.momentSentence&&!asked.has('impulse'))return{
+    id:'impulse',mood:'inspire',eyebrow:'Votre élan maintenant',
+    voice:'Je ne vous enferme pas dans une catégorie. Donnez-moi seulement la couleur dominante.',
+    title:'De quoi avez-vous vraiment besoin maintenant ?',
+    choices:[['play','Rire et nous défouler','Du jeu, du mouvement, de la surprise'],['breathe','Prendre l’air','De l’espace et une respiration'],['recharge','Décrocher complètement','Du calme, du soin, aucune course'],['vibrate','Vibrer ensemble','Un moment fort à partager']]
+  };
+  return{
+    id:'ready',mood:'ready',eyebrow:'Dolcia a compris l’essentiel',
+    voice:state.answers.momentSentence?`J’ai retenu : ${state.answers.momentSentence}`:'Je peux maintenant agir sans vous faire passer un interrogatoire.',
+    title:state.program.length?'Je garde le fil. Que voulez-vous faire évoluer ?':'Je vous propose les idées justes, ou je compose tout pour vous.',
+    choices:[['choose','Laisser D décider','Le meilleur accord, expliqué et modifiable'],['animate','D anime ce moment','Jeux, défis ou séance guidée'],['adjust','Affiner une nuance','Rythme, distance, surprise ou météo'],['budget','Protéger le budget','Équilibrer sans appauvrir l’expérience']]
+  };
+}
+function dCoachChoiceValue(questionId,value){
+  if(questionId==='duration')state.answers.duration=value;
+  if(questionId==='who')state.answers.who=value;
+  if(questionId==='impulse')state.answers.vibes=[value];
+}
+function dCoachLiveCount(){
+  return (state.allItems||[]).filter(item=>typeof geoVisible!=='function'||geoVisible(item)).length;
+}
+function dCoachRerank(){
+  if(!state.allItems.length)return;
+  state.allItems=scoreItems(state.allItems);
+  state.dDialogue.dirty=true;
+  document.body.classList.add('d-results-reordering');
+  setTimeout(()=>document.body.classList.remove('d-results-reordering'),520);
+}
+function answerDCoach(questionId,value){
+  if(questionId==='ready')return dCoachChoose(value);
+  dCoachChoiceValue(questionId,value);
+  state.dDialogue.asked=[...new Set([...(state.dDialogue.asked||[]),questionId])];
+  dCoachRerank();save();
+  document.querySelector('#dCoach article')?.classList.add('answering');
+  setTimeout(()=>openDCoach(),220);
+}
 function openDCoach(){
   stopLiveConversation();
   document.querySelector('#dCoach')?.remove();
   const context=dCoachContext();
-  const title=context.hasProgram?'Je garde le fil. Que voulez-vous ajuster ?':'Que voulez-vous que je prenne en charge ?';
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal d-coach" id="dCoach">
+  const question=dCoachNextQuestion(),count=dCoachLiveCount();
+  state.dDialogue.mood=question.mood;
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal d-coach mood-${question.mood}" id="dCoach" data-question="${question.id}">
     <div class="d-coach-scene" aria-hidden="true"></div>
     <article>
       <button class="close" onclick="closeDCoach()" aria-label="Fermer">×</button>
-      <header>${dMascotMark('large')}<div><small>Dolcia · compagnon, coach & animateur</small><strong>Je connais déjà votre moment.</strong></div></header>
+      <header>${dMascotMark('large')}<div><small>Dolcia · une seule présence, plusieurs talents</small><strong>Je vous écoute et je garde le fil.</strong></div></header>
       <div class="d-coach-known"><span>${esc(context.when)}</span><span>${esc(context.who)}</span><span>${esc(context.budget)}</span></div>
       <section class="d-coach-dialogue">
-        <p class="d-coach-voice">« ${context.sentence?`J’ai bien retenu : ${esc(context.sentence)}`:'Dites-moi simplement ce dont vous avez besoin. Je ne vous ferai pas recommencer.'} ${dRelationshipLine()} »</p>
-        <h2>${title}</h2>
-        <p class="d-coach-hint">Cliquez un choix ci-dessous, ou dites-le-moi directement — les deux marchent aussi bien, à vous de voir.</p>
-        <div class="d-coach-actions">
-          <button onclick="dCoachChoose('choose')"><b>01</b><span><strong>Choisissez pour moi</strong><small>Des idées justes ou un programme complet</small></span><i>→</i></button>
-          <button onclick="dCoachChoose('animate')"><b>02</b><span><strong>Animez ce moment</strong><small>Jeux, défis, détente ou séance guidée</small></span><i>→</i></button>
-          <button onclick="dCoachChoose('adjust')"><b>03</b><span><strong>Réajustez mon rythme</strong><small>Plus doux, plus vivant, plus proche ou moins cher</small></span><i>→</i></button>
-          <button onclick="dCoachChoose('budget')"><b>04</b><span><strong>Protégez mon budget</strong><small>Équilibrer sans appauvrir l’expérience</small></span><i>→</i></button>
+        <span class="d-coach-eyebrow">${esc(question.eyebrow)}</span>
+        <p class="d-coach-voice">« ${esc(question.voice)} ${dRelationshipLine()} »</p>
+        <h2>${esc(question.title)}</h2>
+        <p class="d-coach-hint">Répondez d’un geste, écrivez ou parlez : D comprend les trois de la même façon.</p>
+        <div class="d-coach-actions ${question.id==='ready'?'ready-actions':''}">
+          ${question.choices.map(([id,label,detail],index)=>`<button onclick="answerDCoach('${question.id}','${id}')"><b>0${index+1}</b><span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span><i>→</i></button>`).join('')}
         </div>
         <div class="d-coach-free">
-          <input id="dCoachInput" value="${esc(context.sentence)}" placeholder="Ex. Les enfants s’ennuient, animez-nous 30 minutes…">
-          <button class="d-coach-send" onclick="askDCoach()">Confier à Dolcia</button>
+          <input id="dCoachInput" value="" placeholder="Ou dites-le naturellement à D…">
+          <button class="d-coach-send" onclick="askDCoach()">Envoyer</button>
           <button class="d-coach-mic" onclick="startDCoachVoice()" aria-label="Parler à Dolcia"><span></span></button>
         </div>
         <button class="d-coach-live-voice" onclick="toggleLiveConversation('dcoach')" aria-pressed="false"><i></i><span>Parler en direct avec Dolcia</span></button>
-        <div class="d-coach-status" id="dCoachStatus" aria-live="polite"><i></i><span>Prête à écouter, par écrit ou à voix haute.</span></div>
+        <div class="d-coach-live-impact" aria-live="polite"><i></i><span>${count?`${count} possibilités réévaluées en direct`:'D prépare votre terrain de jeu'}</span><b>Votre catalogue reste entièrement accessible</b></div>
+        <div class="d-coach-status" id="dCoachStatus" aria-live="polite"><i></i><span>Une question à la fois. Jamais deux fois la même.</span></div>
       </section>
     </article>
   </div>`);
-  setTimeout(()=>document.querySelector('#dCoachInput')?.focus(),180);
+  requestAnimationFrame(()=>document.querySelector('#dCoach article')?.classList.add('question-visible'));
 }
-function closeDCoach(){stopLiveConversation();document.querySelector('#dCoach')?.remove()}
+function closeDCoach(){
+  stopLiveConversation();document.querySelector('#dCoach')?.remove();
+  if(state.dDialogue.dirty&&state.view==='results'){state.dDialogue.dirty=false;renderResults()}
+}
 function dCoachChoose(mode){
   if(mode==='animate'){closeDCoach();return openDolciaAnimate()}
   if(mode==='budget'){closeDCoach();return openBudgetEditor()}
   if(mode==='adjust')return renderDCoachAdjustments();
   closeDCoach();
   if(state.program.length)return renderSurprise();
-  openEclatDialogue();
+  if(!state.answers.budget)state.answers.budget='flexible';
+  save();
+  if(state.allItems.length)return surprise(true);
+  compose();
 }
 function renderDCoachAdjustments(){
   const target=document.querySelector('.d-coach-dialogue');if(!target)return;
@@ -193,16 +250,34 @@ function setDCoachStatus(message,active=false){
   const status=document.querySelector('#dCoachStatus');if(!status)return;
   status.classList.toggle('active',active);status.querySelector('span').textContent=message;
 }
+function absorbDCoachSentence(value){
+  const text=plainText(value),vibes=new Set(state.answers.vibes||[]);
+  if(/famille|enfant|fille|fils|ado|bebe/.test(text))state.answers.who='family';
+  else if(/couple|a deux|amoureux|mari|femme/.test(text))state.answers.who='couple';
+  else if(/ami|copain|copine/.test(text))state.answers.who='friends';
+  else if(/seul|seule|pour moi/.test(text))state.answers.who='solo';
+  if(/2 ?h|deux heures|une heure/.test(text))state.answers.duration='2h';
+  else if(/apres.midi.*soir|soir.*apres.midi/.test(text))state.answers.duration='afternoon_evening';
+  else if(/journee|toute la journee/.test(text))state.answers.duration='day';
+  else if(/week.end|sejour|plusieurs jours|semaine/.test(text))state.answers.duration='stay';
+  if(/rire|jeu|defoul|bouger|sport/.test(text))vibes.add('play');
+  if(/air|mer|plage|nature|balade/.test(text))vibes.add('breathe');
+  if(/calme|repos|spa|massage|detendre|souffler/.test(text))vibes.add('recharge');
+  if(/concert|fete|danser|vibrer|soiree/.test(text))vibes.add('vibrate');
+  if(/manger|restaurant|gourmand|brunch|deguster/.test(text))vibes.add('taste');
+  if(/culture|musee|expo|atelier|creer|decouvrir/.test(text))vibes.add('create');
+  state.answers.vibes=[...vibes];
+}
 function askDCoach(){
   const input=document.querySelector('#dCoachInput'),value=input?.value.trim();if(!value)return showToast('Dites-moi ce que vous voulez que Dolcia prenne en charge');
-  state.answers.momentSentence=value;save();
+  state.answers.momentSentence=value;absorbDCoachSentence(value);dCoachRerank();save();
   const text=plainText(value);
   setDCoachStatus('Je comprends votre demande et je choisis la prochaine action utile…',true);
   setTimeout(()=>{
-    if(/anime|jeu|occuper|defi|coach|séance|seance/.test(text)){closeDCoach();openDolciaAnimate()}
+    if(/anime.moi|animation|occuper.*sans sortir|defi guide|coach|séance guidée|seance guidee/.test(text)){closeDCoach();openDolciaAnimate()}
     else if(/budget|moins cher|économ|econom|gratuit|dépens|depens/.test(text)){closeDCoach();openBudgetEditor()}
     else if(/plus doux|plus vivant|plus proche|rééquilibr|reequilibr|plan b|météo|meteo/.test(text)){renderDCoachAdjustments()}
-    else {closeDCoach();state.program.length?refreshRecommendations():compose()}
+    else openDCoach()
   },520);
 }
 function startDCoachVoice(){
@@ -223,8 +298,9 @@ function startDCoachVoice(){
 // (choisir/animer/ajuster/budget) est évalué instantanément côté client sur ce que la personne
 // vient de dire, sans attendre le réseau. Séparé de startDCoachVoice/speakAnimateStep pour ne
 // jamais toucher la dictée simple ni la narration scriptée déjà testées.
-const liveConversation={active:false,mode:null,messages:[],recognition:null,watcher:null,reader:null,audio:null,speaking:false,speechQueue:[],pendingAction:null,turnId:0};
+const liveConversation={active:false,mode:null,messages:[],recognition:null,watcher:null,reader:null,audio:null,speaking:false,speechQueue:[],pendingAction:null,turnId:0,realtimePeer:null,realtimeStream:null,realtimeChannel:null,realtimeAudio:null,realtimeTranscript:''};
 function liveConversationSupported(){return Boolean((window.SpeechRecognition||window.webkitSpeechRecognition)&&'speechSynthesis'in window)}
+function realtimeConversationSupported(){return Boolean(window.RTCPeerConnection&&navigator.mediaDevices?.getUserMedia)}
 function liveButton(mode){return mode==='animate'?document.querySelector('.animate-live-voice'):document.querySelector('.d-coach-live-voice')}
 function buildLiveContext(mode){
   if(mode==='animate'){
@@ -255,7 +331,12 @@ function stopLiveConversation(){
   try{liveConversation.watcher?.abort?.()}catch{}
   try{liveConversation.reader?.cancel?.()}catch{}
   try{liveConversation.audio?.pause?.()}catch{}
+  try{liveConversation.realtimeChannel?.close?.()}catch{}
+  try{liveConversation.realtimePeer?.close?.()}catch{}
+  try{liveConversation.realtimeStream?.getTracks?.().forEach(track=>track.stop())}catch{}
+  try{liveConversation.realtimeAudio?.pause?.()}catch{}
   liveConversation.recognition=null;liveConversation.watcher=null;liveConversation.reader=null;liveConversation.audio=null;
+  liveConversation.realtimePeer=null;liveConversation.realtimeStream=null;liveConversation.realtimeChannel=null;liveConversation.realtimeAudio=null;liveConversation.realtimeTranscript='';
   liveConversation.messages=[];liveConversation.mode=null;
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   liveButton(mode)?.classList.remove('listening','thinking','speaking');
@@ -440,14 +521,53 @@ async function sendLiveTurn(mode,userText){
     liveConversation.pendingAction=null;
   }
 }
-function toggleLiveConversation(mode){
+function realtimeEventText(event){
+  return event.transcript||event.text||event.delta||event.item?.content?.map(part=>part.transcript||part.text||'').join('')||'';
+}
+function stopGPTRealtimeOnly(){
+  try{liveConversation.realtimeChannel?.close?.()}catch{}
+  try{liveConversation.realtimePeer?.close?.()}catch{}
+  try{liveConversation.realtimeStream?.getTracks?.().forEach(track=>track.stop())}catch{}
+  try{liveConversation.realtimeAudio?.pause?.()}catch{}
+  liveConversation.realtimePeer=null;liveConversation.realtimeStream=null;liveConversation.realtimeChannel=null;liveConversation.realtimeAudio=null;liveConversation.realtimeTranscript='';
+}
+async function startGPTRealtime(mode){
+  const peer=new RTCPeerConnection();
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  if(!liveConversation.active||liveConversation.mode!==mode){stream.getTracks().forEach(track=>track.stop());peer.close();return}
+  liveConversation.realtimePeer=peer;liveConversation.realtimeStream=stream;
+  const audio=document.createElement('audio');audio.autoplay=true;audio.setAttribute('aria-hidden','true');liveConversation.realtimeAudio=audio;
+  peer.ontrack=event=>{audio.srcObject=event.streams[0]};
+  stream.getTracks().forEach(track=>peer.addTrack(track,stream));
+  const channel=peer.createDataChannel('oai-events');liveConversation.realtimeChannel=channel;
+  channel.onopen=()=>{liveButton(mode)?.classList.add('listening');setLiveStatus(mode,'Je vous écoute. Parlez naturellement…')};
+  channel.onmessage=message=>{
+    let event;try{event=JSON.parse(message.data)}catch{return}
+    const button=liveButton(mode);
+    if(event.type==='input_audio_buffer.speech_started'){button?.classList.remove('thinking','speaking');button?.classList.add('listening');setLiveStatus(mode,'Je vous écoute…')}
+    if(event.type==='input_audio_buffer.speech_stopped'||event.type==='response.created'){button?.classList.remove('listening');button?.classList.add('thinking');setLiveStatus(mode,'Je vous réponds…')}
+    if(event.type?.includes('output_audio')||event.type?.includes('audio_transcript')){button?.classList.remove('thinking','listening');button?.classList.add('speaking');const text=realtimeEventText(event);if(text)liveConversation.realtimeTranscript+=text}
+    if(event.type==='response.done'){button?.classList.remove('thinking','speaking');button?.classList.add('listening');if(liveConversation.realtimeTranscript.trim()){liveConversation.messages.push({role:'assistant',content:liveConversation.realtimeTranscript.trim()});liveConversation.realtimeTranscript=''}setLiveStatus(mode,'Je vous écoute…')}
+    if(event.type==='error'){setLiveStatus(mode,'La conversation directe a été interrompue. Je repasse en mode compatible.');stopGPTRealtimeOnly();listenOnce(mode)}
+  };
+  peer.onconnectionstatechange=()=>{if(['failed','disconnected'].includes(peer.connectionState)&&liveConversation.active&&liveConversation.realtimePeer===peer){stopGPTRealtimeOnly();listenOnce(mode)}};
+  const offer=await peer.createOffer();await peer.setLocalDescription(offer);
+  const response=await fetch('/api/events?service=realtime',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:offer.sdp,mode,context:buildLiveContext(mode)})});
+  const answer=await response.json();
+  if(!response.ok||!answer.sdp)throw new Error(answer.error||'Realtime unavailable');
+  await peer.setRemoteDescription({type:'answer',sdp:answer.sdp});
+}
+async function toggleLiveConversation(mode){
   const button=liveButton(mode);
   if(liveConversation.active&&liveConversation.mode===mode)return stopLiveConversation();
-  if(!liveConversationSupported())return showToast('La conversation vocale n’est pas disponible sur ce navigateur. Vous pouvez écrire exactement la même chose.');
+  if(!realtimeConversationSupported()&&!liveConversationSupported())return showToast('La conversation vocale n’est pas disponible sur ce navigateur. Vous pouvez écrire exactement la même chose.');
   stopLiveConversation();
   liveConversation.active=true;liveConversation.mode=mode;liveConversation.messages=[];liveConversation.speechQueue=[];liveConversation.pendingAction=null;
   button?.setAttribute('aria-pressed','true');
-  listenOnce(mode);
+  if(realtimeConversationSupported()){
+    try{return await startGPTRealtime(mode)}catch{stopGPTRealtimeOnly();setLiveStatus(mode,'Je passe en mode vocal compatible…')}
+  }
+  if(liveConversationSupported())listenOnce(mode);else stopLiveConversation();
 }
 
 function retiredHomeArchive(){
@@ -466,7 +586,7 @@ function retiredHomeArchive(){
     ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#e2cf9b')}
   </div><button class="desire-cta" onclick="startCompose()"><span>La signature Dolcia</span><strong>Compose-moi mon expérience</strong><b>→</b></button></section>`);loadHomePulse();
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="eclat-home"><div class="eclat-home-atmosphere"></div><div class="eclat-home-copy"><span class="kicker">Chaque instant mérite une expérience</span><div class="eclat-home-mark"><span>D<i>✦</i></span><small>Dolcia vous écoute</small></div><h1>Vos prochaines émotions<br><em>commencent ici.</em></h1><p>Parlez naturellement. Dolcia comprend avec qui vous êtes, ce que vous ressentez, le temps disponible et votre budget total.</p><div class="eclat-home-actions"><button class="primary" onclick="openEclatDialogue()">Composer mon moment <b>→</b></button><button class="secondary" onclick="openExplorer()">Explorer librement <b>∞</b></button></div><div class="eclat-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openEclatDialogue()">« Surprenez-nous, mais sans voiture. »</button></div></div></section><section class="home-live-minimal"><div id="homeMajor" class="home-major-shell"><div class="home-major-loading">Dolcia vérifie les rendez-vous qui comptent aujourd’hui…</div></div><div class="live-pulse" id="livePulse"><div class="pulse-weather"><span>Maintenant au Touquet</span><strong id="pulseTemp">Météo en direct</strong><small id="pulseWeather">Actualisation…</small></div><div class="pulse-events"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></div></section>`);loadHomePulse()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="eclat-home"><div class="eclat-home-atmosphere"></div><div class="eclat-home-copy"><span class="kicker">Chaque instant mérite une expérience</span><div class="eclat-home-mark"><span>D<i>✦</i></span><small>Dolcia vous écoute</small></div><h1>Vos prochaines émotions<br><em>commencent ici.</em></h1><p>Parlez naturellement. Dolcia comprend avec qui vous êtes, ce que vous ressentez, le temps disponible et votre budget total.</p><div class="eclat-home-actions"><button class="primary" onclick="openEclatDialogue()">Composer mon moment <b>→</b></button><button class="secondary" onclick="openExplorer()">Voir toutes les activités <b>∞</b></button></div><div class="eclat-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openEclatDialogue()">« Surprenez-nous, mais sans voiture. »</button></div></div></section><section class="home-live-minimal"><div id="homeMajor" class="home-major-shell"><div class="home-major-loading">Dolcia vérifie les rendez-vous qui comptent aujourd’hui…</div></div><div class="live-pulse" id="livePulse"><div class="pulse-weather"><span>Maintenant au Touquet</span><strong id="pulseTemp">Météo en direct</strong><small id="pulseWeather">Actualisation…</small></div><div class="pulse-events"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></div></section>`);loadHomePulse()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -521,7 +641,7 @@ async function loadHomePulse(){
       get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),
       get(`/api/touquet-events?after=${today}&before=${today}`),
       get(`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${today}`),
-      get(`/api/major-events?date=${today}`)
+      get(`/api/major-events?date=${today}&days=30&lat=${state.location.lat}&lng=${state.location.lng}`)
     ]);
     if(state.view!=='home')return;
     const w=weather.status==='fulfilled'&&weather.value&&typeof weather.value==='object'?weather.value:null;
@@ -543,8 +663,10 @@ async function loadHomePulse(){
     if(list)list.innerHTML=emptyPulse();
   }
 }
-function renderHomeMajor(moment){const target=document.querySelector('#homeMajor');if(!target)return;if(!moment){target.innerHTML='';target.hidden=true;return}const date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});target.innerHTML=`<article class="home-major-card"><div><span class="kicker">Ce soir, un moment qui rassemble</span><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Grand rendez-vous')} · ${time}. Dolcia peut organiser votre soirée autour de cet événement et vérifier les lieux qui le diffusent.</p></div><div class="home-major-actions"><button class="primary" onclick="acceptHomeMajor('${esc(moment.id)}')">Oui, organiser ma soirée</button><button class="secondary" onclick="dismissHomeMajor()">Non merci</button></div></article>`}
-function acceptHomeMajor(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return startCompose();const date=new Date(moment.date);state.majorChoice=id;state.dateMode='major';state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),18,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);state.answers={duration:'evening',vibes:['vibrate']};openEclatDialogue()}
+function majorMomentTiming(moment){if(!moment)return'';const date=new Date(moment.date),day=date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});return moment.timeKnown===false?day:`${day} · ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`}
+function majorMomentAction(moment){if(moment?.kind==='astronomy')return{eyebrow:'Un phénomène rare à anticiper',description:`${moment.visibilityLabel||'Visible depuis votre région'}. Dolcia peut prévoir le bon créneau, un lieu adapté et les précautions utiles.`,button:'Préparer ce moment'};if(moment?.broadcastable)return{eyebrow:'Un grand rendez-vous qui rassemble',description:'Dolcia peut l’intégrer à votre programme et chercher uniquement des lieux de diffusion réellement confirmés.',button:'L’intégrer à mon moment'};return{eyebrow:'Un rendez-vous à ne pas manquer',description:'Dolcia peut l’intégrer à votre programme sans sacrifier le reste de vos envies.',button:'L’intégrer à mon moment'}}
+function renderHomeMajor(moment){const target=document.querySelector('#homeMajor');if(!target)return;if(!moment){target.innerHTML='';target.hidden=true;return}const copy=majorMomentAction(moment);target.hidden=false;target.innerHTML=`<article class="home-major-card"><div><span class="kicker">${esc(copy.eyebrow)}</span><h2>${esc(moment.title||moment.name)}</h2><p>${esc(majorMomentTiming(moment))}. ${esc(copy.description)}</p>${moment.safetyNote?`<p class="major-safety">${esc(moment.safetyNote)}</p>`:''}${moment.sourceUrl?`<a class="major-source" href="${esc(moment.sourceUrl)}" target="_blank" rel="noopener">Source officielle · ${esc(moment.source||'Organisateur')}</a>`:''}</div><div class="home-major-actions"><button class="primary" onclick="acceptHomeMajor('${esc(moment.id)}')">${esc(copy.button)}</button><button class="secondary" onclick="dismissHomeMajor()">Pas cette fois</button></div></article>`}
+function acceptHomeMajor(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return startCompose();const date=new Date(moment.date);state.majorChoice=id;state.dateMode='major';if(moment.kind==='astronomy'){state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),12,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),22,0);state.answers={duration:'afternoon_evening',vibes:['breathe']}}else{state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),18,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);state.answers={duration:'evening',vibes:['vibrate']}}openEclatDialogue()}
 function dismissHomeMajor(){const target=document.querySelector('#homeMajor');if(target){target.innerHTML='';target.hidden=true}}
 function openHomeEvent(id){startCompose();showToast('Choisissez votre timing : Dolcia intégrera les événements du jour')}
 function moment(kicker,title,image){return `<button class="moment-card" onclick="startCompose()"><img src="${image}" alt=""><span class="moment-copy"><small>${kicker}</small><h3>${title}</h3></span></button>`}
@@ -574,7 +696,19 @@ function budgetStep(){
   const budgetKind=['morning','afternoon','evening'].includes(duration)?'half':duration==='afternoon_evening'?'day':duration;const set=sets[budgetKind]||sets['2h'];return {title:set.title,sub:set.sub,options:set.values.map((x,i)=>[...x,[IMAGES.outside,IMAGES.family,IMAGES.food,IMAGES.slow][i]])}
 }
 function choice(step,o,selected){const active=step.multi?selected.includes(o[0]):selected===o[0]; return `<button class="choice ${active?'selected':''}" onclick="pick('${step.key}','${o[0]}',${!!step.multi})"><img src="${o[3]}" alt=""><span class="choice-copy"><h3>${o[1]}</h3><p>${o[2]}</p></span></button>`}
-function pick(key,val,multi){if(multi){const a=state.answers[key];state.answers[key]=a.includes(val)?a.filter(x=>x!==val):[...a,val]}else{if(key==='who'&&state.answers.who!==val)state.answers.groupDetail=null;state.answers[key]=val;if(key==='duration')state.answers.budget=null}renderComposer()}
+function pick(key,val,multi){
+  if(multi){
+    const a=state.answers[key];
+    state.answers[key]=a.includes(val)?a.filter(x=>x!==val):[...a,val];
+    renderComposer();
+    return;
+  }
+  if(key==='who'&&state.answers.who!==val)state.answers.groupDetail=null;
+  state.answers[key]=val;
+  if(key==='duration')state.answers.budget=null;
+  renderComposer();
+  setTimeout(nextStep,220);
+}
 function nextStep(){if(state.step>=0){const s=FLOW[state.step],v=state.answers[s.key];if(!v||(Array.isArray(v)&&!v.length))return showToast('Choisissez une option pour continuer')} if(state.step<FLOW.length-1){state.step++;renderComposer()}else compose()}
 function backStep(){if(state.step<=1){state.step=-1;renderDate()}else{state.step--;renderComposer()}}
 
@@ -614,6 +748,7 @@ async function openExplorer(force=false){
 
 async function compose(explorerOnly=false){
   state.catalogAttempted=true;
+  state.catalogSourceStatus={attempted:0,responded:0,failed:0};
   state.view='loading';app.innerHTML=shell(`<section class="loading"><div class="loading-card"><div class="loader"></div><span class="kicker">Concierge Dolcia</span><h2>Nous composons votre moment.</h2><p>Nous croisons vos envies, la date, la météo et les expériences réelles autour de ${esc(state.location.name)}.</p><div class="live-search"><div class="live-line"><span>Météo locale</span><b id="load-weather">En cours</b></div><div class="live-line"><span>Événements aux bonnes dates</span><b id="load-events">En cours</b></div><div class="live-line"><span>Lieux accordés à vos envies</span><b id="load-places">En cours</b></div><div class="live-preview" id="live-preview"></div></div></div></section>`,'compose');
   state.items=[]; const queries=queriesForVibes();
   try{
@@ -623,9 +758,22 @@ async function compose(explorerOnly=false){
     const ticketmaster=`/api/ticketmaster-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
     const partners=`/api/partner-events?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
     const nationalTourism=`/api/datatourisme?lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}&after=${iso(state.dateStart)}&before=${iso(state.dateEnd)}`;
-    const majorMoments=`/api/major-events?date=${iso(state.dateStart)}`;
+    const majorMoments=`/api/major-events?date=${iso(state.dateStart)}&days=30&lat=${state.location.lat}&lng=${state.location.lng}`;
     const broadcastVenues=state.majorChoice?`/api/utils?action=broadcast-venues&event=${encodeURIComponent(state.majorChoice)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`:null;
-    const get=async url=>{const r=await fetch(url);if(!r.ok)throw new Error('source');return r.json()};
+    const get=async url=>{
+      const tracksCatalog=!/\/api\/(weather|major-events)/.test(url);
+      if(tracksCatalog)state.catalogSourceStatus.attempted+=1;
+      try{
+        const response=await fetch(url);
+        if(!response.ok)throw new Error('source');
+        const data=await response.json();
+        if(tracksCatalog)state.catalogSourceStatus.responded+=1;
+        return data;
+      }catch(error){
+        if(tracksCatalog)state.catalogSourceStatus.failed+=1;
+        throw error;
+      }
+    };
     let retrievalPlan=queries.slice(0,24).map(query=>({query,radius:state.radius,scope:'local',reason:'LOCAL_FALLBACK'}));
     try{const planned=await fetch('/api/utils?action=retrieval-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({queries,duration:state.answers.duration,momentSentence:state.answers.momentSentence||'',widened:Boolean(state.catalogFilters?.widened),localRadius:state.radius})}).then(response=>response.json());if(planned.plan?.length)retrievalPlan=planned.plan}catch(_){}
     const placeQueries=retrievalPlan.map(entry=>({...entry,url:`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${entry.radius}&mode=text&keyword=${encodeURIComponent(entry.query+' '+state.location.name)}`}));
@@ -635,7 +783,7 @@ async function compose(explorerOnly=false){
     const ticketmasterJob=get(ticketmaster).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);updateLivePreview()}).catch(()=>null);
     const partnerJob=get(partners).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ partenaires`);updateLivePreview()}).catch(()=>null);
     const nationalJob=get(nationalTourism).then(d=>{const found=normalizeEvents(d.events||[]);state.items.push(...found);if(found.length)markLoaded('events',`${found.length}+ offices de tourisme`);updateLivePreview()}).catch(()=>null);
-    const majorJob=get(majorMoments).then(d=>{state.majorMoments=(d.events||[]).map(event=>({...event,kind:'sport',score:100}))}).catch(()=>{state.majorMoments=[]});
+    const majorJob=get(majorMoments).then(d=>{state.majorMoments=(d.events||[]).map(event=>({...event,kind:event.kind||'major_event',score:Number(event.score)||100}))}).catch(()=>{state.majorMoments=[]});
     const broadcastJob=broadcastVenues?get(broadcastVenues).then(d=>{state.broadcastVenues=d.venues||[]}).catch(()=>{state.broadcastVenues=[]}):Promise.resolve();
     let placesFound=0;
     const placeJobs=placeQueries.map(entry=>get(entry.url).then(d=>{const found=normalizePlaces(d.results||[]).map(item=>({...item,retrievalScope:entry.scope,retrievalReason:entry.reason,retrievalMaxKm:entry.radius/1000})).filter(retrievalBoundaryAccepts);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés${retrievalPlan.some(item=>item.scope==='signature')?' · exception régionale demandée':''}`);updateLivePreview()}).catch(()=>null));
@@ -643,7 +791,7 @@ async function compose(explorerOnly=false){
     state.majorMoments=detectMajorMoments(state.items,state.majorMoments);
     const deduped=dedupe(state.items);
     await enrichPlaceAvailability(deduped);
-    state.allItems=(await rankItemsServer(deduped).catch(()=>[])).filter(geoVisible);
+    state.allItems=(await rankItemsServer(deduped).catch(()=>scoreItems(deduped))).filter(geoVisible);
     state.program=buildProgram(state.allItems);
     if(state.majorChoice)state.program=injectMajorMoment(state.program);
     state.alternatives=buildAlternatives(state.allItems);
@@ -653,10 +801,10 @@ async function compose(explorerOnly=false){
 }
 function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if(el){el.textContent=text;el.classList.add('done')}}
 function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
-function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
-function majorMomentPrompt(){const moment=state.majorMoments[0];if(!moment)return'';const chosen=state.majorChoice===moment.id,date=new Date(moment.date),time=date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),venues=chosen?(state.broadcastVenues.length?`<div class="broadcast-list">${state.broadcastVenues.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="${venue.confirmation==='confirmed'?'confirmed':'to-confirm'}">${venue.confirmation==='confirmed'?'Diffusion confirmée':'Diffusion à confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}${venue.rating?` · Google ${venue.rating}/5`:''}</span></div><div>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank">Voir le lieu</a>`:''}</div></div>`).join('')}</div>`:'<div class="broadcast-empty"><b>Aucun lieu trouvé dans le rayon choisi.</b><span>Dolcia ne transforme pas un bar probable en diffusion certaine.</span></div>'):'';return `<section class="major-moment"><span class="kicker">Le grand rendez-vous du jour</span><div><h2>${esc(moment.title||moment.name)}</h2><p>${esc(moment.stage||'Événement exceptionnel')} · ${time}. Souhaitez-vous que Dolcia l’intègre à votre programme et cherche une diffusion réellement confirmée ?</p></div><div class="major-actions"><button class="primary" onclick="chooseMajorMoment('${esc(moment.id)}')">${chosen?'Actualiser les lieux':'Oui, l’intégrer'}</button><button class="secondary" onclick="dismissMajorMoment('${esc(moment.id)}')">Pas cette fois</button></div>${venues}<small>« À confirmer » signifie que le lieu est pertinent, mais qu’aucune annonce datée ne prouve encore la diffusion.</small></section>`}
-async function chooseMajorMoment(id){state.majorChoice=id;showToast('Dolcia compose votre soirée autour du match…');try{const response=await fetch(`/api/utils?action=broadcast-venues&event=${encodeURIComponent(id)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`),data=await response.json();state.broadcastVenues=data.venues||[]}catch(_){state.broadcastVenues=[]}state.program=injectMajorMoment(state.program.length?state.program:buildProgram(state.allItems));state.items=state.program.map(slot=>slot.item);renderSurprise()}
-function injectMajorMoment(program){const moment=state.majorMoments.find(item=>item.id===state.majorChoice);if(!moment)return program;const date=new Date(moment.date),minutes=date.getHours()*60+date.getMinutes(),item={id:moment.id,name:moment.title||moment.name,source:moment.source||'Source officielle',category:'night',date:moment.date,address:'Lieu de diffusion à choisir',official:true,timeKnown:true,summary:`${moment.stage||'Grand rendez-vous'} confirmé à ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}. Choisissez ensuite votre lieu de diffusion.`,quality:'official-partial'};let closest=-1,distance=Infinity;program.forEach((slot,index)=>{const match=slot.label.match(/(\d{2}):(\d{2})/);if(!match)return;const value=Number(match[1])*60+Number(match[2]),delta=Math.abs(value-minutes);if(delta<distance){distance=delta;closest=index}});const slot={label:`${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · Le grand rendez-vous`,item};if(closest>=0){const copy=[...program];copy[closest]=slot;return copy.sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}return [...program,slot].sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}
+function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration|éclipse|eclipse|pluie d.étoiles|grandes marées|phénomène astronomique/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:item.kind||'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
+function majorMomentPrompt(){const moment=state.majorMoments[0];if(!moment)return'';const chosen=state.majorChoice===moment.id,copy=majorMomentAction(moment),showVenues=chosen&&moment.broadcastable===true,venues=showVenues?(state.broadcastVenues.length?`<div class="broadcast-list">${state.broadcastVenues.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="${venue.confirmation==='confirmed'?'confirmed':'to-confirm'}">${venue.confirmation==='confirmed'?'Diffusion confirmée':'Diffusion à confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}${venue.rating?` · Google ${venue.rating}/5`:''}</span></div><div>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank" rel="noopener">Voir le lieu</a>`:''}</div></div>`).join('')}</div>`:'<div class="broadcast-empty"><b>Aucun lieu confirmé dans la destination.</b><span>Dolcia ne transforme pas un établissement probable en diffusion certaine.</span></div>'):'';return `<section class="major-moment"><span class="kicker">${esc(copy.eyebrow)}</span><div><h2>${esc(moment.title||moment.name)}</h2><p>${esc(majorMomentTiming(moment))}. ${esc(copy.description)}</p>${moment.safetyNote?`<p class="major-safety">${esc(moment.safetyNote)}</p>`:''}</div><div class="major-actions"><button class="primary" onclick="chooseMajorMoment('${esc(moment.id)}')">${chosen&&moment.broadcastable?'Actualiser les lieux':esc(copy.button)}</button><button class="secondary" onclick="dismissMajorMoment('${esc(moment.id)}')">Pas cette fois</button></div>${venues}${moment.sourceUrl?`<a class="major-source" href="${esc(moment.sourceUrl)}" target="_blank" rel="noopener">Vérifié par ${esc(moment.source||'la source officielle')}</a>`:''}</section>`}
+async function chooseMajorMoment(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return;state.majorChoice=id;showToast(moment.kind==='astronomy'?'Dolcia prépare ce moment rare…':'Dolcia ajuste votre programme…');if(moment.broadcastable===true){try{const response=await fetch(`/api/utils?action=broadcast-venues&event=${encodeURIComponent(id)}&lat=${state.location.lat}&lng=${state.location.lng}&radius=${Math.round(state.radius/1000)}`),data=await response.json();state.broadcastVenues=data.venues||[]}catch(_){state.broadcastVenues=[]}}else state.broadcastVenues=[];state.program=injectMajorMoment(state.program.length?state.program:buildProgram(state.allItems));state.items=state.program.map(slot=>slot.item);renderSurprise()}
+function injectMajorMoment(program){const moment=state.majorMoments.find(item=>item.id===state.majorChoice);if(!moment)return program;const date=new Date(moment.date),hasTime=moment.timeKnown!==false,minutes=hasTime?date.getHours()*60+date.getMinutes():16*60,isAstronomy=moment.kind==='astronomy',item={id:moment.id,name:moment.title||moment.name,source:moment.source||'Source officielle',sourceUrl:moment.sourceUrl||'',category:isAstronomy?'outside':'night',date:moment.date,address:isAstronomy?(moment.visibilityLabel||state.location.name):(moment.broadcastable?'Lieu de diffusion à choisir':state.location.name),official:true,timeKnown:hasTime,summary:isAstronomy?`${moment.summary||moment.stage||'Phénomène naturel vérifié'}. L’horaire local précis devra être confirmé avant le jour J.${moment.safetyNote?` ${moment.safetyNote}`:''}`:`${moment.stage||'Grand rendez-vous'}${hasTime?` confirmé à ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:''}.`,quality:hasTime?'official':'official-partial'};let closest=-1,distance=Infinity;program.forEach((entry,index)=>{const match=entry.label.match(/(\d{2}):(\d{2})/);if(!match)return;const value=Number(match[1])*60+Number(match[2]),delta=Math.abs(value-minutes);if(delta<distance){distance=delta;closest=index}});const label=hasTime?`${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · Le grand rendez-vous`:`À préciser · ${isAstronomy?'Le phénomène du jour':'Le grand rendez-vous'}`,slot={label,item};if(closest>=0){const copy=[...program];copy[closest]=slot;return copy.sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}return [...program,slot].sort((a,b)=>slotMinutes(a.label)-slotMinutes(b.label))}
 function slotMinutes(label){const match=label.match(/(\d{2}):(\d{2})/);return match?Number(match[1])*60+Number(match[2]):0}
 function dismissMajorMoment(id){state.majorMoments=state.majorMoments.filter(item=>item.id!==id);renderResults()}
 function queriesForVibes(){
@@ -1014,7 +1162,10 @@ function renderResults(){
   const visibleBase=state.allItems.filter(geoVisible);
   const counts=Object.fromEntries(families.map(([id])=>[id,id==='all'?visibleBase.length:visibleBase.filter(item=>catalogFamily(item)===id).length]));
   if(!state.allItems.length){
-    app.innerHTML=shell(`<section class="explorer-recovery"><div class="explorer-recovery-glow"></div><span class="eclat-mini">D<i>✦</i></span><span class="kicker">Dolcia garde le cap</span><h1>Le territoire ne nous a pas encore<br><em>livré ses meilleures idées.</em></h1><p>Ce n’est pas une absence d’activités. Les sources n’ont simplement pas répondu correctement. Dolcia peut les interroger à nouveau sans perdre votre moment.</p><div><button class="primary" onclick="openExplorer(true)">Relancer toutes les sources</button><button class="secondary" onclick="openEclatDialogue()">Dites-moi ce qui vous ferait plaisir</button></div><small>Aucune proposition inventée ne remplacera une information indisponible.</small></section>`,'discover');
+    const sourceDown=!state.catalogSourceStatus||state.catalogSourceStatus.responded===0;
+    app.innerHTML=shell(sourceDown
+      ?`<section class="explorer-recovery compact-recovery"><div class="recovery-visual"><span class="eclat-mini">D<i>✦</i></span><div><span class="kicker">Connexion momentanément incomplète</span><h1>Je garde votre demande.<br><em>Je relance la recherche.</em></h1></div></div><p>Les activités n’ont pas disparu : certaines sources n’ont simplement pas répondu. Vous pouvez réessayer ou préciser votre envie à D sans recommencer.</p><div class="recovery-actions"><button class="primary" onclick="openExplorer(true)">Réessayer maintenant</button><button class="secondary" onclick="openDCoach()">Préciser avec D</button><button class="ghost" onclick="home()">Revenir à l’accueil</button></div><small>Aucune activité incertaine ne sera inventée pour remplir cet écran.</small></section>`
+      :`<section class="explorer-recovery compact-recovery"><div class="recovery-visual"><span class="eclat-mini">D<i>✦</i></span><div><span class="kicker">Aucune correspondance exacte</span><h1>Je garde votre envie.<br><em>Élargissons juste ce qu’il faut.</em></h1></div></div><p>Les sources ont bien répondu, mais aucune proposition ne réunit encore toutes vos conditions. Dolcia peut ajuster un seul critère sans modifier le reste de votre moment.</p><div class="recovery-actions"><button class="primary" onclick="openDCoach()">Ajuster avec D</button><button class="secondary" onclick="clearAdaptiveLenses();openExplorer(true)">Voir sans les filtres avancés</button><button class="ghost" onclick="home()">Revenir à l’accueil</button></div><small>Votre date, votre groupe et votre budget restent conservés.</small></section>`,'discover');
     return;
   }
   setTimeout(()=>mountThreeFutures(),0);
@@ -1077,7 +1228,7 @@ function programEmptyCinematic(){const strictFree=state.answers.budget==='free';
 function mountProgramIntelligence(){if(!state.program.length)return;const anchor=document.querySelector('.surprise-note');if(!anchor)return;const discovery=state.program.some(slot=>slot.item.discoveryPick),official=state.program.filter(slot=>slot.item.official&&slot.item.date).length,verified=state.program.filter(slot=>slot.item.quality==='verified'||slot.item.official).length,profiles=currentGroupProfiles().filter(person=>person.likes.length||person.avoids.length||person.momentNeed),strong=state.program.filter(slot=>slot.item.ranking?.groupFit?.ratio>=.75).length;anchor.insertAdjacentHTML('afterend',`${programArcPanel()}<aside class="program-intelligence"><div><span>Signature Dolcia</span><strong>${profiles.length?'J’ai trouvé votre point d’accord':'Pourquoi ce programme vous ressemble'}</strong>${profiles.length?`<small>${profiles.map(person=>esc(person.name)).join(', ')} · aucune étape contraire à un refus durable déclaré</small>`:''}</div><div class="intelligence-signals"><span><b>${verified}</b> choix solidement documentés</span><span><b>${official}</b> rendez-vous officiels à vos dates</span><span><b>${profiles.length?strong:(discovery?'1':'—')}</b> ${profiles.length?'accords forts dans ce programme':(discovery?'pépite inattendue mais cohérente':'surprise ajoutée seulement si elle est assez pertinente')}</span><span><b>100 %</b> ordonné selon votre rythme</span></div></aside>${state.answers.who==='family'?familyRhythmPanel():''}`)}
 function familyRhythmPanel(){const value=state.answers.familyRhythm||'together';return `<aside class="family-rhythm"><div><span class="kicker">Le rythme de votre famille</span><strong>Ensemble, ou chacun son moment ?</strong><p>Dolcia peut chercher un temps enfants réellement encadré, une parenthèse pour les parents, puis organiser les retrouvailles. Rien ne sera proposé sans encadrement documenté.</p></div><div>${[['together','Tout vivre ensemble'],['balanced','Un moment chacun + retrouvailles'],['flexible','Dolcia choisit le meilleur équilibre']].map(([id,label])=>`<button class="${value===id?'selected':''}" onclick="setFamilyRhythm('${id}')">${label}</button>`).join('')}</div></aside>`}
 function setFamilyRhythm(value){state.answers.familyRhythm=value;save();showToast(value==='together'?'Dolcia privilégie les moments tous ensemble':'Dolcia vérifie les activités encadrées avant de séparer le programme');compose()}
-function broadcastProgramPanel(){if(!state.majorChoice)return'';if(!state.broadcastVenues.length)return`<aside class="program-broadcast"><span>Lieu du match</span><strong>Aucune diffusion confirmée au Touquet.</strong><p>Le match reste dans le programme à 21 h. Dolcia continuera à vérifier les annonces ; aucun établissement ne sera présenté comme certain sans preuve.</p></aside>`;return `<aside class="program-broadcast"><span>Où voir le match ?</span><strong>${state.broadcastVenues.some(v=>v.confirmation==='confirmed')?'Diffusions confirmées':'Lieux à appeler pour confirmer'}</strong><div>${state.broadcastVenues.slice(0,4).map(venue=>`<article><b>${esc(venue.name)}</b><small>${venue.confirmation==='confirmed'?'Confirmé':'À confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</small>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank">Voir</a>`:''}</article>`).join('')}</div></aside>`}
+function broadcastProgramPanel(){if(!state.majorChoice)return'';const moment=state.majorMoments.find(item=>item.id===state.majorChoice);if(!moment?.broadcastable)return'';if(!state.broadcastVenues.length)return`<aside class="program-broadcast"><span>Lieu de diffusion</span><strong>Aucune diffusion confirmée dans la destination.</strong><p>Le rendez-vous reste dans le programme. Dolcia continuera à vérifier les annonces ; aucun établissement ne sera présenté comme certain sans preuve.</p></aside>`;return `<aside class="program-broadcast"><span>Où vivre ce rendez-vous ?</span><strong>${state.broadcastVenues.some(v=>v.confirmation==='confirmed')?'Diffusions confirmées':'Lieux à appeler pour confirmer'}</strong><div>${state.broadcastVenues.slice(0,4).map(venue=>`<article><b>${esc(venue.name)}</b><small>${venue.confirmation==='confirmed'?'Confirmé':'À confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</small>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank" rel="noopener">Voir</a>`:''}</article>`).join('')}</div></aside>`}
 function lodgingPreference(){const value=state.answers.lodging;return `<aside class="lodging-preference"><div><span>Votre hébergement</span><strong>${value?'Préférence enregistrée':'Quel séjour vous ressemble ?'}</strong><p>Dolcia ne confondra jamais un lieu à visiter avec un hébergement.</p></div><div>${[['family','Familial + piscine'],['sea','Vue mer'],['character','Hôtel de charme'],['simple','Simple et bien placé']].map(([id,label])=>`<button class="${value===id?'selected':''}" onclick="setLodging('${id}')">${label}</button>`).join('')}</div></aside>`}
 function setLodging(value){state.answers.lodging=value;showToast('Votre préférence d’hébergement est prise en compte');compose()}
 // Plan B météo : un seul design premium (noir/or, pas de bleu clair oublié d'une ancienne version),
@@ -1443,6 +1594,7 @@ window.openCirclePerson=openCirclePerson;window.saveCirclePerson=saveCirclePerso
 window.openSensitivity=openSensitivity;window.saveSensitivity=saveSensitivity;
 window.openDolciaAnimate=openDolciaAnimate;window.previewDolciaAnimate=previewDolciaAnimate;window.addDolciaAnimate=addDolciaAnimate;window.startDolciaAnimate=startDolciaAnimate;window.speakAnimateStep=speakAnimateStep;window.stopDolciaAnimate=stopDolciaAnimate;
 window.openDCoach=openDCoach;window.closeDCoach=closeDCoach;window.dCoachChoose=dCoachChoose;window.renderDCoachAdjustments=renderDCoachAdjustments;window.applyDCoachAdjustment=applyDCoachAdjustment;window.askDCoach=askDCoach;window.startDCoachVoice=startDCoachVoice;
+window.answerDCoach=answerDCoach;
 window.applyProgramDirection=applyProgramDirection;
 window.reactDolciaAnimate=reactDolciaAnimate;window.completeDolciaAnimateStep=completeDolciaAnimateStep;window.pauseDolciaAnimate=pauseDolciaAnimate;
 home();
