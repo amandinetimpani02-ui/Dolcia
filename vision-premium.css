@@ -26,17 +26,42 @@ body:before{
 .eclat-home-atmosphere{
   position:absolute;inset:0;z-index:-3;
   background:
-    linear-gradient(90deg,rgba(5,8,7,.93) 0%,rgba(5,8,7,.66) 48%,rgba(5,8,7,.2) 100%),
-    linear-gradient(0deg,rgba(5,8,7,.78),transparent 55%),
+    linear-gradient(90deg,rgba(4,6,5,.96) 0%,rgba(4,6,5,.74) 48%,rgba(4,6,5,.28) 100%),
+    linear-gradient(0deg,rgba(4,6,5,.86),transparent 55%),
     url('/assets/hero-le-touquet.png') center/cover;
   transform:scale(1.015);
+  filter:contrast(1.14) saturate(.9) brightness(.88);
 }
 .eclat-home:after{
   content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
   background:
-    radial-gradient(circle at 74% 35%,rgba(239,211,146,.18),transparent 18rem),
-    linear-gradient(180deg,transparent 72%,#070908);
+    radial-gradient(circle at 74% 32%,rgba(240,214,150,.32),transparent 15rem),
+    radial-gradient(ellipse at 50% 100%,transparent 55%,rgba(0,0,0,.62)),
+    radial-gradient(ellipse at 50% 50%,transparent 58%,rgba(0,0,0,.5) 100%),
+    linear-gradient(180deg,transparent 68%,#050605);
 }
+/* Rayon de lumière qui balaie lentement la scène, façon bande-annonce — discret, jamais criard. */
+.eclat-home-sweep{position:absolute;inset:-20% -30%;z-index:-2;pointer-events:none;
+  background:linear-gradient(72deg,transparent 42%,rgba(240,214,150,.09) 49%,rgba(255,240,205,.16) 50%,rgba(240,214,150,.09) 51%,transparent 58%);
+  animation:eclatSweep 9s ease-in-out infinite;
+}
+@keyframes eclatSweep{0%,100%{transform:translateX(-16%)}50%{transform:translateX(16%)}}
+@media(prefers-reduced-motion:reduce){.eclat-home-sweep{animation:none!important;opacity:0}}
+/* Petite scène animée d'accueil : lumière qui scintille et vague douce, façon "vidéo silencieuse"
+   sans dépendre d'un fichier vidéo. Reste discrète derrière le texte, jamais distrayante. */
+.eclat-home-motion{position:absolute;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.eclat-home-motion svg{width:100%;height:100%}
+.motion-glint{fill:#f0dba5;opacity:.55;animation:eclatGlint 3.6s ease-in-out infinite}
+.motion-glint.g2{animation-delay:.6s;animation-duration:4.1s}
+.motion-glint.g3{animation-delay:1.3s;animation-duration:3.2s}
+.motion-glint.g4{animation-delay:2s;animation-duration:4.6s}
+.motion-wave{fill:rgba(233,208,146,.05)}
+.motion-wave.w2{fill:rgba(233,208,146,.035)}
+.motion-wave{animation:eclatWave 14s ease-in-out infinite}
+.motion-wave.w2{animation-duration:19s;animation-delay:-4s}
+@keyframes eclatGlint{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.75;transform:scale(1.25)}}
+@keyframes eclatWave{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(-2%) translateY(4px)}}
+@media(prefers-reduced-motion:reduce){.motion-glint,.motion-wave{animation:none!important}}
 .eclat-home-copy{width:min(1180px,calc(100% - 44px));margin:auto;padding:clamp(110px,17vh,190px) 0 110px}
 .eclat-home-mark{display:flex;align-items:center;gap:12px;margin:20px 0 34px}
 .eclat-home-mark>span{
