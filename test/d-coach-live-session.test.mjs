@@ -23,8 +23,8 @@ test('D adapte la session aux réactions du groupe sans pénaliser un refus', ()
 
 test('la voix porte la personnalité et la consigne de la mission', () => {
   assert.match(app, /animateCoachLine\(session\).*animateStepText\(session\)/s);
-  assert.match(app, /voice\.lang='fr-FR'/);
-  assert.match(app, /voice\.rate=\.94/);
+  assert.match(app, /playPremiumVoice\(text/);
+  assert.match(app, /voiceMoodFromText/);
 });
 
 test('la session vivante garde une mise en scène premium et mobile', () => {

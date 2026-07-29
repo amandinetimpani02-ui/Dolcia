@@ -2,6 +2,7 @@ import { cached, remember } from './utils.js';
 import recommendationsHandler from '../server/recommendations.js';
 import flashOffersHandler from '../server/flash-offers.js';
 import coachConversationHandler from '../server/coach-conversation.js';
+import realtimeVoiceHandler from '../server/realtime-voice.js';
 import voiceSynthesisHandler from '../server/voice-synthesis.js';
 import pushSubscriptionsHandler from '../server/push-subscriptions.js';
 import flashNotifyHandler from '../server/flash-notify.js';
@@ -48,6 +49,7 @@ export default async function handler(req, res) {
   if (req.query.service === 'recommendations') return recommendationsHandler(req, res);
   if (req.query.service === 'flash-offers') return flashOffersHandler(req, res);
   if (req.query.service === 'coach') return coachConversationHandler(req, res);
+  if (req.query.service === 'realtime') return realtimeVoiceHandler(req, res);
   if (req.query.service === 'speak') return voiceSynthesisHandler(req, res);
   if (req.query.service === 'push-subscribe') return pushSubscriptionsHandler(req, res);
   if (req.query.service === 'flash-notify') return flashNotifyHandler(req, res);
