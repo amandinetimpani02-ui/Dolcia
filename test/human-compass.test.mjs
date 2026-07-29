@@ -27,7 +27,7 @@ test('une sortie éloignée doit mériter sa place', () => {
 });
 
 test('la version porte explicitement la vérité du moment', () => {
-  assert.match(client, /20\.13\.0-d-presence-vivante/);
+  assert.match(client, /20\.14\.0-signature-atelier/);
   assert.match(client, /function momentTruth/);
 });
 

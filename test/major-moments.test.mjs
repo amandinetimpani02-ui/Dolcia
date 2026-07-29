@@ -14,6 +14,6 @@ assert.match(app,/moment\.broadcastable===true/);
 assert.match(app,/moment\.kind==='astronomy'/);
 assert.match(app,/L’horaire local précis devra être confirmé/);
 assert.match(app,/days=30&lat=/);
-assert.match(app,/20\.13\.0-d-presence-vivante/);
+  assert.match(app,/20\.14\.0-signature-atelier/);
 
 console.log('major moments: ok');

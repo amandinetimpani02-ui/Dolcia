@@ -8,7 +8,7 @@ const css = await readFile(new URL('../vision-premium.css', import.meta.url), 'u
 test('la vérité du moment résume la décision en trois secondes', () => {
   assert.match(app, /function momentTruth\(/);
   assert.match(app, /id="momentChangeFeed"/);
-  assert.match(app, /idée\$\{truth\.compatible>1\?'s':''\} réellement compatible/);
+  assert.match(app, /idée\$\{truth\.compatible>1\?'s':''\} compatible/);
   assert.match(app, /aucun trajet inutile/);
   assert.match(css, /\.moment-truth/);
 });

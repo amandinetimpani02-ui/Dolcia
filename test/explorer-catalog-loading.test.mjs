@@ -26,5 +26,5 @@ test('renderResults cannot expose a first-load zero catalogue', () => {
 test('Explorer stays in catalogue mode after loading', () => {
   assert.match(app, /explorerOnly\?renderResults\(\)/);
   assert.match(app, /rankItemsServer\(deduped\)\.catch\(\(\)=>scoreItems\(deduped\)\)/);
-  assert.match(app, /const APP_BUILD = '20\.13\.0-d-presence-vivante'/);
+  assert.match(app, /const APP_BUILD = '20\.14\.0-signature-atelier'/);
 });

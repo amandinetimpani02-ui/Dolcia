@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '20.13.0-d-presence-vivante';
+const APP_BUILD = '20.14.0-signature-atelier';
 // Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
 // correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
 // vit jamais ici.
@@ -1226,7 +1226,7 @@ function momentTruth(items=state.items.length?state.items:state.allItems){
 }
 function momentTruthPanel(items,scope='explorer'){
   const truth=momentTruth(items),trip=truth.unnecessary===0?'aucun trajet inutile':`${truth.unnecessary} trajet${truth.unnecessary>1?'s':''} à arbitrer`;
-  return `<section class="moment-truth ${scope}" aria-label="Vérité du moment"><div class="moment-truth-main"><span>Vérité du moment</span><strong>${esc(truth.now)}</strong></div><div class="moment-truth-facts"><b>${truth.compatible} idée${truth.compatible>1?'s':''} réellement compatible${truth.compatible>1?'s':''}</b><b>${truth.uniqueEvents} événement${truth.uniqueEvents>1?'s':''} unique${truth.uniqueEvents>1?'s':''}</b><b>${trip}</b></div><div class="moment-truth-live" id="momentChangeFeed"><i></i><span>Veille active · météo, disponibilités et offres</span></div><button class="moment-truth-decide" onclick="surprise(true)">Laisser D décider</button></section>`;
+  return `<section class="moment-truth ${scope}" aria-label="Vérité du moment"><div class="moment-truth-main"><span>Maintenant</span><strong>${esc(truth.now)}</strong></div><div class="moment-truth-facts"><b>${truth.compatible} idée${truth.compatible>1?'s':''} compatible${truth.compatible>1?'s':''}</b><b>${truth.uniqueEvents} rendez-vous unique${truth.uniqueEvents>1?'s':''}</b><b>${trip}</b></div><div class="moment-truth-live" id="momentChangeFeed"><i></i><span>Dolcia veille · météo, places et offres</span></div><button class="moment-truth-decide" onclick="surprise(true)">D compose pour moi</button></section>`;
 }
 function updateMomentChangeFeed(){
   const feed=document.querySelector('#momentChangeFeed');if(!feed)return;const changes=state.liveMoment.changes.slice(-2);
