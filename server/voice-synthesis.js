@@ -20,6 +20,13 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const text = typeof body.text === 'string' ? body.text.trim().slice(0, 600) : '';
   if (!text) return res.status(400).json({ error: 'Missing text' });
+  const mood = ['warm', 'joyful', 'calm', 'encouraging'].includes(body.mood) ? body.mood : 'warm';
+  const voiceProfiles = {
+    warm: { stability: 0.48, similarity_boost: 0.79, style: 0.38 },
+    joyful: { stability: 0.36, similarity_boost: 0.8, style: 0.62 },
+    calm: { stability: 0.64, similarity_boost: 0.78, style: 0.22 },
+    encouraging: { stability: 0.43, similarity_boost: 0.8, style: 0.5 }
+  };
 
   let upstream;
   try {
@@ -33,7 +40,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         text,
         model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.78, style: 0.35, use_speaker_boost: true }
+        voice_settings: { ...voiceProfiles[mood], use_speaker_boost: true }
       })
     });
   } catch (e) {
