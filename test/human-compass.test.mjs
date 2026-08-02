@@ -27,7 +27,7 @@ test('une sortie éloignée doit mériter sa place', () => {
 });
 
 test('la version porte explicitement la vérité du moment', () => {
-  assert.match(client, /20\.14\.0-signature-atelier/);
+  assert.match(client, /21\.40\.1-moteur-comportements/);
   assert.match(client, /function momentTruth/);
 });
 
@@ -50,6 +50,8 @@ test('un séjour pose une seule question décisive sur son rythme global', () =>
   assert.match(client, /function stayRhythmInsight/);
   assert.match(client, /if\(insight\.confidence>=\.8\)/);
   assert.match(client, /function renderStayRhythmQuestion/);
+  assert.match(client, /dialogue-choices stay-rhythm-options/);
+  assert.doesNotMatch(client, /dialogue-options stay-rhythm-options/);
   assert.match(client, /UNE NUANCE DÉCISIVE/);
   assert.match(client, /Surtout douceur & plage/);
   assert.match(client, /Une vraie semaine sportive/);

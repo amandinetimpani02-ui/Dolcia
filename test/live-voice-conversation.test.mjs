@@ -23,7 +23,7 @@ test('le D-Coach et Dolcia Anime proposent une conversation continue, sans rempl
 
 test('la boucle vocale se coupe proprement à la fermeture du D-Coach et à la pause de Dolcia Anime', () => {
   assert.match(app, /function closeDCoach\(\)\{\s*stopLiveConversation\(\)/);
-  assert.match(app, /function pauseDolciaAnimate\(\)\{stopLiveConversation\(\)/);
+  assert.match(app, /function pauseDolciaAnimate\(\)\{stopDolciaTheme\(\);stopLiveConversation\(\)/);
 });
 
 test('le moteur serveur ne fabrique jamais un fait touristique : la consigne l’interdit explicitement', () => {

@@ -34,7 +34,7 @@ test('les interventions spontanées sont minutées, contextuelles et restent un 
   assert.match(app, /52000/);
   assert.match(app, /On continue/);
   assert.match(app, /Adapte la suite/);
-  assert.match(app, /mais seulement si vous en avez envie/);
+  assert.match(app, /mais seulement si tu en as envie/);
   assert.match(premium, /\.animate-nudge/);
 });
 

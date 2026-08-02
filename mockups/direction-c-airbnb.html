@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dolcia — Direction C · Airbnb Luxe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--display:"Playfair Display",Georgia,serif;--sans:"Manrope",sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:#050505;color:#faf6ee;font-family:var(--sans)}
+  .scene{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+  .scene-image{position:absolute;inset:0;z-index:0;
+    background:linear-gradient(0deg,rgba(4,4,3,.97) 0%,rgba(4,4,3,.55) 42%,rgba(4,4,3,.08) 70%),
+      linear-gradient(100deg,rgba(4,4,3,.55) 0%,transparent 45%),
+      url('https://picsum.photos/seed/dolcia-touquet/1600/2100') center/cover;
+    animation:kenburns 22s ease-in-out infinite alternate;
+  }
+  @keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.07)}}
+
+  .top{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;
+    padding:30px clamp(20px,5vw,60px) 0}
+  .brand{font-family:var(--display);font-size:15px;letter-spacing:.08em}
+  .date{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+
+  .editorial{position:relative;z-index:2;padding:0 clamp(20px,5vw,60px) 64px;max-width:760px}
+  .eyebrow{font-family:var(--display);font-style:italic;font-size:16px;color:#f0dba5;margin:0 0 16px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(46px,8vw,96px);line-height:.95;
+    letter-spacing:-.02em;margin:0 0 18px}
+  .deck{font-size:15px;line-height:1.6;color:rgba(255,255,255,.78);max-width:44ch;margin:0 0 32px}
+
+  .meta-row{display:flex;gap:26px;margin-bottom:34px;flex-wrap:wrap}
+  .meta{display:flex;flex-direction:column;gap:4px}
+  .meta span{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+  .meta b{font-family:var(--display);font-size:16px;font-weight:500}
+
+  .cta{display:inline-flex;align-items:center;gap:12px;background:#faf6ee;color:#0a0908;
+    padding:17px 28px;border-radius:999px;font-weight:600;font-size:14px;border:0;cursor:pointer;
+    transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s ease}
+  .cta:hover{transform:translateY(-3px);box-shadow:0 18px 40px -10px rgba(250,246,238,.35)}
+
+  .strip{position:relative;z-index:2;display:flex;gap:2px;padding:0 clamp(20px,5vw,60px);margin-top:-1px}
+  .strip i{flex:1;height:4px;background:rgba(255,255,255,.18)}
+  .strip i.on{background:#f0dba5}
+
+  .footer{position:relative;z-index:2;text-align:center;font-size:11px;color:rgba(255,255,255,.4);
+    padding:16px 0 24px}
+  .footer b{color:#f0dba5}
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="scene-image"></div>
+  <div class="top">
+    <span class="brand">Dolcia</span>
+    <span class="date">Mardi 5 août · Le Touquet</span>
+  </div>
+
+  <div class="editorial">
+    <p class="eyebrow">Il pleut… mais j'ai une idée.</p>
+    <h1>Une soirée<br>à Boulogne.</h1>
+    <p class="deck">Concert exceptionnel, jamais proposé cette saison — suivi d'une balade sur le port avant de rentrer.</p>
+
+    <div class="meta-row">
+      <div class="meta"><span>Ce soir</span><b>19h30</b></div>
+      <div class="meta"><span>Trajet</span><b>26 min</b></div>
+      <div class="meta"><span>Retour</span><b>23h15</b></div>
+    </div>
+
+    <button class="cta">L'intégrer à mon moment <span>→</span></button>
+  </div>
+
+  <div class="strip"><i class="on"></i><i></i><i></i></div>
+  <p class="footer">Direction C — <b>Airbnb Luxe</b> · photographie immense, magazine, cinématographique · photo d'espace réservé, la vraie image (itemImage) s'applique en production</p>
+</div>
+</body>
+</html>

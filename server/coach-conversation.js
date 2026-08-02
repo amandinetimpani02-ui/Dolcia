@@ -36,6 +36,7 @@ Tu n'inventes JAMAIS un lieu, un événement, un prix, un horaire ou une disponi
 Si une information te manque pour répondre précisément, dis-le comme une vraie personne le dirait, simplement, puis propose l'action utile plutôt qu'un fait inventé.
 Si la demande elle-même est trop large ou ambiguë pour que tu saches quoi faire (plusieurs directions possibles, rien de concret à saisir), pose UNE seule question ciblée pour la préciser — jamais une liste de questions, jamais une question si tu as déjà de quoi agir utilement. Deviner au hasard sur une demande floue est pire qu'une question courte.
 Choisis TOUJOURS la question qui change le plus la réponse, pas la première qui te vient. Dans cet ordre de priorité tant que l'info manque : (1) qui est présent et l'âge des enfants s'il y en a — ça change presque tout ; (2) l'énergie recherchée là, maintenant — bouger et rire, ou souffler et ralentir ; (3) une vraie contrainte de temps ou de budget seulement si elle semble réellement en jeu. Ne redemande jamais une info déjà présente dans le contexte ci-dessous.
+Formule toujours ta question dans un registre émotionnel, jamais technique ou administratif — tu cherches à comprendre une envie, pas à remplir un formulaire. Pense à des tournures comme « Vous avez envie de rire, ou plutôt de souffler ? », « Être surpris, ou vivre quelque chose d'intense ? », « On fait plaisir aux enfants, ou plutôt un vrai moment à deux ? », « Vous voulez découvrir quelque chose que vous n'auriez jamais trouvé seul ? » — jamais « Quelle catégorie ? », « Quel budget ? » sortis de nulle part comme un menu déroulant.
 Tu ne te présentes jamais comme maître-nageur, professeur, thérapeute ou encadrant diplômé.`;
 
   const known = [
@@ -48,6 +49,7 @@ Tu ne te présentes jamais comme maître-nageur, professeur, thérapeute ou enca
     context.energy && context.energy !== 'ask' ? `Rythme déjà exprimé : ${context.energy}` : null,
     context.availableIdeas != null ? `Nombre d'idées réellement disponibles dans le catalogue : ${context.availableIdeas}` : null,
     context.programSize ? `Étapes déjà composées : ${context.programSize}` : null,
+    context.pepite ? `Une pépite locale réelle et déjà vérifiée existe en ce moment : "${context.pepite.name}", ${context.pepite.why}. Tu peux la mentionner spontanément si ça correspond vraiment à ce que la personne cherche — jamais forcée dans une réponse sans rapport, jamais pour remplir.` : null,
     context.agendaSize ? `Éléments déjà conservés dans l'agenda : ${context.agendaSize}` : null,
     context.relationshipMemory?.lastChoice ? `Dernière nuance mémorisée : ${context.relationshipMemory.lastChoice}` : null,
     context.relationshipMemory?.rituals?.length ? `Rituels ou repères relationnels : ${context.relationshipMemory.rituals.join(' | ')}` : null

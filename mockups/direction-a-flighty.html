@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dolcia — Direction A · Flighty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050505; --ink:#f5f3ee; --muted:#8a8780; --line:rgba(255,255,255,.1); --gold:#d9b878;
+    --display:"Playfair Display",Georgia,serif; --sans:"Manrope",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:0 0 60px}
+  .frame{width:100%;max-width:460px;padding:64px 28px 0}
+  .tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;margin-bottom:64px}
+  .tag b{color:var(--gold);font-weight:600}
+  .phrase{font-family:var(--display);font-weight:500;font-size:26px;line-height:1.3;
+    color:var(--ink);margin:0 0 6px;letter-spacing:-.01em}
+  .phrase em{color:var(--gold);font-style:italic}
+  .sub{font-size:13px;color:var(--muted);margin:0 0 54px}
+
+  /* Signature : la proposition lue comme un statut de vol — départ/décor/durée en ligne, jamais
+     une carte. C'est la structure elle-même qui raconte, pas une image. */
+  .status{border-top:1px solid var(--line);padding-top:22px}
+  .status-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+  .status-row .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .status-row .v{font-family:var(--display);font-size:15px;color:var(--ink)}
+  .status-main{margin:26px 0 30px}
+  .status-main .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;display:block}
+  .status-main h1{font-family:var(--display);font-weight:600;font-size:44px;line-height:1.02;
+    margin:0 0 10px;letter-spacing:-.02em}
+  .status-main p{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
+  .track{position:relative;height:2px;background:var(--line);margin:30px 0;border-radius:2px}
+  .track::after{content:"";position:absolute;left:0;top:0;height:100%;width:38%;background:var(--gold);border-radius:2px}
+  .track-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:8px}
+  .cta{width:100%;background:transparent;border:1px solid var(--line);color:var(--ink);
+    font-family:var(--sans);font-weight:600;font-size:13px;padding:16px;border-radius:14px;
+    display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+    transition:border-color .25s ease,background .25s ease}
+  .cta:hover{border-color:var(--gold);background:rgba(217,184,120,.06)}
+  .cta span{color:var(--gold)}
+  .footer{margin-top:40px;font-size:11px;color:var(--muted);text-align:center;line-height:1.6}
+  .footer a{color:var(--gold);text-decoration:none}
+  .swatches{display:flex;gap:6px;justify-content:center;margin-top:26px}
+  .swatches i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .swatches i.on{background:var(--gold)}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="tag"><span>Dolcia</span><b>Mardi 5 août</b></div>
+  <p class="phrase">Il pleut<span>…</span> mais j'ai <em>une idée</em>.</p>
+  <p class="sub">Le Touquet-Paris-Plage · 09:14</p>
+
+  <div class="status">
+    <div class="status-main">
+      <span class="k">Ce soir vous attend</span>
+      <h1>Concert exceptionnel</h1>
+      <p>Une soirée rare, jamais proposée cette saison.</p>
+    </div>
+
+    <div class="status-row"><span class="k">Départ</span><span class="v">19:30 · Le Touquet</span></div>
+    <div class="status-row"><span class="k">Lieu</span><span class="v">Boulogne-sur-Mer</span></div>
+    <div class="track"></div>
+    <div class="track-labels"><span>Vous êtes ici</span><span>26 min de route</span></div>
+    <div class="status-row"><span class="k">Retour estimé</span><span class="v">23:15</span></div>
+
+    <button class="cta">L'intégrer à mon moment <span>→</span></button>
+  </div>
+
+  <div class="swatches"><i class="on"></i><i></i><i></i></div>
+  <p class="footer">Direction A — <a href="#">Flighty</a> · minimal, typographique, tout se lit sans image</p>
+</div>
+</body>
+</html>

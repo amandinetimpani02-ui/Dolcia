@@ -30,13 +30,23 @@ body:before{
     linear-gradient(0deg,rgba(5,8,7,.78),transparent 55%),
     url('/assets/hero-le-touquet.png') center/cover;
   transform:scale(1.015);
-  animation:eclatBreath 14s ease-in-out infinite alternate;
+  animation:eclatBreath 8s ease-in-out infinite alternate;
 }
 .eclat-home:before{
   content:"";position:absolute;inset:-24% -34%;z-index:-2;pointer-events:none;
-  background:linear-gradient(112deg,transparent 28%,rgba(255,239,198,.075) 47%,rgba(231,199,127,.025) 54%,transparent 70%);
+  background:linear-gradient(112deg,transparent 28%,rgba(255,239,198,.16) 47%,rgba(231,199,127,.05) 54%,transparent 70%);
   transform:translateX(-26%) rotate(-2deg);
-  animation:eclatSweep 10s cubic-bezier(.45,0,.25,1) infinite;
+  animation:eclatSweep 4.5s cubic-bezier(.45,0,.25,1) infinite;
+}
+@keyframes eclatSweep{
+  0%,8%{transform:translateX(-30%) rotate(-2deg);opacity:0}
+  24%{opacity:.85}
+  48%{opacity:.5}
+  68%,100%{transform:translateX(34%) rotate(-2deg);opacity:0}
+}
+@keyframes eclatBreath{
+  from{transform:scale(1.015)}
+  to{transform:scale(1.05)}
 }
 .eclat-home:after{
   content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
@@ -44,16 +54,29 @@ body:before{
     radial-gradient(circle at 74% 35%,rgba(239,211,146,.18),transparent 18rem),
     linear-gradient(180deg,transparent 72%,#070908);
 }
-@keyframes eclatSweep{
-  0%,18%{transform:translateX(-30%) rotate(-2deg);opacity:0}
-  34%{opacity:.72}
-  64%{opacity:.38}
-  82%,100%{transform:translateX(34%) rotate(-2deg);opacity:0}
+/* Petites particules qui montent en scintillant, façon bulles ou lumière du soleil sur l'eau —
+   c'est ce qui donne l'énergie "vacances" qui manquait, pas juste un fond qui respire doucement. */
+.eclat-home-sparkles{position:absolute;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.eclat-home-sparkles i{position:absolute;bottom:-5%;width:5px;height:5px;border-radius:50%;background:#f0dba5;box-shadow:0 0 8px 2px rgba(240,219,165,.7);opacity:0;animation:eclatRise 6s ease-in infinite}
+.eclat-home-sparkles i:nth-child(1){left:6%;animation-delay:0s;animation-duration:5.5s}
+.eclat-home-sparkles i:nth-child(2){left:14%;animation-delay:.9s;animation-duration:6.5s;width:3px;height:3px}
+.eclat-home-sparkles i:nth-child(3){left:23%;animation-delay:2.1s;animation-duration:5s}
+.eclat-home-sparkles i:nth-child(4){left:33%;animation-delay:.4s;animation-duration:7s;width:4px;height:4px}
+.eclat-home-sparkles i:nth-child(5){left:44%;animation-delay:3s;animation-duration:5.8s}
+.eclat-home-sparkles i:nth-child(6){left:55%;animation-delay:1.6s;animation-duration:6.2s;width:3px;height:3px}
+.eclat-home-sparkles i:nth-child(7){left:64%;animation-delay:2.6s;animation-duration:5.4s}
+.eclat-home-sparkles i:nth-child(8){left:72%;animation-delay:.2s;animation-duration:6.8s;width:4px;height:4px}
+.eclat-home-sparkles i:nth-child(9){left:80%;animation-delay:1.3s;animation-duration:5.2s}
+.eclat-home-sparkles i:nth-child(10){left:87%;animation-delay:2.9s;animation-duration:6s;width:3px;height:3px}
+.eclat-home-sparkles i:nth-child(11){left:94%;animation-delay:.7s;animation-duration:5.7s}
+.eclat-home-sparkles i:nth-child(12){left:50%;animation-delay:1.9s;animation-duration:6.4s;width:4px;height:4px}
+@keyframes eclatRise{
+  0%{transform:translateY(0) scale(.6);opacity:0}
+  12%{opacity:.9}
+  85%{opacity:.5}
+  100%{transform:translateY(-92vh) scale(1.1);opacity:0}
 }
-@keyframes eclatBreath{
-  from{transform:scale(1.015)}
-  to{transform:scale(1.035)}
-}
+@media(prefers-reduced-motion:reduce){.eclat-home-sparkles i,.eclat-home-atmosphere,.eclat-home:before{animation:none!important}}
 .eclat-home-copy{width:min(1180px,calc(100% - 44px));margin:auto;padding:clamp(110px,17vh,190px) 0 110px}
 .eclat-home-mark{display:flex;align-items:center;gap:12px;margin:20px 0 34px}
 .eclat-home-mark>span{
@@ -478,10 +501,17 @@ button:focus-visible{outline:2px solid #f1d897;outline-offset:3px}
 
 /* Explorer : des couvertures éditoriales, jamais une succession de formulaires. */
 .catalog-toolbar,.filters-panel,.explorer-brief{
+  position:relative;
   border-color:var(--atelier-line)!important;
   background:linear-gradient(145deg,rgba(28,31,29,.67),rgba(10,12,11,.62))!important;
-  box-shadow:inset 0 1px rgba(255,255,255,.045);
+  box-shadow:inset 0 1px rgba(255,255,255,.045),0 24px 60px -20px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.25);
   backdrop-filter:blur(26px) saturate(1.18);
+}
+/* Le reflet net sur le bord supérieur — la vraie signature du Liquid Glass iOS 26, pas juste du flou. */
+.catalog-toolbar::before,.filters-panel::before,.explorer-brief::before{
+  content:"";position:absolute;top:0;left:6%;right:6%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.5) 45%,rgba(255,255,255,.5) 55%,transparent);
+  pointer-events:none;
 }
 .experience{
   border:1px solid var(--atelier-line)!important;border-radius:var(--atelier-radius-lg)!important;
@@ -576,4 +606,37 @@ button:focus-visible{outline:2px solid #f1d897;outline-offset:3px}
 }
 @media(prefers-reduced-motion:reduce){
   button,.experience,.experience .exp-image{transition:none!important}
+}
+
+/* v20.15 — la question décisive devient un geste premium et compréhensible. */
+.d-question-impact{
+  display:grid;grid-template-columns:42px 1fr;gap:13px;align-items:center;
+  margin:18px 0;padding:13px 15px;border:1px solid rgba(235,199,119,.25);
+  border-radius:18px;background:
+    radial-gradient(circle at 0 50%,rgba(228,184,87,.17),transparent 38%),
+    rgba(255,255,255,.035);
+  box-shadow:inset 0 1px rgba(255,255,255,.07);
+}
+.d-question-impact>i{
+  display:grid;place-items:center;width:40px;height:40px;border-radius:50%;
+  color:#19130a;background:linear-gradient(145deg,#fff0b8,#bf8428);
+  box-shadow:0 8px 25px rgba(196,140,42,.23);font-style:normal;
+}
+.d-question-impact strong{
+  display:block;margin-bottom:3px;color:#f2d48d;font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.d-question-impact span{display:block;color:rgba(255,250,238,.72);font-size:13px;line-height:1.45}
+.d-coach-actions.precision-actions button{
+  position:relative;overflow:hidden;background:
+    linear-gradient(120deg,rgba(255,255,255,.075),rgba(255,255,255,.025));
+}
+.d-coach-actions.precision-actions button:before{
+  content:"";position:absolute;inset:0;opacity:0;transition:opacity .28s;
+  background:radial-gradient(circle at 18% 20%,rgba(236,199,112,.17),transparent 43%);
+}
+.d-coach-actions.precision-actions button:hover:before{opacity:1}
+@media(max-width:620px){
+  .d-question-impact{grid-template-columns:34px 1fr;padding:11px 12px}
+  .d-question-impact>i{width:34px;height:34px}
 }

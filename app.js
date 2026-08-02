@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '20.14.0-signature-atelier';
+const APP_BUILD = '21.40.1-moteur-comportements';
 // Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
 // correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
 // vit jamais ici.
@@ -75,11 +75,100 @@ state.animateHistory=JSON.parse(localStorage.getItem('dolcia_animate_history_v1'
 state.companionMemory=JSON.parse(localStorage.getItem('dolcia_companion_memory_v1')||'{"interactions":0,"lastChoice":"","rituals":[],"tone":"warm"}');
 state.programPreferences=JSON.parse(localStorage.getItem('dolcia_program_preferences_v1')||'{"energy":"ask","dining":"ask","fatigue":"unknown"}');
 state.liveMoment={checkedAt:null,weatherKey:null,offerIds:[],changes:[],watcher:null};
-state.dDialogue={asked:[],dirty:false,mood:'concierge',messages:[],suggestedAction:'none'};
+state.dDialogue={asked:[],dirty:false,mood:'concierge',messages:[],suggestedAction:'none',lastImpact:''};
 state.dVisualMood='idle';
 let animateNudgeTimer=null;
+let animateAutoAdvanceTimer=null;
+// Avancement mains libres pour les programmes structurés (sport) : la voix parle déjà seule à
+// chaque étape, mais il fallait encore toucher l'écran pour passer à la suivante — impossible à
+// faire pendant un effort physique. Le minuteur avance seul, calé sur les horaires du programme.
+function parseStepSeconds(label){const match=/(\d{1,2}):(\d{2})/.exec(label||'');return match?(Number(match[1])*60+Number(match[2]))*60:0}
+function scheduleAnimateAutoAdvance(session){
+  window.clearTimeout(animateAutoAdvanceTimer);
+  if(!session.item.phased)return;
+  const steps=session.item.steps,current=parseStepSeconds(steps[session.index][0]);
+  const next=session.index<steps.length-1?parseStepSeconds(steps[session.index+1][0]):current+45;
+  const durationMs=Math.max(8,next-current)*1000;
+  animateAutoAdvanceTimer=window.setTimeout(()=>{if(state.activeAnimate===session)completeDolciaAnimateStep()},durationMs);
+}
 
 const esc = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Comportement commun à toutes les fenêtres modales — une seule mécanique pour toute l'application,
+// jamais à répéter fenêtre par fenêtre. Échap ferme, le focus reste emprisonné dedans tant qu'elle
+// est ouverte, il revient sur l'élément qui l'avait ouverte à la fermeture, le fond ne défile plus
+// pendant ce temps, et le bouton Retour mobile ferme la fenêtre plutôt que de quitter l'application.
+let modalOpenerStack=[];
+let modalClosingViaPopstate=false;
+let modalSuppressNextPopstate=false;
+function focusableIn(container){return[...container.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null)}
+function topModal(){const modals=document.querySelectorAll('.modal');return modals[modals.length-1]||null}
+// Le fond doit devenir réellement inerte (pas seulement visuellement bloqué) pendant qu'une
+// fenêtre est ouverte — sinon un lecteur d'écran peut encore parcourir ce qui est derrière.
+// Toute fenêtre qui n'est plus la plus haute de la pile devient inerte aussi, pas seulement le
+// contenu principal de l'application.
+function updateInertState(){
+  const modals=[...document.querySelectorAll('.modal')],top=modals[modals.length-1];
+  const appEl=document.querySelector('#app');
+  if(appEl)appEl.inert=modals.length>0;
+  modals.forEach(m=>{m.inert=m!==top});
+}
+// Le focus initial ne doit jamais tomber par défaut sur la croix de fermeture simplement parce
+// qu'elle est le premier élément dans le HTML — [autofocus] d'abord, sinon le premier élément
+// utile qui n'est pas le bouton fermer, et seulement en tout dernier recours la croix elle-même.
+function pickInitialFocus(modal){
+  const explicit=modal.querySelector('[autofocus]');if(explicit)return explicit;
+  const useful=focusableIn(modal).filter(el=>!el.classList.contains('close'));
+  return useful[0]||modal.querySelector('.close')||modal;
+}
+function enhanceModal(modal){
+  if(modal.dataset.a11yReady)return;
+  modal.dataset.a11yReady='1';
+  if(!modal.getAttribute('role'))modal.setAttribute('role','dialog');
+  modal.setAttribute('aria-modal','true');
+  if(!modal.hasAttribute('tabindex'))modal.setAttribute('tabindex','-1');
+  const closeBtn=modal.querySelector('.close');
+  if(closeBtn&&!closeBtn.getAttribute('aria-label'))closeBtn.setAttribute('aria-label','Fermer');
+  modalOpenerStack.push(document.activeElement);
+  document.body.style.overflow='hidden';
+  updateInertState();
+  pickInitialFocus(modal).focus?.();
+  history.pushState({dolciaModal:true},'');
+}
+// Deux drapeaux distincts, jamais confondus : l'un neutralise le popstate que NOUS déclenchons
+// nous-mêmes en consommant l'historique (fermeture normale, Échap ou ×) ; l'autre signale qu'un
+// vrai geste retour est déjà en train de fermer la fenêtre, pour ne jamais consommer l'historique
+// une deuxième fois pour la même action. C'est l'absence de cette distinction qui provoquait la
+// fermeture en cascade de deux fenêtres imbriquées pour un seul geste.
+function retireModal(){
+  const opener=modalOpenerStack.pop();
+  if(opener&&document.contains(opener))opener.focus?.();
+  if(!document.querySelector('.modal'))document.body.style.overflow='';
+  updateInertState();
+  if(modalClosingViaPopstate){modalClosingViaPopstate=false;return}
+  modalSuppressNextPopstate=true;
+  history.back();
+}
+document.addEventListener('keydown',e=>{
+  const modal=topModal();if(!modal)return;
+  if(e.key==='Escape'){e.preventDefault();modal.remove();return}
+  if(e.key==='Tab'){
+    const focusables=focusableIn(modal);if(!focusables.length)return;
+    const first=focusables[0],last=focusables[focusables.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  }
+});
+window.addEventListener('popstate',()=>{
+  if(modalSuppressNextPopstate){modalSuppressNextPopstate=false;return}
+  const modal=topModal();if(modal){modalClosingViaPopstate=true;modal.remove()}
+});
+new MutationObserver(mutations=>{
+  for(const m of mutations){
+    for(const node of m.addedNodes)if(node.nodeType===1&&node.classList?.contains('modal'))enhanceModal(node);
+    for(const node of m.removedNodes)if(node.nodeType===1&&node.classList?.contains('modal'))retireModal();
+  }
+}).observe(document.body,{childList:true});
 const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
 const iso = d => {const date=new Date(d);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`};
 const sameDay = (a,b) => a&&b&&a.toDateString()===b.toDateString();
@@ -107,7 +196,7 @@ function dRelationshipLine(){
 function shell(content, active='discover'){
   return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="openAccount()">VD</button></div></header>${content}${nav(active)}</main>`;
 }
-function nav(active){return `<nav class="bottom-nav essential-nav" aria-label="Navigation principale"><button class="nav-item ${active==='discover'?'active':''}" onclick="home()"><span>⌁</span>Explorer</button><button class="nav-item signature ${active==='compose'||active==='agenda'||active==='pass'?'active':''}" onclick="openMyMoment()"><b>D<i>✦</i></b><span>Mon moment${state.agenda.length?` · ${state.agenda.length}`:''}</span></button><button class="nav-item ${active==='services'?'active':''}" onclick="openMeHub()"><span>◯</span>Moi</button></nav>`}
+function nav(active){return `<nav class="bottom-nav essential-nav" aria-label="Navigation principale"><button class="nav-item ${active==='discover'?'active':''}" onclick="openExplorer()"><span>⌁</span>Explorer</button><button class="nav-item signature ${active==='compose'||active==='agenda'||active==='pass'?'active':''}" onclick="openMyMoment()"><b>D<i>✦</i></b><span>Mon moment${state.agenda.length?` · ${state.agenda.length}`:''}</span></button><button class="nav-item ${active==='services'?'active':''}" onclick="openMeHub()"><span>◯</span>Moi</button></nav>`}
 function openMyMoment(){openDCoach()}
 function openMeHub(){document.querySelector('#meHub')?.remove();const hasPass=state.passWallet.status==='active'||state.reservations.some(r=>r.status!=='cancelled'),amount=state.budgetPlan.amount;document.body.insertAdjacentHTML('beforeend',`<div class="modal me-hub" id="meHub"><article><button class="close" onclick="document.querySelector('#meHub')?.remove()">×</button><span class="kicker">Tout ce qui vous appartient</span><h2>Moi.</h2><p>Trois accès seulement. Dolcia conserve toute la richesse derrière eux.</p><div class="me-hub-grid"><button onclick="document.querySelector('#meHub')?.remove();openAccount()"><span>01</span><b>Mon profil & mon cercle</b><small>Mes proches, nos goûts et notre constellation</small></button><button onclick="document.querySelector('#meHub')?.remove();openBudgetEditor()"><span>02</span><b>Budget & tout compris</b><small>${amount==null?'Définir une enveloppe pour le groupe':`${amount.toLocaleString('fr-FR')} € prévus pour ce moment`}</small></button>${hasPass?`<button onclick="document.querySelector('#meHub')?.remove();renderPass()"><span>03</span><b>Mon Pass Dolcia</b><small>Prestations réservées et déjà comprises</small></button>`:`<button onclick="document.querySelector('#meHub')?.remove();renderAgenda()"><span>03</span><b>Mes moments</b><small>Programme, réservations et propositions du groupe</small></button>`}</div><aside class="inclusive-whisper"><b>Dolcia Tout Compris</b><span>Dans les destinations partenaires, repas, activités et avantages rejoindront automatiquement le Pass — jamais avant d’être réellement disponibles.</span></aside></article></div>`)}
 function openComposition(){if(state.program.length)return renderSurprise();startCompose()}
@@ -173,6 +262,8 @@ function dCoachNextQuestion(){
     title:'De quoi avez-vous vraiment besoin maintenant ?',
     choices:[['play','Rire et nous défouler','Du jeu, du mouvement, de la surprise'],['breathe','Prendre l’air','De l’espace et une respiration'],['recharge','Décrocher complètement','Du calme, du soin, aucune course'],['vibrate','Vibrer ensemble','Un moment fort à partager']]
   };
+  const decisive=dCoachDecisiveQuestion(asked);
+  if(decisive)return decisive;
   return{
     id:'ready',mood:'ready',eyebrow:'Dolcia a compris l’essentiel',
     voice:state.answers.momentSentence?`J’ai retenu : ${state.answers.momentSentence}`:'Je peux maintenant agir sans vous faire passer un interrogatoire.',
@@ -180,10 +271,63 @@ function dCoachNextQuestion(){
     choices:[['choose','Laisser D décider','Le meilleur accord, expliqué et modifiable'],['animate','D anime ce moment','Jeux, défis ou séance guidée'],['adjust','Affiner une nuance','Rythme, distance, surprise ou météo'],['budget','Protéger le budget','Équilibrer sans appauvrir l’expérience']]
   };
 }
+function dCoachDecisiveQuestion(asked=new Set()){
+  // Une seule précision facultative par moment : la question doit changer le classement,
+  // jamais seulement enrichir un profil ou prolonger artificiellement le parcours.
+  if([...asked].some(id=>id.startsWith('precision-')))return null;
+  const candidates=[];
+  const sentence=plainText(state.answers.momentSentence||'');
+  if(state.answers.who==='family'&&!state.answers.groupDetail&&!(state.answers.childrenAges||[]).length&&!/\b\d{1,2}\s*ans?\b|bebe|tout.petit|ado/.test(sentence)){
+    candidates.push({priority:100,id:'precision-family',mood:'group',eyebrow:'La précision qui protège toute la famille',
+      voice:'Je vous pose cette question parce qu’elle change vraiment les lieux, le rythme et les horaires.',
+      title:'Quels âges dois-je vraiment accorder ?',
+      impact:'Les idées incompatibles avec l’âge et le rythme du groupe seront écartées ; les autres seront réordonnées.',
+      choices:[['toddlers','Avec des tout-petits','Rythme doux, pauses et contraintes réelles'],['children','Avec des enfants','Bouger, jouer et s’émerveiller'],['teens','Avec des adolescents','Autonomie, énergie et expériences vivantes'],['mixed','Des âges mélangés','Un équilibre où personne n’est oublié']]});
+  }
+  if(state.answers.duration==='stay'&&!state.answers.stayRhythm){
+    candidates.push({priority:90,id:'precision-stay',mood:'tempo',eyebrow:'Le rythme qui change tout le séjour',
+      voice:'Je peux varier les journées ou assumer un vrai fil rouge. Je préfère vous laisser choisir.',
+      title:'Quel rythme voulez-vous vivre sur la durée ?',
+      impact:'Dolcia ajustera l’alternance des énergies sans imposer du repos ni répéter mécaniquement le même style.',
+      choices:[['balanced','Varier naturellement','Des temps forts et des respirations'],['sport','Garder une énergie sportive','Plus d’action, sans ralentissement imposé'],['slow','Prendre vraiment le temps','Moins d’étapes, davantage de profondeur'],['ask','Décider au fil du séjour','D vous proposera le choix au bon moment']]});
+  }
+  const genericHour=state.dateMode==='custom'&&new Date(state.dateStart).getHours()===0;
+  if(state.answers.duration==='2h'&&genericHour){
+    candidates.push({priority:85,id:'precision-time',mood:'tempo',eyebrow:'Deux heures, mais les bonnes',
+      voice:'Une activité parfaite à quinze heures peut être fermée à dix-neuf heures.',
+      title:'À quelle heure voulez-vous vraiment commencer ?',
+      impact:'Les horaires incompatibles seront retirés avant toute recommandation.',
+      choices:[['morning','Vers 10 h','Une matinée disponible'],['lunch','Vers 12 h 30','Autour du déjeuner'],['afternoon','Vers 15 h','Le cœur de l’après-midi'],['evening','Vers 19 h','Une vraie ouverture de soirée']]});
+  }
+  if(!state.answers.budget&&state.budgetPlan.amount==null){
+    candidates.push({priority:75,id:'precision-budget',mood:'ready',eyebrow:'Une enveloppe, pas une étiquette sociale',
+      voice:'Avoir les moyens ne signifie jamais vouloir dépenser fort à chaque étape.',
+      title:'Comment voulez-vous que je protège votre budget ici ?',
+      impact:'Le budget sera calculé pour tout le groupe et toute la durée, puis utilisé pour équilibrer — jamais pour vous enfermer.',
+      choices:[['free','0 € strict','Seulement du gratuit réellement confirmé'],['light','Rester léger','Un repère prudent, ajustable ensuite'],['flexible','Priorité au bon choix','Pas de plafond artificiel'],['signature','Une exception est possible','Économiser ailleurs si elle mérite vraiment le détour']]});
+  }
+  return candidates.sort((a,b)=>b.priority-a.priority)[0]||null;
+}
+function dCoachBudgetReference(level){
+  const people=currentGroupSize(),days=tripDays(),duration=state.answers.duration||'2h';
+  const perPerson=level==='signature'?(duration==='stay'?220*days:duration==='day'?160:80):(duration==='stay'?90*days:duration==='day'?65:30);
+  return Math.max(0,Math.round(perPerson*people/10)*10);
+}
 function dCoachChoiceValue(questionId,value){
   if(questionId==='duration')state.answers.duration=value;
   if(questionId==='who')state.answers.who=value;
   if(questionId==='impulse')state.answers.vibes=[value];
+  if(questionId==='precision-family')state.answers.groupDetail=value;
+  if(questionId==='precision-stay')state.answers.stayRhythm=value;
+  if(questionId==='precision-time'){
+    const hours={morning:[10,0],lunch:[12,30],afternoon:[15,0],evening:[19,0]}[value]||[12,0];
+    state.dateStart=new Date(state.dateStart);state.dateStart.setHours(hours[0],hours[1],0,0);
+  }
+  if(questionId==='precision-budget'){
+    if(value==='free'){state.answers.budget='free';state.budgetPlan.amount=0}
+    else if(value==='flexible'){state.answers.budget='flexible';state.budgetPlan.amount=null}
+    else{state.answers.budget='custom';state.budgetPlan.amount=dCoachBudgetReference(value)}
+  }
 }
 function dCoachLiveCount(){
   return (state.allItems||[]).filter(item=>typeof geoVisible!=='function'||geoVisible(item)).length;
@@ -197,7 +341,9 @@ function dCoachRerank(){
 }
 function answerDCoach(questionId,value){
   if(questionId==='ready')return dCoachChoose(value);
+  const question=dCoachNextQuestion();
   dCoachChoiceValue(questionId,value);
+  state.dDialogue.lastImpact=question?.impact||'Votre réponse vient de réordonner les idées sans masquer le catalogue.';
   state.dDialogue.asked=[...new Set([...(state.dDialogue.asked||[]),questionId])];
   dCoachRerank();save();
   document.querySelector('#dCoach article')?.classList.add('answering');
@@ -220,7 +366,8 @@ function openDCoach(){
         <p class="d-coach-voice">« ${esc(question.voice)} ${dRelationshipLine()} »</p>
         <h2>${esc(question.title)}</h2>
         <p class="d-coach-hint">Répondez d’un geste, écrivez ou parlez : D comprend les trois de la même façon.</p>
-        <div class="d-coach-actions ${question.id==='ready'?'ready-actions':''}">
+        ${question.impact?`<aside class="d-question-impact"><i>✦</i><div><strong>Pourquoi D vous le demande</strong><span>${esc(question.impact)}</span></div></aside>`:''}
+        <div class="d-coach-actions ${question.id==='ready'?'ready-actions':''} ${question.id.startsWith('precision-')?'precision-actions':''}">
           ${question.choices.map(([id,label,detail],index)=>`<button onclick="answerDCoach('${question.id}','${id}')"><b>0${index+1}</b><span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span><i>→</i></button>`).join('')}
         </div>
         ${dCoachConversationMarkup()}
@@ -230,7 +377,7 @@ function openDCoach(){
           <button class="d-coach-mic" onclick="startDCoachVoice()" aria-label="Parler à Dolcia"><span></span></button>
         </div>
         <button class="d-coach-live-voice" onclick="toggleLiveConversation('dcoach')" aria-pressed="false"><i></i><span>Parler en direct avec Dolcia</span></button>
-        <div class="d-coach-live-impact" aria-live="polite"><i></i><span>${count?`${count} possibilités réévaluées en direct`:'D prépare votre terrain de jeu'}</span><b>Votre catalogue reste entièrement accessible</b></div>
+        <div class="d-coach-live-impact" aria-live="polite"><i></i><span>${count?`${count} possibilités réévaluées en direct`:'D prépare votre terrain de jeu'}</span><b>${esc(state.dDialogue.lastImpact||'Votre catalogue reste entièrement accessible')}</b></div>
         <div class="d-coach-status" id="dCoachStatus" aria-live="polite"><i></i><span>D écoute, rebondit et vous laisse toujours le dernier mot.</span></div>
       </section>
     </article>
@@ -363,6 +510,14 @@ const liveConversation={active:false,mode:null,messages:[],recognition:null,watc
 function liveConversationSupported(){return Boolean((window.SpeechRecognition||window.webkitSpeechRecognition)&&'speechSynthesis'in window)}
 function realtimeConversationSupported(){return Boolean(window.RTCPeerConnection&&navigator.mediaDevices?.getUserMedia)}
 function liveButton(mode){return mode==='animate'?document.querySelector('.animate-live-voice'):document.querySelector('.d-coach-live-voice')}
+// Une pépite locale déjà trouvée et vérifiée par le moteur géo (status 'extended') mérite d'être
+// mentionnée spontanément en conversation — pas seulement visible si la personne clique le bon
+// filtre. Jamais inventée : uniquement un item déjà présent dans state.allItems, déjà passé par
+// toutes les vérifications (commune, rareté, budget de temps de trajet).
+function currentPepiteHighlight(){
+  const pepite=state.allItems.filter(item=>item.geoEligibility?.status==='extended').sort((a,b)=>(b.score||0)-(a.score||0))[0];
+  return pepite?{name:pepite.name,why:pepite.date?`le ${new Date(pepite.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}`:'en ce moment'}:null;
+}
 function buildLiveContext(mode){
   if(mode==='animate'){
     const session=state.activeAnimate;
@@ -373,7 +528,7 @@ function buildLiveContext(mode){
     who:context.who,when:context.when,budget:context.budget,sentence:context.sentence,
     people:context.people,childrenAges:context.childrenAges,energy:context.energy,
     relationshipMemory:context.relationshipMemory,availableIdeas:context.availableIdeas,
-    programSize:context.programSize,agendaSize:context.agendaSize
+    programSize:context.programSize,agendaSize:context.agendaSize,pepite:currentPepiteHighlight()
   };
 }
 function setLiveStatus(mode,text){
@@ -667,7 +822,7 @@ function retiredHomeArchive(){
     ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#e2cf9b')}
   </div><button class="desire-cta" onclick="startCompose()"><span>La signature Dolcia</span><strong>Compose-moi mon expérience</strong><b>→</b></button></section>`);loadHomePulse();
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="eclat-home"><div class="eclat-home-atmosphere"></div><div class="eclat-home-copy"><span class="kicker">Chaque instant mérite une expérience</span><div class="eclat-home-mark"><span>D<i>✦</i></span><small>Dolcia vous écoute</small></div><h1>Vos prochaines émotions<br><em>commencent ici.</em></h1><p>Parlez naturellement. Dolcia comprend avec qui vous êtes, ce que vous ressentez, le temps disponible et votre budget total.</p><div class="eclat-home-actions"><button class="primary" onclick="openEclatDialogue()">Composer mon moment <b>→</b></button><button class="secondary" onclick="openExplorer()">Voir toutes les activités <b>∞</b></button></div><div class="eclat-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openEclatDialogue()">« Surprenez-nous, mais sans voiture. »</button></div></div></section><section class="home-live-minimal"><div id="homeMajor" class="home-major-shell"><div class="home-major-loading">Dolcia vérifie les rendez-vous qui comptent aujourd’hui…</div></div><div class="live-pulse" id="livePulse"><div class="pulse-weather"><span>Maintenant au Touquet</span><strong id="pulseTemp">Météo en direct</strong><small id="pulseWeather">Actualisation…</small></div><div class="pulse-events"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></div></section>`);loadHomePulse()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Dites-le simplement à Dolcia</label><input id="homeSearch" placeholder="Avec les enfants, face à la mer, sans trop marcher…" onfocus="openEclatDialogue()" readonly></div><button class="voice-live" onclick="openEclatDialogue(true)" aria-label="Dicter mon envie">◉</button></div><div class="home-quick-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openExplorer()">Voir toutes les activités</button></div><div class="pulse-events" id="livePulse"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -685,13 +840,13 @@ function renderEclatQuestion(){const target=document.querySelector('#eclatQuesti
   {q:'Avec qui allons-nous vivre ce moment ?',sub:'Je chercherai le meilleur accord pour les personnes présentes.',options:[['couple','En amoureux'],['family','En famille'],['friends','Entre amis'],['colleagues','Entre collègues'],['solo','Pour moi']]},
   {q:'De quoi avez-vous vraiment besoin maintenant ?',sub:'Choisissez l’élan dominant. Je garderai une part d’inattendu maîtrisé.',options:[['play','Rire et bouger'],['breathe','Prendre l’air'],['recharge','Décrocher complètement'],['taste','Bien manger'],['create','Découvrir et créer'],['vibrate','Vibrer ensemble']]},
   {q:'Quelle enveloppe totale souhaitez-vous respecter ?',sub:'Pour tout le groupe et tout le moment. Vous pourrez la modifier sans recommencer.',options:[['0','0 € · uniquement du gratuit confirmé'],['60','Jusqu’à 60 €'],['150','Jusqu’à 150 €'],['300','Jusqu’à 300 €'],['flexible','Priorité à l’expérience']]}
-  ];const screen=screens[brief.step];target.classList.remove('question-arrival');target.innerHTML=`<div class="dialogue-progress"><i style="--progress:${(brief.step+1)*25}%"></i><span>0${brief.step+1} / 04</span></div><h2>${screen.q}</h2><p>${screen.sub}</p><div class="dialogue-choices">${screen.options.map(([id,label])=>`<button onclick="answerEclat('${id}')"><span>${label}</span><b>→</b></button>`).join('')}</div><div class="dialogue-free"><input id="eclatFree" placeholder="${brief.step===3?'Ou indiquez votre montant total…':'Ou dites-le avec vos mots…'}" ${brief.step===3?'inputmode="decimal"':''}><button onclick="answerEclatFree()">Continuer</button><button class="voice" onclick="startEclatVoice()" aria-label="Parler à Dolcia">●</button></div>`;requestAnimationFrame(()=>target.classList.add('question-arrival'));updateEclatScene()}
+  ];const screen=screens[brief.step];target.classList.remove('question-arrival');target.innerHTML=`<div class="dialogue-progress"><i style="--progress:${(brief.step+1)*25}%"></i><span>0${brief.step+1} / 04</span></div><h2>${screen.q}</h2><p>${screen.sub}</p><div class="dialogue-choices">${screen.options.map(([id,label])=>`<button onclick="answerEclat('${id}')"><span>${label}</span><b>→</b></button>`).join('')}</div><div class="dialogue-free"><input id="eclatFree" placeholder="${brief.step===3?'Ou indiquez votre montant total…':'Ou dites-le avec vos mots…'}" ${brief.step===3?'inputmode="decimal"':''} onkeydown="if(event.key==='Enter')answerEclatFree()"><button onclick="answerEclatFree()">Continuer</button><button class="voice" onclick="startEclatVoice()" aria-label="Parler à Dolcia">●</button></div>`;requestAnimationFrame(()=>target.classList.add('question-arrival'));updateEclatScene()}
 function answerEclat(value){const brief=state.eclatBrief;if(!brief)return;if(brief.step===0){brief.answers.date=value;if(value==='custom')return renderEclatCustomDate();brief.answers.duration=value==='tonight'?'evening':value==='tomorrow'?'day':'2h'}if(brief.step===1)brief.answers.who=value;if(brief.step===2){brief.answers.vibe=value;return advanceAfterVibe()}if(brief.step===3)brief.answers.budget=value;if(brief.step<3){brief.step++;renderEclatQuestion()}else finishEclat()}
 function renderEclatCustomDate(){const target=document.querySelector('#eclatQuestion');if(!target)return;const today=iso(new Date());target.innerHTML=`<span class="dialogue-step">Votre moment</span><h2>Quand puis-je prendre soin de votre temps ?</h2><p>Choisissez la date et le rythme ici, sans quitter Dolcia.</p><div class="eclat-custom-date"><input id="eclatDate" type="date" min="${today}" value="${today}"><select id="eclatDuration"><option value="2h">Environ 2 heures</option><option value="morning">La matinée</option><option value="afternoon">L’après-midi</option><option value="afternoon_evening">L’après-midi + la soirée</option><option value="evening">La soirée</option><option value="day">La journée complète</option><option value="stay">Plusieurs jours</option></select><button onclick="answerEclatCustomDate()">Continuer →</button></div>`}
 function answerEclatCustomDate(){const value=document.querySelector('#eclatDate')?.value,duration=document.querySelector('#eclatDuration')?.value;if(!value)return showToast('Choisissez une date');const date=new Date(`${value}T12:00:00`);state.eclatBrief.answers.dateObject=date.toISOString();state.eclatBrief.answers.date='custom';state.eclatBrief.answers.duration=duration||'2h';state.eclatBrief.step=1;renderEclatQuestion()}
 function stayRhythmInsight(){const brief=state.eclatBrief?.answers||{},sentence=plainText(state.answers.momentSentence||''),vibe=brief.vibe||'';if(/semaine sportive|stage sportif|sport tous les jours|vacances sportives|beaucoup de sport/.test(sentence))return{id:'sport',confidence:.98,voice:'Vous voulez conserver une vraie intensité sportive pendant le séjour.'};if(/farniente|plage et repos|repos total|ne rien faire|se reposer surtout|vacances tranquilles/.test(sentence))return{id:'rest',confidence:.96,voice:'Vous cherchez surtout la douceur, la plage et du temps libre.'};if(/alterner|equilibr|un peu de sport|sport et repos|temps forts et repos/.test(sentence))return{id:'balanced',confidence:.94,voice:'Vous souhaitez alterner les temps forts et les journées plus douces.'};if(vibe==='recharge')return{id:'rest',confidence:.82,voice:'Je vous imagine dans un séjour surtout doux, avec seulement quelques élans choisis.'};return{id:'adaptive',confidence:.45,voice:'Je peux équilibrer le séjour, mais une nuance changera vraiment son rythme.'}}
 function advanceAfterVibe(){const brief=state.eclatBrief;if(!brief)return;const stay=brief.answers.duration==='stay';if(stay&&!brief.answers.stayRhythm){const insight=stayRhythmInsight();brief.answers.rhythmInsight=insight;if(insight.confidence>=.8)brief.answers.stayRhythm=insight.id;else return renderStayRhythmQuestion(insight)}brief.step=3;renderEclatQuestion()}
-function renderStayRhythmQuestion(insight=stayRhythmInsight()){const target=document.querySelector('#eclatQuestion');if(!target)return;target.innerHTML=`<div class="dialogue-progress"><i style="--progress:72%"></i><span>UNE NUANCE DÉCISIVE</span></div><span class="dialogue-step">Dolcia a compris l’essentiel</span><h2>${esc(insight.voice)}</h2><p>Dois-je équilibrer librement, ou souhaitez-vous donner une dominante claire au séjour ?</p><div class="dialogue-options stay-rhythm-options"><button onclick="answerStayRhythm('adaptive')"><strong>Équilibrez pour nous</strong><small>Temps forts et respirations selon l’énergie réelle du groupe</small><b>→</b></button><button onclick="answerStayRhythm('rest')"><strong>Surtout douceur & plage</strong><small>Repos dominant, avec quelques découvertes choisies</small><b>→</b></button><button onclick="answerStayRhythm('balanced')"><strong>Des journées contrastées</strong><small>Une journée active peut être suivie d’une journée plus douce</small><b>→</b></button><button onclick="answerStayRhythm('sport')"><strong>Une vraie semaine sportive</strong><small>Conserver volontairement une intensité élevée</small><b>→</b></button></div>`}
+function renderStayRhythmQuestion(insight=stayRhythmInsight()){const target=document.querySelector('#eclatQuestion');if(!target)return;target.innerHTML=`<div class="dialogue-progress"><i style="--progress:72%"></i><span>UNE NUANCE DÉCISIVE</span></div><span class="dialogue-step">Dolcia a compris l’essentiel</span><h2>${esc(insight.voice)}</h2><p>Dois-je équilibrer librement, ou souhaitez-vous donner une dominante claire au séjour ?</p><div class="dialogue-choices stay-rhythm-options"><button onclick="answerStayRhythm('adaptive')"><strong>Équilibrez pour nous</strong><small>Temps forts et respirations selon l’énergie réelle du groupe</small><b>→</b></button><button onclick="answerStayRhythm('rest')"><strong>Surtout douceur & plage</strong><small>Repos dominant, avec quelques découvertes choisies</small><b>→</b></button><button onclick="answerStayRhythm('balanced')"><strong>Des journées contrastées</strong><small>Une journée active peut être suivie d’une journée plus douce</small><b>→</b></button><button onclick="answerStayRhythm('sport')"><strong>Une vraie semaine sportive</strong><small>Conserver volontairement une intensité élevée</small><b>→</b></button></div>`}
 function answerStayRhythm(value){if(!state.eclatBrief)return;state.eclatBrief.answers.stayRhythm=value;state.eclatBrief.step=3;renderEclatQuestion()}
 function answerEclatFree(){const value=document.querySelector('#eclatFree')?.value.trim();if(!value)return showToast('Dites-moi simplement ce que vous souhaitez');if(state.eclatBrief.step===3){const amount=Number(value.replace(/[^0-9,.]/g,'').replace(',','.'));if(!Number.isFinite(amount)||amount<0)return showToast('Indiquez un budget total valide');state.eclatBrief.answers.budget=String(amount);return finishEclat()}state.answers.momentSentence=[state.answers.momentSentence,value].filter(Boolean).join(' · ');if(state.eclatBrief.step===2)return advanceAfterVibe();if(state.eclatBrief.step<3){state.eclatBrief.step++;renderEclatQuestion()}else finishEclat()}
 function startEclatVoice(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return showToast('La conversation vocale n’est pas disponible sur ce navigateur');const recognition=new Recognition();recognition.lang='fr-FR';recognition.onstart=()=>showToast('Dolcia vous écoute…');recognition.onresult=event=>{const input=document.querySelector('#eclatFree');if(input){input.value=event.results[0][0].transcript;answerEclatFree()}};recognition.start()}
@@ -709,10 +864,126 @@ function toggleCirclePerson(id){const person=state.circleProfiles.find(item=>ite
 function removeCirclePerson(id){if(id==='me')return showToast('Votre profil principal ne peut pas être retiré');state.circleProfiles=state.circleProfiles.filter(item=>item.id!==id);state.groupParticipants=state.groupParticipants.filter(item=>item.id!==id);save();openAccount();showToast('Profil retiré de votre cercle')}
 function saveAccount(){const name=document.querySelector('#accountName')?.value.trim(),consent=document.querySelector('#accountConsent')?.checked;if(!name||!consent)return showToast('Indiquez votre prénom et acceptez la mémorisation');localStorage.setItem('dolcia_profile_v1',JSON.stringify({name,consent,updatedAt:new Date().toISOString()}));document.querySelector('#accountSpace')?.remove();showToast('Votre espace Dolcia est créé sur cet appareil')}
 function memoryItem(id){return state.agenda.find(item=>item.id===id)||state.allItems.find(item=>item.id===id)||state.items.find(item=>item.id===id)}
-function openConstellation(){document.querySelector('#accountSpace')?.remove();document.querySelector('#constellationSpace')?.remove();const ids=[...new Set([...Object.keys(state.experienceMemories),...Object.keys(state.experienceFeelings)])],records=ids.map(id=>({id,item:memoryItem(id),memory:state.experienceMemories[id]||{},feeling:state.experienceFeelings[id]})).filter(record=>record.item);const learned=Object.entries(state.tasteProfile).filter(([,value])=>value).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,6);document.body.insertAdjacentHTML('beforeend',`<div class="modal constellation-space" id="constellationSpace"><article><button class="close" onclick="document.querySelector('#constellationSpace')?.remove()">×</button><span class="kicker">Votre mémoire visible et corrigeable</span><h2>Notre constellation.</h2><p>Les moments réellement vécus deviennent une carte personnelle. Dolcia distingue vos goûts durables de votre envie du jour.</p><div class="constellation-summary"><span><b>${records.length}</b> expérience${records.length>1?'s':''} racontée${records.length>1?'s':''}</span><span><b>${state.favorites.length}</b> coup${state.favorites.length>1?'s':''} de cœur</span><span><b>${state.circleProfiles.length+1}</b> personne${state.circleProfiles.length?'s':''} dans votre cercle</span></div>${learned.length?`<section class="learned-tastes"><span class="kicker">Ce que Dolcia a compris — modifiable</span><div>${learned.map(([category,value])=>`<button onclick="resetTaste('${esc(category)}')"><b>${esc(category)}</b><small>${value>0?'Vous semble plaire':'À proposer avec prudence'} · effacer ×</small></button>`).join('')}</div></section>`:''}<section class="constellation-list">${records.length?records.map(({id,item,memory,feeling})=>`<article><img src="${itemImage(item)}" alt=""><div><span>${memory.reaction?esc(memory.reaction):feeling?esc(feeling):'Souvenir enregistré'}</span><h3>${esc(item.name)}</h3><small>${memory.at?new Date(memory.at).toLocaleDateString('fr-FR'):'Date non renseignée'} · ${(memory.people||[]).map(person=>esc(person.name)).join(', ')||'Participants non renseignés'}</small><button onclick="forgetExperience('${id}')">Effacer ce souvenir</button></div></article>`).join(''):'<div class="constellation-empty"><h3>Votre constellation commence après votre première expérience.</h3><p>Une réaction suffit. Photos et souvenirs resteront toujours facultatifs.</p></div>'}</section><small class="privacy-note">Dolcia ne déduit jamais que vous connaissez ou ignorez un lieu sans preuve. Vous gardez le droit de correction et d’effacement.</small></article></div>`)}
+function openConstellation(){document.querySelector('#accountSpace')?.remove();document.querySelector('#constellationSpace')?.remove();const ids=[...new Set([...Object.keys(state.experienceMemories),...Object.keys(state.experienceFeelings)])],records=ids.map(id=>({id,item:memoryItem(id),memory:state.experienceMemories[id]||{},feeling:state.experienceFeelings[id]})).filter(record=>record.item);const learned=Object.entries(state.tasteProfile).filter(([,value])=>value).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,6);document.body.insertAdjacentHTML('beforeend',`<div class="modal constellation-space" id="constellationSpace"><article><button class="close" onclick="document.querySelector('#constellationSpace')?.remove()">×</button><span class="kicker">Votre mémoire visible et corrigeable</span><h2>Notre constellation.</h2><p>Les moments réellement vécus deviennent une carte personnelle. Dolcia distingue vos goûts durables de votre envie du jour.</p><div class="constellation-summary"><span><b>${records.length}</b> expérience${records.length>1?'s':''} racontée${records.length>1?'s':''}</span><span><b>${state.favorites.length}</b> coup${state.favorites.length>1?'s':''} de cœur</span><span><b>${state.circleProfiles.length+1}</b> personne${state.circleProfiles.length?'s':''} dans votre cercle</span></div>${learned.length?`<section class="learned-tastes"><span class="kicker">Ce que Dolcia a compris — modifiable</span><div>${learned.map(([category,value])=>`<button onclick="resetTaste('${esc(category)}')"><b>${esc(category)}</b><small>${value>0?'Vous semble plaire':'À proposer avec prudence'} · effacer ×</small></button>`).join('')}</div></section>`:''}<section class="constellation-list">${records.length?records.map(({id,item,memory,feeling})=>`<article><img src="${itemImage(item)}" alt="" loading="lazy" class="fade-img" onload="this.classList.add('img-loaded')"><div><span>${memory.reaction?esc(memory.reaction):feeling?esc(feeling):'Souvenir enregistré'}</span><h3>${esc(item.name)}</h3><small>${memory.at?new Date(memory.at).toLocaleDateString('fr-FR'):'Date non renseignée'} · ${(memory.people||[]).map(person=>esc(person.name)).join(', ')||'Participants non renseignés'}</small><button onclick="forgetExperience('${id}')">Effacer ce souvenir</button></div></article>`).join(''):'<div class="constellation-empty"><h3>Votre constellation commence après votre première expérience.</h3><p>Une réaction suffit. Photos et souvenirs resteront toujours facultatifs.</p><button class="primary" onclick="document.querySelector(\'#constellationSpace\')?.remove();openExplorer()">Découvrir des idées</button></div>'}</section><small class="privacy-note">Dolcia ne déduit jamais que vous connaissez ou ignorez un lieu sans preuve. Vous gardez le droit de correction et d’effacement.</small></article></div>`)}
 function resetTaste(category){delete state.tasteProfile[category];save();openConstellation();showToast('Cette préférence a été effacée')}
 function forgetExperience(id){delete state.experienceMemories[id];delete state.experienceFeelings[id];delete state.experienceTags[id];save();openConstellation();showToast('Ce souvenir et son apprentissage contextuel ont été effacés')}
 function rememberExperience(id,reaction){const item=memoryItem(id);if(!item)return;state.experienceMemories[id]={reaction,at:new Date().toISOString(),people:state.groupParticipants.filter(person=>person.selected!==false).map(({id,name,kind})=>({id,name,kind})),who:state.answers.who||'unknown',category:item.category||'other'};save();showToast('Ce moment rejoint Notre constellation');openDetailRefresh(id)}
+// Niveau 1 du Home : une seule phrase, toujours différente d'un jour à l'autre, jamais deux fois la
+// même formule d'affilée. Choisie une fois par jour (stable pour la session, comme le reste du
+// classement) à partir d'un vrai contexte quand il est connu — jamais une intuition sur l'humeur.
+// Home v3 — une affiche, pas une fiche. Une seule image porte l'émotion ; le texte flotte dessus,
+// jamais dans un cadre. La phrase (Niveau 1) et la proposition (Niveau 2) partagent la même image :
+// deux moments de lecture, une seule scène, comme une vraie invitation plutôt qu'un dashboard.
+// Les 20 séquences retenues après audit éditorial (content/home-selection-20.md) — vouvoiement
+// uniquement, aucune affirmation non fondée, aucune pression. Chaque clé correspond à un signal
+// déjà réellement disponible dans le code, jamais une donnée à inventer.
+const HOME_SEQUENCES={
+  rain:[
+    {signature:'Attendez…',beats:['Tout le monde fait demi-tour.','Pas vous.'],reveal:'La plage est presque à vous.'},
+    {signature:'Regardez.',beats:['La pluie vide les rues.','Elle ne vide pas tout.'],reveal:'Il reste un endroit pour vous.'},
+    {signature:'Chut.',beats:['On dirait un jour à rester dedans.','On dirait, seulement.'],reveal:'Il y a une autre option.'}
+  ],
+  sun:[
+    {signature:'Venez.',beats:['Le soleil ne prévient jamais quand il repart.'],reveal:'Profitez-en pendant qu’il est là.'},
+    {signature:'Regardez.',beats:['Ce ciel-là, on ne le commande pas.','Aujourd’hui, il est offert.'],reveal:'Voici comment en profiter.'},
+    {signature:'Faites-moi confiance.',beats:['Un ciel comme celui-ci mérite mieux qu’un balcon.'],reveal:'Voici mieux.'}
+  ],
+  wind:[
+    {signature:'Écoutez.',beats:['Ce vent-là n’abîme rien.','Il pousse.'],reveal:'Vers ça, par exemple.'},
+    {signature:'Venez.',beats:['Un grand vent, ça se regarde de près, pas de la fenêtre.'],reveal:'Voici où le sentir vraiment.'},
+    {signature:'Regardez.',beats:['Certains attendent que ça se calme.','D’autres en profitent.'],reveal:'Voici comment.'}
+  ],
+  family:[
+    {signature:'Regardez.',beats:['Il y a des journées qu’on planifie.','Et celles qui restent en photo longtemps après.'],reveal:'Celle-ci pourrait en être une.'},
+    {signature:'Écoutez.',beats:['« Qu’est-ce qu’on fait » ne devrait jamais rester sans réponse trop longtemps.'],reveal:'En voici une.'},
+    {signature:'Venez.',beats:['Un bon souvenir de famille ne coûte pas toujours cher.'],reveal:'Celui-ci, par exemple.'}
+  ],
+  couple:[
+    {signature:'Venez.',beats:['Ce n’est pas tous les jours qu’on a une vraie raison de se retrouver.'],reveal:'En voici une.'},
+    {signature:'Écoutez.',beats:['Vous n’avez pas besoin d’une occasion.','Juste d’un moment.'],reveal:'En voici un.'},
+    {signature:'Chut.',beats:['Pas besoin d’en parler à l’avance.','Laissez-vous surprendre.'],reveal:'Voici la surprise.'}
+  ],
+  gem:[
+    {signature:'Chut.',beats:['Ce que j’ai trouvé n’arrive pas souvent.'],reveal:'Regardez.'},
+    {signature:'Regardez.',beats:['Certaines choses valent le détour.','Celle-ci, vraiment.'],reveal:'Voici laquelle.'},
+    {signature:'Écoutez.',beats:['Ce n’est pas tous les jours.'],reveal:'Voici pourquoi.'}
+  ],
+  unique_event:[
+    {signature:'Aujourd’hui seulement.',beats:[],reveal:'Voici ce qui n’arrivera plus.'},
+    {signature:'Écoutez.',beats:['Demain, il sera trop tard pour celui-ci.'],reveal:'Aujourd’hui, encore possible.'}
+  ],
+  // Dolcia ne doit pas attendre un événement exceptionnel pour créer une émotion — mais sans fait
+  // vérifié (météo, horaire, agenda), elle ne doit jamais prétendre avoir observé quelque chose.
+  // Ces lignes restent purement émotionnelles, jamais une observation déguisée en révélation.
+  ordinary:[
+    {signature:'Attendez…',beats:['Votre journée n’est pas encore écrite.'],reveal:'Je peux m’occuper de la suite.'},
+    {signature:'Rien de prévu ?',beats:['Ce n’est pas un problème.'],reveal:'Laissez-moi vous guider.'},
+    {signature:'Regardez.',beats:['Une journée qui commence sans plan', 'n’est pas une journée perdue.'],reveal:'Construisons-la ensemble.'},
+    {signature:'Venez.',beats:['Il n’est jamais trop tôt pour bien commencer.'],reveal:'Je m’occupe du reste.'}
+  ]
+};
+// Priorité de sélection : pépite prouvée et événement unique (les plus rares, donc les plus
+// désirables — ARCHITECTURE.md §5) avant la météo, elle-même avant la composition du groupe connue.
+// Jamais deux contextes en même temps, jamais une supposition sans signal réel derrière.
+function pickHomeSequenceContext(moment){
+  if(moment){
+    if(moment.geoEligibility?.status==='extended')return'gem';
+    if(moment.date&&moment.confirmedUnique)return'unique_event';
+  }
+  const weather=(state.weather?.weather?.[0]?.main||'').toLowerCase();
+  if(moment&&/rain|drizzle|thunder/.test(weather))return'rain';
+  if(moment&&(/wind|squall/.test(weather)||Number(state.weather?.wind?.speed)>10))return'wind';
+  if(moment&&/clear/.test(weather))return'sun';
+  const who=state.answers?.who;
+  if(moment&&who==='family')return'family';
+  if(moment&&who==='couple')return'couple';
+  // Aucun grand moment aujourd'hui — ce n'est pas une raison de rester silencieux. Un mardi
+  // ordinaire mérite aussi sa révélation, tant qu'elle reste honnête (jamais un lieu inventé).
+  return'ordinary';
+}
+function homeCinemaAlreadyShownToday(){
+  const today=new Date().toISOString().slice(0,10);
+  return state.homeCinemaShownDate===today;
+}
+function markHomeCinemaShown(){
+  state.homeCinemaShownDate=new Date().toISOString().slice(0,10);save();
+}
+function homePosterInner(moment){
+  const photo=moment?itemImage(moment):IMAGES.hero;
+  const ctx=pickHomeSequenceContext(moment);
+  const ordinary=ctx==='ordinary';
+  const title=moment?(moment.title||moment.name):ordinary?'Votre moment, à construire ensemble.':'Dites-moi ce qui vous ferait plaisir.';
+  const cta=moment?majorMomentAction(moment).button:ordinary?'Laissez-vous guider':'Composer mon moment';
+  const action=moment?`acceptHomeMajor('${esc(moment.id)}')`:'openEclatDialogue()';
+  const sequence=HOME_SEQUENCES[ctx][Math.floor(Date.now()/86400000)%HOME_SEQUENCES[ctx].length];
+  const playCinema=!homeCinemaAlreadyShownToday();
+  if(playCinema)markHomeCinemaShown();
+  const image=`<div class="home-poster-image" style="background-image:linear-gradient(190deg,rgba(5,6,6,.15) 0%,rgba(5,6,6,.35) 55%,rgba(5,6,6,.92) 100%),url('${photo}')"></div>`;
+  if(!playCinema){
+    // Déjà vue aujourd'hui : on va droit à la révélation, avec une transition courte, jamais le
+    // spectacle complet une seconde fois.
+    return `${image}<div class="home-poster-content home-poster-instant"><p class="home-poster-kicker">${esc(sequence.reveal)}</p><h1 class="home-poster-title">${esc(title)}</h1><button class="home-poster-cta" onclick="${action}">${esc(cta)}<span>→</span></button></div><div class="home-scroll-hint" aria-hidden="true"><span></span></div>`;
+  }
+  const beatsHtml=sequence.beats.map((line,index)=>`<p class="home-beat b${index+1}">${esc(line)}</p>`).join('');
+  return `${image}<span class="home-signature">${esc(sequence.signature)}</span><div class="home-beats">${beatsHtml}</div><div class="home-poster-content home-poster-reveal"><p class="home-poster-kicker">${esc(sequence.reveal)}</p><h1 class="home-poster-title">${esc(title)}</h1><button class="home-poster-cta" onclick="${action}">${esc(cta)}<span>→</span></button></div><button class="home-skip" onclick="skipHomeCinema()">Passer</button><div class="home-scroll-hint" aria-hidden="true"><span></span></div>`;
+}
+function skipHomeCinema(){
+  document.querySelectorAll('.home-signature,.home-beats').forEach(el=>el.remove());
+  document.querySelector('.home-poster-content')?.classList.add('home-poster-instant');
+  document.querySelector('.home-skip')?.remove();
+}
+function homePhrase(){
+  const day=Math.floor(Date.now()/86400000);
+  const weather=(state.weather?.weather?.[0]?.main||'').toLowerCase();
+  const hour=new Date().getHours();
+  let pool;
+  if(/rain|drizzle|thunder/.test(weather))pool=['Il pleut… mais j’ai une idée.','La pluie ne doit pas gâcher la journée.','Un temps parfait pour une autre idée.'];
+  else if(hour<11)pool=['Bonjour. Le temps s’ouvre devant vous.','Un matin de plus à ne pas laisser filer.','Vous avez un peu de temps aujourd’hui ?'];
+  else if(hour>=19)pool=['La soirée peut encore surprendre.','Il reste de belles heures devant vous.','On change un peu des habitudes ?'];
+  else if(/clear|sun/.test(weather))pool=['Il fait beau, profitons-en.','Une belle journée mérite un beau moment.'];
+  else pool=['J’ai pensé à quelque chose pour aujourd’hui.','Qu’est-ce qui vous ferait plaisir, là ?','Le temps libre commence maintenant.'];
+  return pool[day%pool.length];
+}
 async function loadHomePulse(){
   const today=iso(new Date());
   const list=document.querySelector('#pulseEventList');
@@ -746,7 +1017,7 @@ async function loadHomePulse(){
 }
 function majorMomentTiming(moment){if(!moment)return'';const date=new Date(moment.date),day=date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});return moment.timeKnown===false?day:`${day} · ${date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`}
 function majorMomentAction(moment){if(moment?.kind==='astronomy')return{eyebrow:'Un phénomène rare à anticiper',description:`${moment.visibilityLabel||'Visible depuis votre région'}. Dolcia peut prévoir le bon créneau, un lieu adapté et les précautions utiles.`,button:'Préparer ce moment'};if(moment?.broadcastable)return{eyebrow:'Un grand rendez-vous qui rassemble',description:'Dolcia peut l’intégrer à votre programme et chercher uniquement des lieux de diffusion réellement confirmés.',button:'L’intégrer à mon moment'};return{eyebrow:'Un rendez-vous à ne pas manquer',description:'Dolcia peut l’intégrer à votre programme sans sacrifier le reste de vos envies.',button:'L’intégrer à mon moment'}}
-function renderHomeMajor(moment){const target=document.querySelector('#homeMajor');if(!target)return;if(!moment){target.innerHTML='';target.hidden=true;return}const copy=majorMomentAction(moment);target.hidden=false;target.innerHTML=`<article class="home-major-card"><div><span class="kicker">${esc(copy.eyebrow)}</span><h2>${esc(moment.title||moment.name)}</h2><p>${esc(majorMomentTiming(moment))}. ${esc(copy.description)}</p>${moment.safetyNote?`<p class="major-safety">${esc(moment.safetyNote)}</p>`:''}${moment.sourceUrl?`<a class="major-source" href="${esc(moment.sourceUrl)}" target="_blank" rel="noopener">Source officielle · ${esc(moment.source||'Organisateur')}</a>`:''}</div><div class="home-major-actions"><button class="primary" onclick="acceptHomeMajor('${esc(moment.id)}')">${esc(copy.button)}</button><button class="secondary" onclick="dismissHomeMajor()">Pas cette fois</button></div></article>`}
+function renderHomeMajor(moment){const target=document.querySelector('#homePoster');if(!target)return;target.innerHTML=homePosterInner(moment)}
 function acceptHomeMajor(id){const moment=state.majorMoments.find(item=>item.id===id);if(!moment)return startCompose();const date=new Date(moment.date);state.majorChoice=id;state.dateMode='major';if(moment.kind==='astronomy'){state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),12,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),22,0);state.answers={duration:'afternoon_evening',vibes:['breathe']}}else{state.dateStart=new Date(date.getFullYear(),date.getMonth(),date.getDate(),18,0);state.dateEnd=new Date(date.getFullYear(),date.getMonth(),date.getDate(),23,59);state.answers={duration:'evening',vibes:['vibrate']}}openEclatDialogue()}
 function dismissHomeMajor(){const target=document.querySelector('#homeMajor');if(target){target.innerHTML='';target.hidden=true}}
 function openHomeEvent(id){startCompose();showToast('Choisissez votre timing : Dolcia intégrera les événements du jour')}
@@ -1198,6 +1469,31 @@ function retiredResultsArchive(){
   app.innerHTML=shell(`<section class="results-hero"><div class="results-photo" style="background-image:url('${IMAGES.hero}')"></div><div class="results-copy"><span class="kicker">Composé pour vous</span><h1>Votre moment<br>prend forme.</h1><p>${state.weather?.main?.temp?`${Math.round(state.weather.main.temp)}°, `:''}${esc(state.location.name)}. Plusieurs choix pertinents pour chaque moment, uniquement à la date et dans la destination sélectionnées.</p><div class="tags">${criteria.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div><button class="surprise-hero" onclick="surprise()"><span>Confiez votre temps à Dolcia</span><strong>${composeCta()}</strong><b>→</b></button></div></section>${majorMomentPrompt()}<section class="program">${weatherPlan()}<div class="program-head proposal-intro"><div><span class="kicker">Sélection vérifiée pour vous</span><h2>${state.alternatives.length?'Votre moment peut commencer ici.':'Dolcia cherche une autre voie.'}</h2><p>${state.alternatives.length?'Des idées compatibles avec votre horaire, vos envies et votre destination. Ouvrez une fiche ou ajoutez uniquement ce qui vous plaît.':'Aucune proposition ne passera si elle n’est pas suffisamment fiable.'}</p></div><div class="program-actions"><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="startCompose()">Ajuster mes choix</button></div></div>${state.alternatives.length?state.alternatives.map(alternativeGroup).join(''):emptyState()}${state.alternatives.length?`<div class="agenda-guidance"><strong>Vous choisissez activité par activité.</strong><span>Retrouvez uniquement vos choix dans l’onglet Agenda en bas de l’écran.</span><button onclick="renderAgenda()">Ouvrir mon agenda →</button></div>`:''}</section>`,'discover');
 }
 function catalogFamily(item){const t=plainText(`${item.name||''} ${item.category||''}`);if(item.category==='hotel')return'hotel';if(item.category==='food')return'food';if(item.category==='slow')return'wellness';if(item.category==='night')return'night';if(item.category==='culture')return'culture';if(item.category==='outside'||/plage|nature|jardin|foret|mer|nautique|voile|surf|paddle|kayak/.test(t))return'nature';return'fun'}
+// Classement désir/surprise — ARCHITECTURE.md §5.2-5.4. Seuls les signaux réellement calculables
+// avec les données existantes sont implémentés ici ; les autres (type d'expérience jamais proposé
+// récemment, différent des habitudes récentes) demandent un historique de propositions pas encore
+// suivi — mieux vaut un score honnête sur 3 signaux qu'un score gonflé sur 5 dont 2 seraient devinés.
+function desireScore(item){
+  let score=0;
+  if((item.rating||0)>=4.6&&(item.reviews||0)>=50&&(item.official||item.quality==='verified'||item.ranking?.confidence==='confirmed'))score++; // Sélection Dolcia
+  if(item.geoEligibility?.status==='extended')score++; // pépite prouvée
+  if(item.official)score++; // source officielle
+  if(item.date&&item.timeKnown!==false){const days=(new Date(item.date)-Date.now())/86400000;if(days>=0&&days<=14)score++} // événement limité dans le temps
+  return score;
+}
+function surpriseScore(item){
+  if(desireScore(item)<1)return 0; // la surprise amplifie un désir déjà réel, ne le remplace jamais (§5.3)
+  let score=0;
+  if(!state.experienceMemories[item.id]&&!state.favorites.includes(item.id))score++; // jamais consulté/vécu
+  if(item.geoEligibility?.status==='extended'&&Number(item.distance)>5)score++; // hors zone habituelle, preuve de rareté déjà vérifiée
+  return score;
+}
+function scenarioRank(a,b){
+  return desireScore(b)-desireScore(a)
+    ||surpriseScore(b)-surpriseScore(a)
+    ||(a.date&&b.date?new Date(a.date)-new Date(b.date):Number(Boolean(b.date))-Number(Boolean(a.date)))
+    ||(a.distance??999)-(b.distance??999);
+}
 function catalogSelection(){
   const filters=state.catalogFilters||{family:'all',sort:'recommended',availability:'all',query:'',limit:60};state.catalogFilters=filters;
   filters.preferred=filters.preferred||[];
@@ -1207,10 +1503,11 @@ function catalogSelection(){
   if(filters.family!=='all')items=items.filter(item=>catalogFamily(item)===filters.family);
   if(filters.availability==='open')items=items.filter(item=>item.isOpen===true);
   if(filters.availability==='scheduled')items=items.filter(item=>item.date&&item.timeKnown!==false);
+  if(filters.budget&&filters.budget!=='all')items=items.filter(item=>Number.isInteger(item.price)&&item.price<=Number(filters.budget));
   filters.lenses.forEach(id=>{const definition=adaptiveLensDefinitions().find(lens=>lens.id===id);if(definition)items=items.filter(definition.test)});
   if(filters.query){const q=plainText(filters.query);items=items.filter(item=>plainText(`${item.name||''} ${item.address||''} ${item.category||''}`).includes(q))}
   const geoOrder={core:0,extended:1,location_unknown:2,outside:3};
-  if(filters.sort==='recommended')items.sort((a,b)=>(geoOrder[a.geoEligibility?.status]??2)-(geoOrder[b.geoEligibility?.status]??2)||(momentOrder[momentCompatibility(a)]??9)-(momentOrder[momentCompatibility(b)]??9)||(filters.preferred.length?Number(filters.preferred.includes(catalogFamily(b)))-Number(filters.preferred.includes(catalogFamily(a))):0)||(a.geoEligibility?.travel_minutes??999)-(b.geoEligibility?.travel_minutes??999)||(b.score||0)-(a.score||0));
+  if(filters.sort==='recommended')items.sort((a,b)=>scenarioRank(a,b)||(geoOrder[a.geoEligibility?.status]??2)-(geoOrder[b.geoEligibility?.status]??2)||(momentOrder[momentCompatibility(a)]??9)-(momentOrder[momentCompatibility(b)]??9)||(filters.preferred.length?Number(filters.preferred.includes(catalogFamily(b)))-Number(filters.preferred.includes(catalogFamily(a))):0)||(a.geoEligibility?.travel_minutes??999)-(b.geoEligibility?.travel_minutes??999)||(b.score||0)-(a.score||0));
   if(filters.discoveryMode)items.sort((a,b)=>Number(!filters.preferred.includes(catalogFamily(b)))-Number(!filters.preferred.includes(catalogFamily(a)))||(b.score||0)-(a.score||0));
   if(filters.sort==='distance')items.sort((a,b)=>(a.distance??999)-(b.distance??999));
   if(filters.sort==='rating')items.sort((a,b)=>(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0));
@@ -1324,7 +1621,7 @@ function renderResults(){
   }
   setTimeout(()=>mountThreeFutures(),0);
   setTimeout(startMomentWatch,0);
-  app.innerHTML=shell(`<section class="explore-signature result-signature"><div class="explore-signature-copy"><span class="kicker">Votre terrain de jeu · ${esc(state.location.name)}</span><h1>Qu’allons-nous<br><em>vivre maintenant ?</em></h1><p>Écrivez une envie. Les meilleures idées remontent pendant que vous parlez, sans jamais cacher le reste.</p></div><div class="living-brief"><span class="eclat-mini">D<i>✦</i></span><div><label for="catalogSearch">Dites-le simplement à Dolcia</label><input id="catalogSearch" value="${esc(filters.query)}" placeholder="Avec les enfants, face à la mer, sans trop marcher…" oninput="liveCatalogSearch(this.value)"><small><b></b><span>${items.length} possibilités explorées maintenant</span></small></div><button class="voice-live" onclick="startCatalogVoice()" aria-label="Dicter mon envie">◉</button></div><div class="signature-actions"><button class="signature-compose" onclick="surprise()"><span>Dolcia s’occupe de tout</span><strong>${composeCta()}</strong><b>→</b></button><button class="signature-adjust" onclick="openEclatDialogue()">Préciser mon moment</button></div></section><section class="catalog-shell result-first"><div class="catalog-toolbar compact-toolbar"><div class="catalog-families">${families.filter(([id])=>(id==='all'||counts[id]>0)&&(id!=='hotel'||state.answers.duration==='stay')).map(([id,label])=>`<button class="${filters.family===id?'selected':''}" onclick="setCatalogFamily('${id}')">${label}<small>${counts[id]}</small></button>`).join('')}</div><details class="advanced-refinements"><summary><span>Affiner les résultats</span><small>Distance, disponibilité, confiance et tri</small><b>+</b></summary><div class="catalog-controls"><select onchange="setCatalogSort(this.value)"><option value="recommended" ${filters.sort==='recommended'?'selected':''}>Les plus pertinents</option><option value="distance" ${filters.sort==='distance'?'selected':''}>Les plus proches</option><option value="rating" ${filters.sort==='rating'?'selected':''}>Les mieux notés</option><option value="new" ${filters.sort==='new'?'selected':''}>Événements en premier</option></select><select onchange="setCatalogAvailability(this.value)"><option value="all" ${filters.availability==='all'?'selected':''}>Toutes les disponibilités</option><option value="open" ${filters.availability==='open'?'selected':''}>Ouverts maintenant</option><option value="scheduled" ${filters.availability==='scheduled'?'selected':''}>Événements avec horaire</option></select><button onclick="startCompose()">Date, groupe et budget</button></div><div class="refinement-lenses">${adaptiveLensDefinitions().filter(lens=>state.allItems.some(lens.test)).map(lens=>`<button class="${lens.id==='signature'?'lens-signature ':''}${(filters.lenses||[]).includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')">${lens.label}</button>`).join('')}</div></details></div><div class="catalog-summary"><strong>${items.length} idées disponibles</strong><span>Classées selon votre moment · jamais selon le montant payé par un partenaire</span></div>${filters.family==='hotel'?abundantWidenPrompt('hotel'):''}${items.length?`<div class="catalog-list">${shown.map((item,index)=>experience(item,index,'')).join('')}</div>`:zeroResultRecovery({embedded:true})}${shown.length<items.length?`<button class="catalog-more" onclick="showMoreCatalog()">Découvrir ${Math.min(60,items.length-shown.length)} idées de plus</button>`:''}</section>`,'discover')
+  app.innerHTML=shell(`<section class="explore-signature result-signature"><div class="explore-signature-copy"><span class="kicker">Votre terrain de jeu · ${esc(state.location.name)}</span><h1>Qu’allons-nous<br><em>vivre maintenant ?</em></h1><p>Écrivez une envie. Les meilleures idées remontent pendant que vous parlez, sans jamais cacher le reste.</p></div><div class="living-brief"><span class="eclat-mini">D<i>✦</i></span><div><label for="catalogSearch">Dites-le simplement à Dolcia</label><input id="catalogSearch" value="${esc(filters.query)}" placeholder="Avec les enfants, face à la mer, sans trop marcher…" oninput="liveCatalogSearch(this.value)"><small><b></b><span>${items.length} possibilités explorées maintenant</span></small></div><button class="voice-live" onclick="startCatalogVoice()" aria-label="Dicter mon envie">◉</button></div><div class="signature-actions"><button class="signature-compose" onclick="surprise()"><span>Dolcia s’occupe de tout</span><strong>${composeCta()}</strong><b>→</b></button><button class="signature-adjust" onclick="openEclatDialogue()">Préciser mon moment</button></div></section><section class="catalog-shell result-first"><div class="catalog-toolbar compact-toolbar"><div class="catalog-families">${families.filter(([id])=>(id==='all'||counts[id]>0)&&(id!=='hotel'||state.answers.duration==='stay')).map(([id,label])=>`<button class="${filters.family===id?'selected':''}" onclick="setCatalogFamily('${id}')">${label}<small>${counts[id]}</small></button>`).join('')}</div><details class="advanced-refinements"><summary><span>Affiner les résultats</span><small>Distance, disponibilité, confiance et tri</small><b>+</b></summary><div class="catalog-controls"><select onchange="setCatalogSort(this.value)"><option value="recommended" ${filters.sort==='recommended'?'selected':''}>Les plus pertinents</option><option value="distance" ${filters.sort==='distance'?'selected':''}>Les plus proches</option><option value="rating" ${filters.sort==='rating'?'selected':''}>Les mieux notés</option><option value="new" ${filters.sort==='new'?'selected':''}>Événements en premier</option></select><select onchange="setCatalogAvailability(this.value)"><option value="all" ${filters.availability==='all'?'selected':''}>Toutes les disponibilités</option><option value="open" ${filters.availability==='open'?'selected':''}>Ouverts maintenant</option><option value="scheduled" ${filters.availability==='scheduled'?'selected':''}>Événements avec horaire</option></select><select onchange="setCatalogBudget(this.value)"><option value="all" ${!filters.budget||filters.budget==='all'?'selected':''}>Tous budgets</option><option value="0" ${filters.budget==='0'?'selected':''}>€ Économique</option><option value="1" ${filters.budget==='1'?'selected':''}>€€ Modéré</option><option value="2" ${filters.budget==='2'?'selected':''}>€€€ Confort</option><option value="3" ${filters.budget==='3'?'selected':''}>€€€€ Premium</option></select><button onclick="startCompose()">Date, groupe et budget</button></div><div class="refinement-lenses">${adaptiveLensDefinitions().filter(lens=>state.allItems.some(lens.test)).map(lens=>`<button class="${['signature','pepite'].includes(lens.id)?'lens-signature ':''}${(filters.lenses||[]).includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')">${lens.label}</button>`).join('')}</div></details></div><div class="catalog-summary"><strong>${items.length} idées disponibles</strong><span>Classées selon votre moment · jamais selon le montant payé par un partenaire</span></div>${filters.family==='hotel'?abundantWidenPrompt('hotel'):''}${items.length?`<div class="catalog-list">${shown.map((item,index)=>experience(item,index,'')).join('')}</div>`:zeroResultRecovery({embedded:true})}${shown.length<items.length?`<button class="catalog-more" onclick="showMoreCatalog()">Découvrir ${Math.min(60,items.length-shown.length)} idées de plus</button>`:''}</section>`,'discover')
   document.querySelector('.catalog-toolbar')?.insertAdjacentHTML('beforebegin',momentTruthPanel(items,'explorer'));
 }
 
@@ -1342,12 +1639,15 @@ function horizonSignal(item){const trust=confidencePresentation(item);return[tru
 function mountThreeFutures(){const toolbar=document.querySelector('.catalog-toolbar');if(!toolbar)return;const take=(pool,count,used)=>pool.filter(item=>!used.has(item.id)).slice(0,count),used=new Set(),perfect=take(futurePool('perfect'),5,used);perfect.forEach(i=>used.add(i.id));const local=take(futurePool('local'),3,used);local.forEach(i=>used.add(i.id));const dated=take(state.allItems.filter(i=>i.date&&i.timeKnown!==false).sort((a,b)=>(b.score||0)-(a.score||0)),2,used);dated.forEach(i=>used.add(i.id));const unexpected=take(futurePool('unexpected'),2,used),items=[...perfect,...local,...dated,...unexpected];if(!items.length)return;const directions=[['perfect','Valeurs sûres'],['local','Pépites locales'],['unexpected','Inattendu maîtrisé']],snapshot=momentSnapshot();toolbar.insertAdjacentHTML('beforebegin',`<section class="horizon"><div class="moment-command"><div><span>Votre moment, en un regard</span><strong>${snapshot.map(esc).join(' · ')}</strong></div><button onclick="openEclatDialogue()">Ajuster</button></div><div class="horizon-head"><div><span class="kicker">La sélection vivante de Dolcia</span><h2>Douze idées.<br><em>Déjà très vous.</em></h2><p>Une vitrine éditoriale calculée pour votre moment. Faites défiler, réagissez, ou confiez toute la composition à Dolcia.</p></div><div class="horizon-directions">${directions.map(([id,label])=>`<button onclick="openFuture('${id}')">${label}</button>`).join('')}<button class="compose" onclick="surprise()">Composer mon programme</button></div></div><div class="horizon-grid">${items.map((item,index)=>{const signal=horizonSignal(item);return`<article class="horizon-card" onclick="openDetail('${item.id}')"><div class="horizon-image" style="background-image:url('${itemImage(item)}')"><span>${index<5?'Pour vous':index<8?'Pépite locale':index<10?'À votre date':'Inattendu maîtrisé'}</span><button onclick="event.stopPropagation();openReactionMenu('${item.id}')" aria-label="Réagir à cette activité">${state.favorites.includes(item.id)?'♥':'♡'}</button></div><div class="horizon-card-copy"><div class="horizon-signal ${signal[0]}"><i></i>${signal[1]}</div><small>${why(item)}</small><h3>${esc(item.name)}</h3><p>${esc(item.address||state.location.name)}</p><div class="horizon-quick"><button onclick="event.stopPropagation();openDetail('${item.id}')">Voir la fiche</button><button onclick="event.stopPropagation();addAgenda('${item.id}')">Ajouter au programme</button></div></div></article>`}).join('')}</div><button class="horizon-all" onclick="document.querySelector('.catalog-toolbar')?.scrollIntoView({behavior:'smooth'})">Explorer les ${state.allItems.length} possibilités →</button></section>`)}
 function adaptiveLensDefinitions(){return[
   {id:'signature',label:'Sélection Dolcia',test:item=>(item.rating||0)>=4.6&&(item.reviews||0)>=50&&(item.official||item.quality==='verified'||item.ranking?.confidence==='confirmed')},
+  {id:'pepite',label:'Pépite locale',test:item=>item.geoEligibility?.status==='extended'},
+  {id:'sheltered',label:'À l’abri de la pluie',test:item=>!['outside','water'].includes(item.category)},
   {id:'near',label:'À moins de 3 km',test:item=>item.distance!=null&&item.distance<=3},
   {id:'confirmed',label:'Confiance maximale',test:item=>item.ranking?.confidence==='confirmed'||item.quality==='verified'},
   {id:'today',label:'À votre date',test:item=>item.date&&sameDay(new Date(item.date),state.dateStart)},
   {id:'open',label:'Ouvert maintenant',test:item=>item.isOpen===true},
   {id:'free',label:'Gratuit confirmé',test:item=>item.free||item.price===0||item.freeAccess},
   {id:'loved',label:'Très apprécié',test:item=>(item.rating||0)>=4.5&&(item.reviews||0)>=30},
+  {id:'rare',label:'Rarement vu ailleurs',test:item=>(item.reviews||0)>0&&(item.reviews||0)<=15&&(item.rating||0)>=4.3},
   {id:'bookable',label:'Réservable',test:item=>Boolean(item.booking||item.website)},
   {id:'official',label:'Officiel',test:item=>Boolean(item.official)}
 ]}
@@ -1359,13 +1659,14 @@ function mountCatalogPreferences(families){const toolbar=document.querySelector(
 function applyMomentBrief(){const input=document.querySelector('#momentBriefInput'),sentence=input?.value.trim();if(!sentence)return showToast('Décrivez votre envie en une phrase');const t=plainText(sentence),preferred=new Set(state.catalogFilters.preferred||[]),vibes=new Set(state.answers.vibes||[]),ages=[...sentence.matchAll(/\b(\d{1,2})\s*ans?\b/gi)].map(match=>Number(match[1])).filter(age=>age<18);if(/enfant|fille|fils|famille|ado|bebe|tout.petit/.test(t)){state.answers.who='family';if(ages.length)state.answers.childrenAges=ages;if(/bebe|tout.petit|bout.chou/.test(t))state.answers.groupDetail='toddlers';else if(/ado/.test(t))state.answers.groupDetail='teens'}if(/mari|femme|couple|a deux|amoureux/.test(t))state.answers.who='couple';if(/collegue|equipe|travail|afterwork/.test(t))state.answers.who='colleagues';else if(/ami|copain|copine/.test(t))state.answers.who='friends';if(/seul|seule|pour moi/.test(t))state.answers.who='solo';if(/bouger|sport|defouler|sensation|aventure/.test(t)){preferred.add('fun');vibes.add('play')}if(/mer|plage|nature|balade|dehors/.test(t)){preferred.add('nature');vibes.add('breathe')}if(/restaurant|diner|manger|gourmand|deguster|brunch/.test(t)){preferred.add('food');vibes.add('taste')}if(/calme|detendre|massage|spa|souffler|repos/.test(t)){preferred.add('wellness');vibes.add('recharge')}if(/concert|danser|bar|soiree|faire la fete/.test(t)){preferred.add('night');vibes.add('vibrate')}if(/musee|culture|expo|atelier|creatif|decouvrir/.test(t)){preferred.add('culture');vibes.add('create')}state.answers.momentSentence=sentence;state.answers.vibes=[...vibes];state.catalogFilters.preferred=[...preferred];state.catalogFilters.sort='recommended';state.catalogFilters.limit=60;save();renderResults();showToast('Dolcia a compris votre brief et réordonné toutes les propositions')}
 function mountVoiceBrief(){const target=document.querySelector('.moment-brief>div:last-child');if(!target)return;target.insertAdjacentHTML('beforeend','<button class="voice-brief" onclick="startVoiceBrief()" title="Parler à Dolcia">◉ Parler à Dolcia</button>')}
 function startVoiceBrief(){const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition)return showToast('La dictée vocale n’est pas disponible dans ce navigateur');const recognition=new Recognition();recognition.lang='fr-FR';recognition.interimResults=false;recognition.onstart=()=>showToast('Dolcia vous écoute…');recognition.onerror=()=>showToast('Dolcia n’a pas bien entendu. Vous pouvez réessayer.');recognition.onresult=event=>{const input=document.querySelector('#momentBriefInput');if(input){input.value=event.results[0][0].transcript;applyMomentBrief()}};recognition.start()}
-function mountGuidedCompass(){const brief=document.querySelector('.moment-brief');if(!brief)return;const stage=state.catalogFilters.compassStage||'direction';brief.insertAdjacentHTML('afterend',`<section class="guided-compass"><div><span class="kicker">La boussole Dolcia</span><strong>${stage==='direction'?'Dans quelle direction part-on ?':'Quel ton donner à ce moment ?'}</strong><p>Chaque réponse affine l’ordre des idées sans cacher le reste.</p></div><div>${stage==='direction'?[['energy','Bouger et rire'],['soft','Souffler vraiment'],['share','Vivre quelque chose ensemble'],['unknown','Je ne sais pas, étonnez-moi']].map(([id,label])=>`<button onclick="chooseCompass('${id}')">${label}</button>`).join(''):[['iconic','Une valeur sûre'],['local','Une pépite locale'],['unexpected','Quelque chose d’inattendu'],['mix','Un mélange parfait']].map(([id,label])=>`<button onclick="finishCompass('${id}')">${label}</button>`).join('')}</div></section>`)}
+function mountGuidedCompass(){const anchor=document.querySelector('.catalog-toolbar');if(!anchor)return;if(document.querySelector('.guided-compass'))return;const stage=state.catalogFilters.compassStage||'direction';anchor.insertAdjacentHTML('afterend',`<section class="guided-compass"><div><span class="kicker">La boussole Dolcia</span><strong>${stage==='direction'?'Dans quelle direction part-on ?':'Quel ton donner à ce moment ?'}</strong><p>Chaque réponse affine l’ordre des idées sans cacher le reste.</p></div><div>${stage==='direction'?[['energy','Bouger et rire'],['soft','Souffler vraiment'],['share','Vivre quelque chose ensemble'],['unknown','Je ne sais pas, étonnez-moi']].map(([id,label])=>`<button onclick="chooseCompass('${id}')">${label}</button>`).join(''):[['iconic','Une valeur sûre'],['local','Une pépite locale'],['unexpected','Quelque chose d’inattendu'],['mix','Un mélange parfait']].map(([id,label])=>`<button onclick="finishCompass('${id}')">${label}</button>`).join('')}</div></section>`)}
 function chooseCompass(path){const preferred=new Set(state.catalogFilters.preferred||[]),vibes=new Set(state.answers.vibes||[]);if(path==='energy'){preferred.add('fun');preferred.add('nature');vibes.add('play')}if(path==='soft'){preferred.add('wellness');preferred.add('food');vibes.add('recharge')}if(path==='share'){preferred.add('culture');preferred.add('food');vibes.add('create')}if(path==='unknown')state.catalogFilters.discoveryMode=true;state.catalogFilters.preferred=[...preferred];state.answers.vibes=[...vibes];state.catalogFilters.compassStage='tone';renderResults()}
 function finishCompass(tone){state.catalogFilters.compassTone=tone;state.catalogFilters.compassStage='direction';if(tone==='unexpected')state.catalogFilters.discoveryMode=true;if(tone==='iconic')state.catalogFilters.sort='rating';if(tone==='local')state.catalogFilters.sort='distance';save();renderResults();showToast('La boussole a réordonné le catalogue sans rien masquer')}
 function toggleCatalogPreference(value){const list=state.catalogFilters.preferred||[];state.catalogFilters.preferred=list.includes(value)?list.filter(id=>id!==value):[...list,value];state.catalogFilters.sort='recommended';renderResults()}
 function clearCatalogPreferences(){state.catalogFilters.preferred=[];renderResults()}
 function setCatalogSort(value){state.catalogFilters.sort=value;renderResults()}
 function setCatalogAvailability(value){state.catalogFilters.availability=value;state.catalogFilters.limit=60;renderResults()}
+function setCatalogBudget(value){state.catalogFilters.budget=value;state.catalogFilters.limit=60;renderResults()}
 function applyCatalogSearch(){state.catalogFilters.query=document.querySelector('#catalogSearch')?.value.trim()||'';state.catalogFilters.limit=60;renderResults()}
 function showMoreCatalog(){state.catalogFilters.limit+=60;renderResults()}
 
@@ -1421,7 +1722,8 @@ function toggleOutdoor(){state.items=[...state.items].sort((a,b)=>(b.category===
 function label(key){const base=FLOW.find(x=>x.key===key),s=key==='budget'?{...base,...budgetStep()}:base,v=state.answers[key];return s?.options.find(o=>o[0]===v)?.[1]}
 function criteriaLabels(){const vibeStep=FLOW.find(step=>step.key==='vibes');const vibes=(state.answers.vibes||[]).map(value=>vibeStep.options.find(option=>option[0]===value)?.[1]).filter(Boolean),budget=state.answers.budget==='custom'&&state.budgetPlan.amount!=null?`${state.budgetPlan.amount.toLocaleString('fr-FR')} € pour le groupe`:label('budget');return [fmt(state.dateStart),label('duration'),label('who'),budget,...vibes].filter(Boolean)}
 function confidencePresentation(item){const compatibility=momentCompatibility(item);if(item.official&&item.date&&item.timeKnown!==false)return['confirmed','Confirmé'];if(compatibility==='confirmed'||compatibility==='autonomous')return['compatible','Compatible'];return['check','À vérifier']}
-function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>item.id===i.id),reserved=state.reservations.some(r=>r.itemId===i.id&&r.status!=='cancelled'),fallback=IMAGES[i.category]||IMAGES.fallback,label=i.partner?'Partenaire Dolcia · réservation intégrée':i.sponsored?'Suggestion partenaire · pertinence vérifiée':i.quality==='verified'?'Informations vérifiées':i.quality==='official-partial'?'Source officielle · détails à confirmer':esc(i.source),trust=confidencePresentation(i),isSignature=(i.rating||0)>=4.6&&(i.reviews||0)>=50&&(i.official||i.quality==='verified'||i.ranking?.confidence==='confirmed'),price=i.free?'<span>Gratuit confirmé</span>':i.freeAccess?'<span>Accès libre · options éventuelles payantes</span>':i.price!=null?`<span>${i.price===0?'Gratuit confirmé':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>',dateMeta=i.date?`<span>${i.timeKnown===false?new Date(i.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' · horaire à confirmer':new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:'',travel=i.geoEligibility?.travel_minutes,travelMeta=travel!=null?`<span>${travel} min de trajet</span>`:i.distance!=null?`<span>${i.distance.toFixed(1)} km à vol d’oiseau</span>`:'';return `<article class="experience ${i.partner?'partner-ready':''} ${i.geoEligibility?.status==='outside'?'outside-scope':''}">${isSignature?'<span class="signature-ribbon">✦ Sélection Dolcia</span>':''}<button class="quick-heart ${state.favorites.includes(i.id)?'selected':''}" onclick="openReactionMenu('${i.id}')" aria-label="Dire à Dolcia si cette activité vous plaît">${state.favorites.includes(i.id)?'♥':'♡'}</button><img class="exp-image" src="${itemImage(i)}" alt="" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label">${label}<i class="trust-badge ${trust[0]}">${trust[1]}</i></span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à confirmer auprès de la source')}</p><div class="exp-meta">${travelMeta}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${i.isOpen===true?'<span>Ouvert actuellement</span>':''}${dateMeta}</div><p class="dolcia-voice"><b>✦ Le regard de Dolcia</b><em>${esc(why(i))}</em></p></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir la fiche</button>${i.partner?`<button class="agenda-button pass-action ${reserved?'added':''}" onclick="reserveWithDolcia('${i.id}','${esc(slotLabel)}')">${reserved?'Réservation confirmée':'Réserver avec Dolcia'}</button>`:`<button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Ajouté à mon agenda':'Ajouter à mon agenda'}</button>`}</div></article>`}
+function experience(i,index,slotLabel=''){const added=state.agenda.some(item=>item.id===i.id),reserved=state.reservations.some(r=>r.itemId===i.id&&r.status!=='cancelled'),fallback=IMAGES[i.category]||IMAGES.fallback,label=i.partner?'Partenaire Dolcia · réservation intégrée':i.sponsored?'Suggestion partenaire · pertinence vérifiée':i.quality==='verified'?'Informations vérifiées':i.quality==='official-partial'?'Source officielle · détails à confirmer':esc(i.source),trust=confidencePresentation(i),price=i.free?'<span>Gratuit confirmé</span>':i.freeAccess?'<span>Accès libre · options éventuelles payantes</span>':i.price!=null?`<span>${i.price===0?'Gratuit confirmé':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>',dateMeta=i.date?`<span>${i.timeKnown===false?new Date(i.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' · horaire à confirmer':new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:'',travel=i.geoEligibility?.travel_minutes,travelMeta=travel!=null?`<span>${travel} min de trajet</span>`:i.distance!=null?`<span>${i.distance.toFixed(1)} km à vol d’oiseau</span>`:'';const hearts=scenarioHearts(i),reasons=whyTodayReasons(i);
+  return `<article class="experience ${i.partner?'partner-ready':''} ${i.geoEligibility?.status==='outside'?'outside-scope':''}"><span class="scenario-hearts" aria-label="${hearts} sur 5">${'❤'.repeat(hearts)}${'♡'.repeat(5-hearts)}</span><button class="quick-heart ${state.favorites.includes(i.id)?'selected':''}" onclick="openReactionMenu('${i.id}')" aria-label="Dire à Dolcia si cette activité vous plaît">${state.favorites.includes(i.id)?'♥':'♡'}</button><img class="exp-image fade-img" src="${itemImage(i)}" alt="" loading="lazy" onload="this.classList.add('img-loaded')" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label">${label}<i class="trust-badge ${trust[0]}">${trust[1]}</i></span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à confirmer auprès de la source')}</p><div class="exp-meta">${travelMeta}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${i.isOpen===true?'<span>Ouvert actuellement</span>':''}${dateMeta}</div><div class="why-today"><b>Pourquoi aujourd’hui ?</b><ul>${reasons.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul></div></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir la fiche</button>${i.partner?`<button class="agenda-button pass-action ${reserved?'added':''}" onclick="reserveWithDolcia('${i.id}','${esc(slotLabel)}')">${reserved?'Réservation confirmée':'Réserver avec Dolcia'}</button>`:`<button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Ajouté à mon agenda':'Ajouter à mon agenda'}</button>`}</div></article>`}
 function sourcePresentation(i){
   if(i.partner)return'Partenaire Dolcia';
   if(i.officialSource)return esc(i.officialSource);
@@ -1435,7 +1737,7 @@ function experienceV205(i,index,slotLabel=''){
   const price=i.free?'<span>Gratuit</span>':i.freeAccess?'<span>Accès libre · options payantes possibles</span>':i.price!=null?`<span>${i.price===0?'Gratuit':'€'.repeat(Math.min(i.price,4))}</span>`:'<span>Tarif non communiqué</span>';
   const dateMeta=i.date?`<span>${i.timeKnown===false?new Date(i.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' · horaire à vérifier':new Date(i.date).toLocaleString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</span>`:'';
   const travel=i.geoEligibility?.travel_minutes,travelMeta=travel!=null?`<span>${travel} min de trajet</span>`:i.distance!=null?`<span>${i.distance.toFixed(1)} km à vol d’oiseau</span>`:'';
-  return `<article class="experience ${i.partner?'partner-ready':''} ${i.geoEligibility?.status==='outside'?'outside-scope':''}">${isSignature?'<span class="signature-ribbon">✦ Sélection Dolcia</span>':''}<button class="quick-heart ${state.favorites.includes(i.id)?'selected':''}" onclick="openReactionMenu('${i.id}')" aria-label="Dire à Dolcia si cette activité vous plaît">${state.favorites.includes(i.id)?'♥':'♡'}</button><img class="exp-image" src="${itemImage(i)}" alt="" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label"><small>${sourcePresentation(i)}</small><i class="trust-badge ${trust[0]}">${trust[1]}</i></span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à vérifier auprès de la source')}</p><div class="exp-meta">${travelMeta}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${dateMeta}</div><p class="dolcia-voice"><b>✦ Pourquoi maintenant</b><em>${esc(why(i))}</em></p></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir</button><button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Gardé':'Garder'}</button>${i.booking||i.partner?`<button class="agenda-button pass-action ${reserved?'added':''}" onclick="reserveWithDolcia('${i.id}','${esc(slotLabel)}')">${reserved?'Réservé':'Réserver'}</button>`:''}</div></article>`;
+  return `<article class="experience ${i.partner?'partner-ready':''} ${i.geoEligibility?.status==='outside'?'outside-scope':''}">${isSignature?'<span class="signature-ribbon">✦ Sélection Dolcia</span>':''}<button class="quick-heart ${state.favorites.includes(i.id)?'selected':''}" onclick="openReactionMenu('${i.id}')" aria-label="Dire à Dolcia si cette activité vous plaît">${state.favorites.includes(i.id)?'♥':'♡'}</button><img class="exp-image fade-img" src="${itemImage(i)}" alt="" loading="lazy" onload="this.classList.add('img-loaded')" onerror="this.onerror=null;this.src='${fallback}'"><div class="exp-copy"><span class="exp-label"><small>${sourcePresentation(i)}</small><i class="trust-badge ${trust[0]}">${trust[1]}</i></span><h3>${esc(i.name)}</h3><p>${esc(i.address||'Lieu exact à vérifier auprès de la source')}</p><div class="exp-meta">${travelMeta}${i.rating?`<span>Google ${i.rating}/5${i.reviews?` · ${i.reviews} avis`:''}</span>`:''}${price}${dateMeta}</div><p class="dolcia-voice"><b>✦ Pourquoi maintenant</b><em>${esc(why(i))}</em></p></div><div class="exp-actions clear-actions"><button class="detail-button" onclick="openDetail('${i.id}')">Voir</button><button class="agenda-button ${added?'added':''}" onclick="addAgenda('${i.id}','${esc(slotLabel)}')">${added?'Gardé':'Garder'}</button>${i.booking||i.partner?`<button class="agenda-button pass-action ${reserved?'added':''}" onclick="reserveWithDolcia('${i.id}','${esc(slotLabel)}')">${reserved?'Réservé':'Réserver'}</button>`:''}</div></article>`;
 }
 experience=experienceV205;
 function programDecisionPrompt(slot,index){
@@ -1466,22 +1768,101 @@ function refineStatus(lines){const target=document.querySelector('#refineLive');
 async function applySlotRefinement(index){const input=document.querySelector('#refineInput'),query=input?.value.trim(),slot=state.program[index];if(!query||!slot)return showToast('Précisez ce que vous souhaitez');const steps=[['active',`Je comprends « ${query} »`]];refineStatus(steps);try{steps[0][0]='done';steps.push(['active',`Recherche autour de ${state.location.name}`]);refineStatus(steps);const response=await fetch(`/api/places?lat=${state.location.lat}&lng=${state.location.lng}&radius=${state.radius}&mode=text&keyword=${encodeURIComponent(query+' '+state.location.name)}`),data=await response.json(),raw=normalizePlaces(data.results||[]);steps[1][0]='done';steps.push(['active',`${raw.length} possibilités trouvées · vérification du contexte`]);refineStatus(steps);const ranked=await rankItemsServer(raw),found=ranked.filter(item=>isTimeCompatible(item,slot.label)&&!state.program.some(current=>current.item.id===item.id));steps[2][0]='done';steps.push([found.length?'done':'active',found.length?`${found.length} alternatives compatibles avec ce créneau`:'Aucune alternative assez fiable']);refineStatus(steps);if(!found.length)return;state.program[index]={...slot,item:found[0]};state.items=state.program.map(current=>current.item);setTimeout(()=>{document.querySelector('#refineModal')?.remove();renderSurprise();showToast('L’Éclat a recomposé uniquement ce moment')},450)}catch(_){refineStatus([...steps,['active','La source est momentanément indisponible']])}}
 function alternativeGroup(group,index){return `<section class="alternative-group"><div class="slot-heading"><span>${group.label}</span><small>${group.total||group.items.length} possibilités vérifiées · les meilleures en premier</small></div><div class="alternative-list">${group.items.map((item,itemIndex)=>experience(item,index*12+itemIndex,group.label)).join('')}</div></section>`}
 function geoWhy(i){if(i.geoEligibility?.status==='outside')return'Hors de la destination · cette proposition est exclue';if(i.geoEligibility?.status!=='extended')return'';const minutes=i.geoEligibility.travel_minutes;return [`Pépite locale exceptionnelle`,minutes!=null?`${minutes} min de trajet`:null,i.geoEligibility.decision_codes?.includes('HIGH_RARITY')?'rareté vérifiée et sourcée':i.official&&i.date?'rendez-vous unique à votre date':'élargissement demandé'].filter(Boolean).join(' · ')}
+function scenarioHearts(item){return Math.max(1,Math.min(5,desireScore(item)+surpriseScore(item)))}
+function whyTodayReasons(item){
+  const reasons=[];
+  if((item.rating||0)>=4.6&&(item.reviews||0)>=50&&(item.official||item.quality==='verified'||item.ranking?.confidence==='confirmed'))reasons.push('Sélection Dolcia');
+  if(item.geoEligibility?.status==='extended')reasons.push('Pépite vérifiée');
+  if(item.date&&item.timeKnown!==false){const days=(new Date(item.date)-Date.now())/86400000;if(days>=0&&days<1)reasons.push('Seulement aujourd’hui');else if(days>=0&&days<=14)reasons.push('Le moment de ne pas rater');}
+  if(!state.experienceMemories[item.id]&&!state.favorites.includes(item.id)&&desireScore(item)>=1)reasons.push('Jamais vécu par vous');
+  if(item.geoEligibility?.status==='extended'&&Number(item.distance)>5)reasons.push('Ça vaut le déplacement');
+  if(!reasons.length)reasons.push(why(item));
+  return reasons;
+}
 function why(i){const temp=state.weather?.main?.temp??18,vibes=state.answers.vibes||[],compatibility=momentCompatibility(i),group=i.ranking?.groupFit;if(geoWhy(i))return geoWhy(i);if(compatibility==='incompatible')return'Incompatible avec le créneau choisi';if(compatibility==='unknown'||compatibility==='open-not-session')return requiresPublishedSession(i)?'Séance ou réservation à confirmer':'Horaire à vérifier';if(group?.vetoes)return'Une réserve existe dans votre groupe · visible dans Explorer, exclue du programme composé';if(group?.ratio>=.75)return`Point d’accord fort · ${group.matched} affinités reconnues dans votre groupe`;if(compatibility==='autonomous')return'Accès libre possible · conditions à vérifier';if(i.retrievalScope==='signature')return [`Expérience régionale repérée pour votre journée`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,`le déplacement reste indiqué clairement`].filter(Boolean).join(' · ');if(compatibility==='confirmed'&&i.source==='Google Places')return [`Ouvert pour votre créneau`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,i.rating?`${i.rating}/5 · ${i.reviews||0} avis`:null].filter(Boolean).join(' · ');if(i.ranking?.reasons?.length)return i.ranking.reasons.map(reason=>reason.charAt(0).toUpperCase()+reason.slice(1)).join(' · ');if(i.discoveryPick)return'La pépite que vous n’auriez peut-être pas cherchée';if(i.official&&i.date)return'Événement officiel à votre date';if(temp>=25&&/plage|nautique|voile|surf|paddle|kayak|piscine/.test(plainText(i.name||'')))return'Idéal avec la météo du moment';if((state.tasteProfile[i.category]||0)>1)return'Inspiré de ce que vous aimez déjà';if(matchesIntentions(i,vibes))return'Correspond à votre envie maintenant';if(i.rating>=4.6&&i.reviews>=100)return'Valeur sûre très appréciée';if(i.distance!=null&&i.distance<2)return'Belle idée tout près de vous';return'Sélection Dolcia pour élargir vos envies'}
 function composeCta(){return ({'2h':'Compose-moi 2 heures parfaites',morning:'Compose-moi ma matinée',afternoon:'Compose-moi mon après-midi',afternoon_evening:'Compose-moi la suite de ma journée',evening:'Compose-moi ma soirée',day:'Compose-moi ma journée',stay:'Compose-moi mon séjour'})[state.answers.duration]||'Compose mon moment'}
 function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Le catalogue n’a pas encore livré la bonne idée.</h3><p>Dolcia peut relancer les sources, affiner votre envie ou créer une expérience autonome sans inventer un événement.</p><div class="empty-actions"><button class="primary" onclick="openDolciaAnimate()">Dolcia anime ce moment</button><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="openEclatDialogue()">Parler à Dolcia</button></div></div>`}
 
 const DOLCIA_ANIMATE_PROGRAMS={
+  sport:{title:'Cardio doux entre nous',tone:'Bouger ensemble, à son rythme',duration:30,place:'Espace dégagé, plage, parc ou pelouse',phased:true,steps:[
+    ['00:00','Échauffement — mobilisez doucement chevilles, genoux, hanches et épaules, chacun à son rythme, sans forcer.',{phase:'echauffement'}],
+    ['00:05','Échauffement — quelques pas rapides puis lents, en alternance, pour réveiller le corps en douceur.',{phase:'echauffement'}],
+    ['00:10','Cœur de séance — alternez un effort plus soutenu et une récupération plus calme, selon votre ressenti, jamais selon un chrono strict.',{phase:'coeur'}],
+    ['00:18','Cœur de séance — gardez ce rythme qui vous convient ; ralentir n’est jamais un échec, c’est écouter son corps.',{phase:'coeur'}],
+    ['00:24','Retour au calme — ralentissez progressivement, respirez profondément, laissez le rythme cardiaque redescendre.',{phase:'retour'}],
+    ['00:27','Retour au calme — étirements doux, sans à-coup ni douleur, puis hydratez-vous.',{phase:'retour'}]
+  ]},
   social:{title:'Le grand défi complice',tone:'Rire ensemble',duration:55,place:'Un espace public autorisé, calme et sûr',steps:[['00:00','Choisissez ensemble trois thèmes qui vous font rire.'],['00:05','Défi photo : recréez une scène de film sans accessoire.'],['00:20','Mission duo : faites deviner un souvenir uniquement avec des gestes.'],['00:35','Final collectif : inventez le slogan de votre journée et photographiez-le.'],['00:50','Chacun nomme son moment préféré.']]},
   party:{title:'La table des jeux cultes',tone:'Fous rires entre adultes',duration:50,place:'Hébergement, salon, terrasse ou espace autorisé',steps:[['00:00','Ni oui ni non express : une minute par personne, avec bienveillance.'],['00:10','Le menteur : chacun raconte trois mini-anecdotes, dont une inventée.'],['00:22','Mime éclair : faites deviner un film, une chanson ou une personne connue du groupe.'],['00:34','Cap ou pas cap complice : proposez uniquement un défi drôle, sûr et respectueux.'],['00:45','Final : élisez ensemble la réplique et le souvenir de la session.']]},
   family:{title:'L’aventure des petits explorateurs',tone:'Jouer en famille',duration:45,place:'Parc, plage ou hébergement autorisé',steps:[['00:00','L’adulte vérifie l’espace et choisit une zone délimitée.'],['00:05','Cherchez cinq couleurs, trois textures et deux sons.'],['00:18','Construisez une histoire avec ce que vous avez observé.'],['00:30','Défi coopération : rejoignez un point sans lâcher le lien du groupe.'],['00:40','Photo-souvenir et retour au calme.']]},
   water:{title:'La piscine devient un terrain de jeu',tone:'Parent-enfant',duration:35,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez les règles, la profondeur et la surveillance.'],['00:04','Jeu des couleurs : rejoindre ensemble un repère visible.'],['00:12','Le petit train : avancer lentement en restant à portée de bras.'],['00:20','Les animaux de l’eau : imiter à tour de rôle un déplacement doux.'],['00:28','Retour au calme, respiration et sortie groupée.']]},
-  calm:{title:'La parenthèse qui remet tout à zéro',tone:'Souffler vraiment',duration:30,place:'Espace calme, sûr et autorisé',steps:[['00:00','Installez-vous confortablement, sans gêner le passage.'],['00:03','Respirez lentement et observez cinq détails autour de vous.'],['00:10','Marche silencieuse : chacun choisit son rythme.'],['00:20','Étirement doux sans douleur ni performance.'],['00:27','Choisissez ensemble la suite de votre journée.']]}
+  calm:{title:'La parenthèse qui remet tout à zéro',tone:'Souffler vraiment',duration:20,place:'Espace calme, sûr et autorisé',phased:true,steps:[
+    ['00:00','Installation — installez-vous confortablement, sans gêner le passage, à votre façon.',{phase:'echauffement'}],
+    ['00:02','Respiration — respirez lentement, observez cinq détails autour de vous, sans rien forcer.',{phase:'echauffement'}],
+    ['00:07','Cœur du moment — marche silencieuse ou immobilité, chacun choisit ce qui lui fait du bien.',{phase:'coeur'}],
+    ['00:13','Cœur du moment — restez dans ce calme aussi longtemps que vous le souhaitez, il n’y a rien à réussir.',{phase:'coeur'}],
+    ['00:17','Retour — étirement doux sans douleur ni performance, à votre rythme.',{phase:'retour'}],
+    ['00:19','Retour — choisissez ensemble la suite de votre journée.',{phase:'retour'}]
+  ]},
+  renforcement:{title:'Renforcement doux en duo',tone:'Bouger à deux, sans matériel',duration:25,place:'Un tapis, une pelouse ou un salon dégagé',phased:true,steps:[
+    ['00:00','Échauffement — bougez chevilles, genoux et épaules à votre façon, sans chercher une posture précise.',{phase:'echauffement'}],
+    ['00:04','Échauffement — alternez quelques pas et un léger étirement, chacun à son rythme.',{phase:'echauffement'}],
+    ['00:08','Cœur de séance — un effort soutenu, puis une pause, en vous relayant l’un l’autre si vous êtes deux.',{phase:'coeur'}],
+    ['00:16','Cœur de séance — gardez le rythme qui vous convient ; ralentir n’est jamais un échec.',{phase:'coeur'}],
+    ['00:21','Retour au calme — respirez profondément, étirement libre, sans forcer.',{phase:'retour'}],
+    ['00:24','Retour au calme — un verre d’eau, et on souffle ensemble.',{phase:'retour'}]
+  ]},
+  olympiades_plage:{title:'Les Olympiades du lieu',tone:'Compétition amicale par équipes',duration:60,place:'Plage, parc ou pelouse dégagée, espace autorisé',phased:true,steps:[
+    ['00:00','Échauffement — formez les équipes, bougez librement pour vous réveiller.',{phase:'echauffement'}],
+    ['00:06','Épreuve 1 — un relais simple entre deux repères que vous choisissez vous-mêmes.',{phase:'coeur'}],
+    ['00:18','Épreuve 2 — un jeu d’équilibre ou d’adresse improvisé avec ce que vous avez sous la main.',{phase:'coeur'}],
+    ['00:32','Épreuve 3 — un défi collectif où toute l’équipe doit réussir ensemble.',{phase:'coeur'}],
+    ['00:48','Podium — additionnez les points dans la joie, sans jamais dévaloriser une équipe.',{phase:'retour'}],
+    ['00:55','Retour au calme et photo souvenir si vous le souhaitez.',{phase:'retour'}]
+  ]},
+  defi_5_epreuves:{title:'Le défi des 5 épreuves',tone:'Petites missions enchaînées',duration:40,place:'Intérieur ou extérieur, selon la météo',phased:true,steps:[
+    ['00:00','Présentation des 5 missions à venir, courtes et variées.',{phase:'echauffement'}],
+    ['00:05','Mission 1 — un défi d’adresse simple, à la portée de tous.',{phase:'coeur'}],
+    ['00:13','Mission 2 — un défi de mémoire ou d’observation.',{phase:'coeur'}],
+    ['00:21','Mission 3 — un défi d’équilibre ou de coordination.',{phase:'coeur'}],
+    ['00:29','Mission 4 — un défi collectif à résoudre en équipe.',{phase:'coeur'}],
+    ['00:35','Mission 5 finale, puis on célèbre tout le monde ensemble.',{phase:'retour'}]
+  ]},
+  chasse_tresor:{title:'La chasse aux trésors de vacances',tone:'Enquête en famille',duration:50,place:'Un lieu autorisé, que vous connaissez ou explorez ensemble',steps:[['00:00','L’adulte fixe les limites de la zone de jeu, clairement.'],['00:06','Premier indice : cherchez quelque chose de rond, quelque chose de doux, quelque chose qui brille.'],['00:20','Deuxième indice : reconstituez une petite histoire avec ce que vous avez trouvé.'],['00:35','Défi final : présentez votre trouvaille la plus surprenante au reste du groupe.'],['00:45','On célèbre chaque trouvaille, jamais un classement entre enfants.']]},
+  rdv_complice:{title:'Le rendez-vous complice',tone:'Se retrouver à deux',duration:35,place:'Un endroit calme, chez vous ou en terrasse autorisée',steps:[['00:00','Chacun raconte un souvenir récent qui l’a marqué, sans être interrompu.'],['00:10','Un jeu simple : « ce que j’aimerais qu’on fasse ensemble bientôt ».'],['00:20','Un compliment sincère chacun, dit à voix haute.'],['00:28','Choisissez ensemble une chose à faire dans les prochains jours.'],['00:33','On termine sur ce qu’on retient de ce moment.']]},
+  defi_deux:{title:'Le défi à deux',tone:'Complicité et petits défis',duration:30,place:'N’importe quel endroit calme et autorisé',steps:[['00:00','Un défi de mime : faites deviner un souvenir commun sans un mot.'],['00:08','Un défi d’équilibre ou de précision, léger et sans risque.'],['00:16','Une question à tour de rôle : « une chose que tu ne savais pas sur moi ».'],['00:24','Un défi final choisi par vous deux, dans la bonne humeur.'],['00:28','On termine sur un vrai compliment, chacun son tour.']]},
+  piscine_grand_jeu:{title:'Le grand jeu aquatique',tone:'Familles et amis, dans l’eau',duration:40,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez profondeur, règles et surveillance active.'],['00:05','Relais dans l’eau, à un rythme tranquille, jamais en compétition dangereuse.'],['00:15','Jeu du miroir : imiter les gestes d’un autre, à tour de rôle.'],['00:25','Défi collectif : former une figure tous ensemble, sans précipitation.'],['00:35','Retour au calme, respiration, sortie groupée de l’eau.']]},
+  blind_test:{title:'Le blind test party',tone:'Musique et éclats de rire',duration:35,place:'Un endroit où chacun peut faire écouter un morceau depuis son téléphone',steps:[['00:00','Chacun prépare en secret un titre qui compte pour lui.'],['00:08','Premier tour : faites deviner votre chanson au groupe, un indice à la fois.'],['00:20','Deuxième tour : devinez la chanson d’un autre membre du groupe.'],['00:30','Le groupe vote pour le titre le plus surprenant de la session.'],['00:33','On termine en dansant sur le titre gagnant, si l’envie est là.']]},
+  quiz_eclair:{title:'Le quiz éclair',tone:'Culture, rire et suspense',duration:30,place:'N’importe quel endroit calme',steps:[['00:00','Chaque participant prépare deux questions sur un sujet qu’il connaît bien.'],['00:08','Premier tour : posez vos questions au groupe, à tour de rôle.'],['00:20','Manche bonus : devinez qui, dans le groupe, a écrit quelle question.'],['00:26','Comptez les points ensemble, dans la bonne humeur.'],['00:29','On célèbre les meilleures questions posées, sans jamais désigner un perdant.']]},
+  danse_minute:{title:'La minute qui bouge',tone:'Danser librement, sans pression',duration:15,place:'Un espace dégagé, chez vous ou en extérieur',phased:true,steps:[
+    ['00:00','Installation — mettez une musique que vous aimez, à votre volume.',{phase:'echauffement'}],
+    ['00:02','Bougez librement une minute, sans chercher à bien faire.',{phase:'coeur'}],
+    ['00:08','Recommencez, en essayant un mouvement différent du premier.',{phase:'coeur'}],
+    ['00:12','Terminez par un mouvement que tout le monde imite ensemble.',{phase:'coeur'}],
+    ['00:14','Respirez, souriez, c’est déjà terminé.',{phase:'retour'}]
+  ]},
+  defi_rythme:{title:'Le défi rythme',tone:'Suivre le tempo, ensemble',duration:20,place:'N’importe quel endroit',steps:[['00:00','Le premier tape un rythme simple avec les mains.'],['00:05','Le groupe répète ce rythme ensemble.'],['00:10','Chacun invente à son tour un nouveau rythme à faire reprendre.'],['00:16','Final collectif : combinez deux rythmes différents ensemble.'],['00:19','On applaudit la meilleure invention du groupe.']]},
+  cocooning:{title:'Le moment cocooning',tone:'Douceur et lenteur',duration:25,place:'Un endroit confortable et calme',phased:true,steps:[
+    ['00:00','Installation — mettez-vous à l’aise, sans écran si vous le souhaitez.',{phase:'echauffement'}],
+    ['00:03','Partagez chacun une petite chose agréable vécue aujourd’hui.',{phase:'coeur'}],
+    ['00:12','Un moment de silence partagé, sans obligation de parler.',{phase:'coeur'}],
+    ['00:18','Étirement très doux, ou simplement rester immobile.',{phase:'retour'}],
+    ['00:23','Choisissez ensemble comment prolonger cette douceur.',{phase:'retour'}]
+  ]},
+  veillee_animee:{title:'La veillée animée',tone:'Histoires et jeux du soir',duration:45,place:'Un espace extérieur ou intérieur autorisé, en soirée',steps:[['00:00','Chacun raconte un souvenir de vacances marquant.'],['00:12','Jeu des devinettes : faites deviner un lieu visité sans le nommer.'],['00:25','Histoire à plusieurs voix : chacun ajoute une phrase à tour de rôle.'],['00:38','On vote pour la meilleure histoire inventée ensemble.'],['00:43','On termine calmement, en profitant du moment.']]},
+  after_genereux:{title:'L’after généreux',tone:'Prolonger la soirée en douceur',duration:40,place:'Hébergement, terrasse ou espace autorisé',steps:[['00:00','Chacun propose une chanson pour l’ambiance du moment.'],['00:08','Jeu léger : « action ou vérité » version douce et bienveillante uniquement.'],['00:20','Un défi collectif drôle, sûr et respectueux, choisi par le groupe.'],['00:32','Chacun partage son moment préféré de la soirée.'],['00:38','On termine sur une note joyeuse, à votre rythme.']]}
 };
 function suggestedAnimateProgram(){const vibes=state.answers.vibes||[],who=state.answers.who;if(state.answers.momentSentence&&/piscine|bassin|eau/.test(plainText(state.answers.momentSentence)))return'water';if(who==='family')return'family';if(vibes.includes('recharge'))return'calm';if(['friends','colleagues'].includes(who)&&vibes.includes('play'))return'party';return'social'}
+function refineAnimateChoice(intent){
+  const map={move:'sport',calm:'calm',laugh:'party',together:'social',family:'family',water:'water'};
+  const id=map[intent]||suggestedAnimateProgram();
+  previewDolciaAnimate(id);
+  document.querySelectorAll('.animate-quick-questions button').forEach(button=>button.classList.toggle('selected',button.getAttribute('onclick')?.includes(`'${intent}'`)));
+}
 function openDolciaAnimate(){
   document.querySelector('#dolciaAnimate')?.remove();
   const selected=suggestedAnimateProgram();
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal dolcia-animate" id="dolciaAnimate"><article><button class="close" onclick="document.querySelector('#dolciaAnimate')?.remove()">×</button><header><span>D<i>✦</i></span><div><small>Programme autonome Dolcia</small><h2>Et si Dolcia animait ce moment ?</h2><p>Choisissez une direction. Je vous guiderai étape par étape, sans inventer de lieu ni de prestation.</p></div></header><div class="animate-choices">${Object.entries(DOLCIA_ANIMATE_PROGRAMS).map(([id,program])=>`<button class="${selected===id?'selected':''}" onclick="previewDolciaAnimate('${id}')"><small>${esc(program.tone)} · ${program.duration} min</small><strong>${esc(program.title)}</strong><span>${esc(program.place)}</span></button>`).join('')}</div><div id="animatePreview"></div><aside><b>Avant de commencer</b><span>Vous restez responsable du lieu, des règles locales, des personnes et du matériel. Dolcia n’est ni un encadrant diplômé, ni un maître-nageur. Avec des enfants dans l’eau : surveillance adulte active, constante et à portée de bras.</span></aside></article></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal dolcia-animate" id="dolciaAnimate"><article><button class="close" onclick="document.querySelector('#dolciaAnimate')?.remove()">×</button><header><span>D<i>✦</i></span><div><small>Programme autonome Dolcia</small><h2>Et si Dolcia animait ce moment ?</h2><p>Choisissez une direction. Je vous guiderai étape par étape, sans inventer de lieu ni de prestation.</p></div></header><div class="animate-quick-questions"><span>Pour bien choisir, une question :</span><div><button onclick="refineAnimateChoice('move')">On veut bouger</button><button onclick="refineAnimateChoice('calm')">On veut souffler</button><button onclick="refineAnimateChoice('laugh')">On veut rire ensemble</button><button onclick="refineAnimateChoice('family')">On a des enfants</button><button onclick="refineAnimateChoice('water')">On est près de l'eau</button><button onclick="refineAnimateChoice('together')">On veut juste se retrouver</button></div></div><div class="animate-choices">${Object.entries(DOLCIA_ANIMATE_PROGRAMS).map(([id,program])=>`<button class="${selected===id?'selected':''}" onclick="previewDolciaAnimate('${id}')"><small>${esc(program.tone)} · ${program.duration} min</small><strong>${esc(program.title)}</strong><span>${esc(program.place)}</span></button>`).join('')}</div><div id="animatePreview"></div><aside><b>Avant de commencer</b><span>Vous restez responsable du lieu, des règles locales, des personnes et du matériel. Dolcia n’est ni un encadrant diplômé, ni un maître-nageur. Avec des enfants dans l’eau : surveillance adulte active, constante et à portée de bras.</span></aside></article></div>`);
   previewDolciaAnimate(selected)
 }
 function previewDolciaAnimate(id){
@@ -1509,68 +1890,252 @@ function injectDolciaAutonomousChoices(){
 }
 function ensureAnimateSafety(){if(!document.querySelector('#animateSafety')?.checked){showToast('Confirmez d’abord le lieu, les règles et la sécurité du groupe');return false}return true}
 function addDolciaAnimate(id){if(!ensureAnimateSafety())return;const item=dolciaAnimateItem(id);state.allItems.push(item);state.agenda.push({...item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia'});save();document.querySelector('#dolciaAnimate')?.remove();renderAgenda();showToast('Programme Dolcia ajouté à votre agenda')}
+const dolciaTheme={audio:null};
+function playDolciaTheme(){
+  try{
+    if(dolciaTheme.audio){dolciaTheme.audio.pause();dolciaTheme.audio.currentTime=0}
+    dolciaTheme.audio=new Audio('/assets/audio/dolcia-theme.mp3');
+    dolciaTheme.audio.volume=.85;
+    dolciaTheme.audio.play().catch(()=>{});
+  }catch{}
+}
+function stopDolciaTheme(){try{dolciaTheme.audio?.pause?.()}catch{}dolciaTheme.audio=null}
+// Équipes façon "Belambra Games" / tournois de club vacances : une vraie rivalité amicale, pas
+// juste un score collectif unique. Toujours deux équipes maximum (au-delà, ça dilue l'effet), et
+// la finale célèbre toujours les deux — jamais un classement qui dévalorise qui que ce soit,
+// conformément à la règle déjà posée : l'Élan ne classe jamais les personnes.
+const TEAM_NAMES = [['Les Soleils','Les Embruns'],['Les Corsaires','Les Flibustiers'],['Team Vague','Team Dune'],['Les Complices','Les Alliés']];
+function buildTeams(roster){
+  if(roster.length<3||roster[0]==='Le groupe')return null;
+  const shuffled=[...roster].sort(()=>Math.random()-.5);
+  const mid=Math.ceil(shuffled.length/2);
+  const [nameA,nameB]=TEAM_NAMES[Math.floor(Math.random()*TEAM_NAMES.length)];
+  return{a:{name:nameA,members:shuffled.slice(0,mid),score:0},b:{name:nameB,members:shuffled.slice(mid),score:0},turn:'a'};
+}
+function animateTeamsBar(session){
+  if(!session.teams)return'';
+  const{a,b,turn}=session.teams;
+  return`<div class="animate-teams"><div class="${turn==='a'?'active':''}"><b>${a.score}</b><span>${esc(a.name)}</span></div><div class="animate-teams-vs">vs</div><div class="${turn==='b'?'active':''}"><b>${b.score}</b><span>${esc(b.name)}</span></div></div>`;
+}
+// Partage de session : une personne "prend la main" (avance les étapes), les autres suivent en
+// direct sur leur propre téléphone via un code court ou un QR — comme un vrai animateur de club où
+// personne n'a besoin de se serrer autour d'un seul écran. La famille déjà dans le Cercle n'a jamais
+// besoin de ce code. Il sert uniquement aux amis externes, pour une durée choisie et limitée.
+const SHARE_DURATIONS=[{id:'24h',label:'24 heures'},{id:'2j',label:'2 jours'},{id:'3j',label:'3 jours'},{id:'1semaine',label:'1 semaine'}];
+async function shareAnimateSession(duration){
+  const session=state.activeAnimate;if(!session)return;
+  try{
+    const response=await fetch('/api/events?service=animate-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',duration,state:animateSessionSnapshot(session)})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.code)return showToast('Impossible de créer le code de partage pour le moment.');
+    session.shareCode=data.code;session.shareExpiresAt=data.expiresAt;
+    save();renderDolciaAnimateLive();
+    showToast(`Code créé : ${data.code} — valable ${SHARE_DURATIONS.find(d=>d.id===duration)?.label||'24 heures'}`);
+  }catch{showToast('Impossible de créer le code de partage pour le moment.')}
+}
+function animateSessionSnapshot(session){
+  return{name:session.item.name,tone:session.item.tone,index:session.index,steps:session.item.steps,phased:Boolean(session.item.phased),elan:session.elan,teams:session.teams,captain:animateCaptain(session),energyTheme:animateEnergyTheme(session).id};
+}
+function pushAnimateSessionState(){
+  const session=state.activeAnimate;if(!session?.shareCode)return;
+  fetch('/api/events?service=animate-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',code:session.shareCode,state:animateSessionSnapshot(session)})}).catch(()=>{});
+}
+function stopShareAnimateSession(){const session=state.activeAnimate;if(session){session.shareCode=null;session.shareExpiresAt=null;save();renderDolciaAnimateLive()}}
+function animateSharePanel(session){
+  if(!session.shareCode)return'';
+  const joinUrl=`${window.location.origin}/?join=${session.shareCode}`;
+  const qrSrc=`https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=8&data=${encodeURIComponent(joinUrl)}`;
+  const invited=(session.invitedContacts||[]).length;
+  return`<div class="animate-share-panel"><div><span class="kicker">Suivez sur votre téléphone</span><strong>${session.shareCode}</strong><p>Envoyez le lien par SMS ou email — un clic pour votre ami, il reste dans ses messages, pas besoin de sortir l'appareil photo.</p>
+    <div class="share-contact-row"><input id="animateShareContact" placeholder="Numéro ou email de votre ami" inputmode="email"><button class="share-link-button" onclick="sendAnimateInvite('${joinUrl}','${session.shareCode}')">Envoyer</button></div>
+    ${invited?`<small class="share-invited-count">${invited} invitation${invited>1?'s':''} envoyée${invited>1?'s':''}</small>`:''}
+    <div class="share-fallback-row"><button onclick="shareAnimateLink('${joinUrl}','${session.shareCode}')">Ou partager le lien autrement</button><small class="share-qr-hint">Vous êtes ensemble ? Scannez :</small></div></div>
+    <img src="${qrSrc}" alt="QR code pour rejoindre la session" width="64" height="64"></div>`;
+}
+// Méthode principale, façon Spotify Jam (SMS/email direct, un clic, reste dans les messages du
+// destinataire) — plus fluide qu'un QR quand on est déjà en interaction avec la personne, et ça
+// capture au passage ses coordonnées pour le Cercle. Le lien natif et le QR restent en repli :
+// le QR surtout utile en solution de secours (affiche, chevalet), pas comme méthode principale.
+function sendAnimateInvite(joinUrl,code){
+  const input=document.querySelector('#animateShareContact'),contact=(input?.value||'').trim();
+  if(!contact)return showToast('Entrez un numéro ou un email d\u2019abord.');
+  const session=state.activeAnimate;
+  const message=`Suivez notre moment Dolcia en direct sur votre téléphone (code ${code}) : ${joinUrl}`;
+  const isEmail=contact.includes('@');
+  if(isEmail){
+    window.location.href=`mailto:${encodeURIComponent(contact)}?subject=${encodeURIComponent('Rejoignez notre session Dolcia')}&body=${encodeURIComponent(message)}`;
+  }else{
+    window.location.href=`sms:${encodeURIComponent(contact)}?body=${encodeURIComponent(message)}`;
+  }
+  if(session){session.invitedContacts=session.invitedContacts||[];session.invitedContacts.push({contact,type:isEmail?'email':'sms',sentAt:new Date().toISOString()});save()}
+  if(input)input.value='';
+  renderDolciaAnimateLive();
+}
+// Repli, pas la méthode principale : partage natif générique (WhatsApp, tout autre canal), utile
+// si la personne préfère un autre outil que SMS/email.
+async function shareAnimateLink(joinUrl,code){
+  const shareData={title:'Rejoignez ma session Dolcia',text:`Suivez notre moment Dolcia en direct sur votre téléphone — code ${code}`,url:joinUrl};
+  try{
+    if(navigator.share){await navigator.share(shareData);return}
+  }catch{return}
+  try{await navigator.clipboard.writeText(joinUrl);showToast('Lien copié — collez-le où vous voulez')}
+  catch{showToast(`Lien : ${joinUrl}`)}
+}
+function openAnimateSharePicker(){
+  const session=state.activeAnimate;if(!session)return;
+  document.querySelector('#animateSharePicker')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="animateSharePicker"><article class="animate-share-picker"><button class="close" onclick="document.querySelector('#animateSharePicker')?.remove()">×</button><h3>Partager avec des amis</h3><p>Votre famille déjà dans votre Cercle n'a besoin d'aucun code. Ce code sert uniquement à des amis externes, pour une durée limitée.</p><div class="share-duration-choices">${SHARE_DURATIONS.map(d=>`<button onclick="document.querySelector('#animateSharePicker')?.remove();shareAnimateSession('${d.id}')">${d.label}</button>`).join('')}</div></article></div>`);
+}
 function startDolciaAnimate(id){
   if(!ensureAnimateSafety())return;
   const item=dolciaAnimateItem(id);
   const roster=currentGroupProfiles().map(person=>person.name).filter(Boolean);
-  state.activeAnimate={item,index:0,startedAt:new Date().toISOString(),lastInteractionAt:Date.now(),elan:0,completed:0,adjustments:[],reactions:[],status:'active',roster:roster.length?roster:['Le groupe'],captainIndex:0,streak:0,laughs:0,messages:[],insideJokes:[],nudgeCount:0};
+  state.activeAnimate={item,index:0,startedAt:new Date().toISOString(),lastInteractionAt:Date.now(),elan:0,completed:0,adjustments:[],reactions:[],status:'active',roster:roster.length?roster:['Le groupe'],captainIndex:0,streak:0,laughs:0,messages:[],insideJokes:[],nudgeCount:0,teams:buildTeams(roster.length?roster:['Le groupe']),continuity:animateContinuityGreeting()};
   document.querySelector('#dolciaAnimate')?.remove();
+  if(navigator.vibrate)navigator.vibrate(12);
+  playDolciaTheme();
   save();renderDolciaAnimateLive()
 }
 function pickVoiceLine(options){return options[Math.floor(Math.random()*options.length)]}
 function animateCaptain(session){const roster=session.roster?.length?session.roster:['Le groupe'];return roster[session.captainIndex%roster.length]}
 function animatePersonalTouch(session){
   const captain=animateCaptain(session),joke=(session.insideJokes||[]).at(-1)||(state.companionMemory.rituals||[]).at(-1);
-  if(joke&&session.index>1)return`${captain}, gardez « ${joke} » sous le coude : je sens que ça peut revenir au meilleur moment.`;
-  return captain==='Le groupe'?'Je reste avec vous et je règle le rythme en direct.':`${captain}, vous êtes capitaine de cette mission — juste pour lancer le mouvement, pas pour commander la troupe.`;
+  if(joke&&session.index>1)return`${captain}, garde « ${joke} » sous le coude : je sens que ça peut revenir au meilleur moment.`;
+  return captain==='Le groupe'?'Je reste avec toi et je règle le rythme en direct.':`${captain}, tu es capitaine de cette mission — juste pour lancer le mouvement, pas pour commander la troupe.`;
+}
+// L'historique des sessions (state.animateHistory) était déjà sauvegardé à chaque fin de moment,
+// mais jamais relu — Dolcia Anime "oubliait" tout d'une fois à l'autre malgré la donnée déjà là.
+// Accompagner dans la durée, pas seulement pendant un moment : célébrer les jalons, reconnaître
+// qu'on se retrouve, jamais inventer un chiffre qui ne vient pas de l'historique réel.
+function animateContinuityGreeting(){
+  const history=state.animateHistory||[];
+  if(!history.length)return null;
+  const count=history.length+1;
+  const daysSinceLast=Math.floor((Date.now()-new Date(history[0].completedAt).getTime())/86400000);
+  if([3,5,10,20,30].includes(count))return`C'est notre ${count}e moment ensemble — sérieusement, bravo pour cette régularité !`;
+  if(daysSinceLast>=14)return`Ça faisait un moment ! Contente de te retrouver pour animer ça.`;
+  if(daysSinceLast===0&&history.length>0)return`Encore une session aujourd'hui, j'adore cette énergie !`;
+  return null;
 }
 function animateCoachLine(session){
-  if(!session.index)return pickVoiceLine([
-    `Je lance le groupe. ${animatePersonalTouch(session)}`,
-    `Bon, on y va. ${animatePersonalTouch(session)}`,
-    `Ok, c’est parti. ${animatePersonalTouch(session)}`
-  ]);
+  if(!session.index){
+    const continuity=session.continuity;
+    return pickVoiceLine([
+      `Allez, on démarre !! ${continuity?continuity+' ':''}${animatePersonalTouch(session)}`,
+      `C’est parti, tout le monde !! ${continuity?continuity+' ':''}${animatePersonalTouch(session)}`,
+      `Et voilà, on lance la machine !! ${continuity?continuity+' ':''}${animatePersonalTouch(session)}`
+    ]);
+  }
   const last=session.reactions.at(-1);
+  const midpoint=Math.floor(session.item.steps.length/2);
+  if(!last&&session.index===midpoint&&session.index>0)return pickVoiceLine([
+    'Petite pause d’une seconde : dis-moi honnêtement, ça te plaît toujours autant ?',
+    'On fait un point vite fait — tout le monde se sent bien, on continue comme ça ?',
+    'Juste pour être sûr : ce rythme te va, ou on ajuste quelque chose ?'
+  ]);
   if(last==='great')return pickVoiceLine([
-    'Je vous sens lancés. Je garde cette énergie et je fais monter le moment d’un cran.',
-    'Ah, ça, c’est le genre d’énergie que j’aime. On garde ce rythme et on pousse un peu plus.',
-    'Voilà, c’est exactement ça. Je monte d’un cran sans rien casser.'
+    'Ouais !! J’adore cette énergie, on garde ça et on monte encore d’un cran !',
+    'Alors LÀ, bravo tout le monde !! On pousse encore un peu, allez !',
+    'Ça, c’est ce que j’aime voir !! On garde ce rythme, on ne s’arrête plus !'
   ]);
   if(last==='calmer')return pickVoiceLine([
-    'J’ai compris. Je ralentis sans casser l’ambiance.',
-    'Ok, on souffle un peu. Je baisse l’intensité, l’ambiance reste.',
-    'Mmh, reçu. On calme le jeu, tranquillement.'
+    'Ok, reçu ! On souffle un peu, mais l’ambiance reste — promis.',
+    'Pas de souci, on ralentit ensemble. Ça n’enlève rien au plaisir !',
+    'Compris, on baisse d’un cran, tranquille. On reste ensemble là-dessus.'
   ]);
   if(last==='livelier')return pickVoiceLine([
-    'On réveille le groupe. La prochaine mission sera plus vive et plus collective.',
-    'Allez, on secoue un peu tout ça. La suite sera plus vivante, promis.',
-    'Ok, plus de peps. Je prépare quelque chose de plus collectif.'
+    'Ah, tu en veux plus ?! On réveille tout ça, allez !!',
+    'Parfait, exactement ce qu’il fallait dire !! La suite va bouger, accroche-toi !',
+    'On monte le son !! La prochaine mission va être costaud, tout le monde !'
   ]);
   if(last==='skip')return pickVoiceLine([
-    'Cette mission ne vous correspondait pas. Je l’oublie pour la suite, sans pénalité.',
-    'Pas grave, celle-là n’était pas pour vous. On passe à autre chose, aucun souci.',
-    'Ok, on efface celle-ci. Ça ne change rien pour la suite.'
+    'Pas de souci, celle-là n’était pas pour toi — on efface et on avance, aucun problème !',
+    'Ok, on passe ! Ça arrive, la suite va te plaire davantage, j’en suis sûr.',
+    'Aucun souci, on l’oublie complètement. On continue sur notre lancée !'
   ]);
   return pickVoiceLine([
-    'Le groupe avance. Je garde le fil et j’adapte la suite à vos réactions.',
-    'On continue sur cette lancée. J’ajuste au fur et à mesure de ce que vous me dites.',
-    'Ça avance bien. Je garde un œil sur le rythme du groupe.'
+    'Allez, on continue sur cette belle énergie !! J’adapte la suite pour toi.',
+    'Ça avance super bien, tout le monde !! Je garde le rythme et on enchaîne.',
+    'On tient le cap, et franchement, bravo !! Prochaine étape, c’est parti.'
   ]);
 }
 function animateStepText(session){
-  const base=session.item.steps[session.index][1],last=session.reactions.at(-1);
-  if(last==='calmer')return`${base} Faites-le tranquillement, sans vitesse ni compétition.`;
-  if(last==='livelier')return`${base} Donnez-vous un mini compte à rebours et célébrez le résultat ensemble.`;
-  return base
+  const base=session.item.steps[session.index][1],last=session.reactions.at(-1),first=session.index===0,finalStep=session.index===session.item.steps.length-1;
+  const hype=pickVoiceLine(finalStep?[
+    'Dernière ligne droite, et elle va être mémorable !',
+    'On garde le meilleur pour la fin — c’est parti !',
+    'Allez, on finit ça en beauté !'
+  ]:first?[
+    'Alors, prêt à te lancer ?!',
+    'On y va, tout le monde !',
+    'C’est le moment, lance-toi !'
+  ]:[
+    'Go, à toi de jouer !',
+    'Allez, c’est ton moment !',
+    'On garde cette énergie, en piste !',
+    'Et maintenant, place à toi !'
+  ]);
+  if(last==='calmer')return`${hype} ${base} Fais-le tranquillement, à ton rythme, sans chrono ni compétition.`;
+  if(last==='livelier')return`${hype} ${base} Un petit compte à rebours, et on célèbre fort le résultat ensemble !`;
+  return`${hype} ${base}`;
+}
+// Ambiance vivante façon animateur de club (piscine, sport, soirée...) : un thème de couleurs et de
+// mouvement selon le type d'activité, plus un pouls sonore synthétisé (Web Audio API) — jamais une
+// fausse "musique" prête à l'emploi, ce que je ne peux pas produire honnêtement, mais un vrai signal
+// rythmique et énergique qui donne du corps à la session. Toujours silencieux par défaut, activé sur
+// un geste explicite, jamais imposé.
+function animatePhaseLabel(phase){return phase==='echauffement'?'Échauffement':phase==='coeur'?'Cœur de séance':phase==='retour'?'Retour au calme':''}
+function animateEnergyTheme(session){
+  const kind=experienceKind(session.item);
+  if(kind==='water')return{id:'water',label:'Ambiance aquatique',bpm:118};
+  if(kind==='sport'||kind==='play')return{id:'sport',label:'Ambiance sport & jeux',bpm:126};
+  if(kind==='event')return{id:'party',label:'Ambiance festive',bpm:122};
+  if(kind==='wellness')return{id:'calm',label:'Ambiance détente',bpm:64};
+  if(kind==='food')return{id:'warm',label:'Ambiance conviviale',bpm:88};
+  return{id:'signature',label:'Ambiance Dolcia',bpm:96};
+}
+const animatePulse={active:false,ctx:null,timer:null};
+function toggleAnimatePulse(bpm){
+  if(animatePulse.active)return stopAnimatePulse();
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return showToast('Le pouls sonore n’est pas disponible sur ce navigateur.');
+    animatePulse.ctx=new Ctx();
+    animatePulse.active=true;
+    document.querySelector('.animate-pulse-toggle')?.classList.add('active');
+    const interval=60000/bpm;
+    const beat=()=>{
+      if(!animatePulse.active||!animatePulse.ctx)return;
+      const ctx=animatePulse.ctx,osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.frequency.value=110;osc.type='sine';
+      gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.16,ctx.currentTime+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.28);
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start();osc.stop(ctx.currentTime+0.3);
+    };
+    beat();animatePulse.timer=setInterval(beat,interval);
+  }catch{showToast('Le pouls sonore n’a pas pu démarrer.')}
+}
+function stopAnimatePulse(){
+  animatePulse.active=false;
+  if(animatePulse.timer)clearInterval(animatePulse.timer);
+  animatePulse.timer=null;
+  try{animatePulse.ctx?.close?.()}catch{}
+  animatePulse.ctx=null;
+  document.querySelector('.animate-pulse-toggle')?.classList.remove('active');
 }
 function renderDolciaAnimateLive(options={}){
   const session=state.activeAnimate;if(!session)return;
   document.querySelector('#animateLive')?.remove();
   const step=session.item.steps[session.index],progress=Math.round(session.completed/session.item.steps.length*100),last=session.index===session.item.steps.length-1;
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live" id="animateLive"><article>
+  const energyTheme=animateEnergyTheme(session);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live theme-${energyTheme.id}" id="animateLive"><article>
+    <div class="animate-energy-scene" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <button class="close" onclick="pauseDolciaAnimate()" aria-label="Mettre la session en pause">×</button>
-    <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
+    <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct · ${esc(energyTheme.label)}</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><button class="animate-pulse-toggle" onclick="playDolciaTheme()" title="Réécouter l'hymne Dolcia"><i></i>Hymne Dolcia</button><button class="animate-pulse-toggle ${animatePulse.active?'active':''}" onclick="toggleAnimatePulse(${energyTheme.bpm})" aria-pressed="${animatePulse.active}" title="Pouls sonore rythmé, pas une musique"><i></i>Pouls</button>${animateTeamsBar(session)}<div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
     <p class="animate-coach-line">« ${esc(animateCoachLine(session))} »</p>
+    ${session.item.phased&&step[2]?.phase?`<div class="animate-phase-badge phase-${step[2].phase}">${esc(animatePhaseLabel(step[2].phase))}</div>`:''}
     <div class="animate-session-meta"><span>Mission ${session.index+1}/${session.item.steps.length}</span><span>Capitaine · ${esc(animateCaptain(session))}</span><span>${progress}% vécu</span><span>${session.streak||0} série</span></div>
     <h2>${esc(session.item.name)}</h2>
     <div class="animate-live-step"><time>${esc(step[0])}</time><p>${esc(animateStepText(session))}</p></div>
@@ -1583,20 +2148,54 @@ function renderDolciaAnimateLive(options={}){
     </div></div>
     ${animateConversationMarkup(session)}
     <div class="animate-talk"><input id="animateTalkInput" placeholder="Une réaction, une anecdote, un clin d’œil…"><button onclick="askAnimateCoach()">Dire à D</button><button onclick="rememberAnimateJoke()">Garder ce clin d’œil</button></div>
-    <div class="animate-live-actions"><button onclick="speakAnimateStep()">Dites-le à voix haute</button><button class="animate-live-voice" onclick="toggleLiveConversation('animate')" aria-pressed="false"><i></i>Parler à D en direct</button><button class="primary" onclick="completeDolciaAnimateStep()">${last?'Clore ce moment':'Mission accomplie →'}</button></div>
+    ${animateSharePanel(session)}
+    <div class="animate-live-actions"><button onclick="speakAnimateStep()">Dites-le à voix haute</button><button class="animate-live-voice" onclick="toggleLiveConversation('animate')" aria-pressed="false"><i></i>Parler à D en direct</button><button onclick="${session.shareCode?'stopShareAnimateSession()':'openAnimateSharePicker()'}">${session.shareCode?'Arrêter le partage':'Partager cette session'}</button><button class="primary" onclick="completeDolciaAnimateStep()">${last?'Clore ce moment':'Mission accomplie →'}</button></div>
     <progress value="${session.completed}" max="${session.item.steps.length}"></progress>
-    <small class="animate-trust">L’Élan mémorise la progression du groupe. Il ne classe jamais les personnes et ne pénalise aucun refus.</small>
+    <small class="animate-trust">${session.item.phased?'Cette séance avance seule, au rythme du programme — vous pouvez toujours mettre en pause. ':''}L’Élan mémorise la progression du groupe. Il ne classe jamais les personnes et ne pénalise aucun refus.</small>
   </article></div>`);
   setDVisualState('encouraging');
   if(options.speak!==false)speakAnimateStep();
+  scheduleAnimateAutoAdvance(session);
   scheduleAnimateNudge()
+}
+// Moteur de comportements d'animateur — sépare CE QUI se joue (les 20 expériences) de COMMENT D
+// l'anime, pour multiplier la variété sans écrire des centaines de scripts. Chaque comportement
+// n'est déclenché que par un signal réellement disponible (temps écoulé, réaction explicite,
+// score, fin de session) — jamais une perception que Dolcia n'a pas (elle ne voit ni n'entend
+// personne en dehors des taps et, en mode vocal, des mots réellement prononcés).
+const ANIMATOR_BEHAVIORS={
+  feliciter_sans_gagnant:[ // signal réel : fin de session avec deux équipes
+    (a,b)=>`${a} et ${b} ont toutes les deux été formidables — l'énergie était là des deux côtés, c'est bien ça qui compte.`,
+    (a,b)=>`Franchement, difficile de départager ${a} et ${b} aujourd'hui — et c'est tant mieux.`,
+    (a,b)=>`${a}, ${b} — tout le monde a donné le meilleur des deux côtés. C'est ça, la vraie victoire.`
+  ],
+  relance_apres_silence:[ // signal réel : lastInteractionAt dépasse un vrai délai
+    ()=>'toujours là ? Je te laisse le temps qu\'il faut, dis-moi quand tu es prêt.',
+    ()=>'pas de pression — on reprend dès que tu veux.',
+    ()=>'je patiente avec toi. Un mot, et on continue.'
+  ],
+  conclure_avec_emotion:[ // signal réel : session réellement terminée (completedAt existe)
+    ()=>'C\'est déjà fini — et c\'était vraiment bien.',
+    ()=>'Voilà, ce moment restera. Merci de l\'avoir vécu avec moi.',
+    ()=>'On s\'arrête là, sur une bonne note. À la prochaine fois.'
+  ],
+  suspense_avant_reveal:[ // signal réel : une révélation va suivre (blind test, quiz, chasse au trésor)
+    ()=>'Prêts ? Voici la réponse…',
+    ()=>'On y est presque… roulement de tambour…',
+    ()=>'accroche-toi, ça arrive…'
+  ]
+};
+function pickAnimatorLine(behavior,...args){
+  const pool=ANIMATOR_BEHAVIORS[behavior];if(!pool)return'';
+  const fn=pool[Math.floor(Math.random()*pool.length)];
+  return fn(...args);
 }
 function animateNudgeLine(session){
   const captain=animateCaptain(session);
-  if((session.reactions||[]).length===0)return`${captain}, je vous laisse vivre la mission. Un signe suffit si vous voulez plus de rythme ou plus de calme.`;
-  if((session.laughs||0)>0)return`Je note que le rire est bien là. On garde cette énergie ou je vous prépare un virage inattendu ?`;
-  if((session.streak||0)>=2)return`Belle série. Je peux monter d’un cran, mais seulement si vous en avez envie.`;
-  return`Petit point d’étape : l’énergie vous convient, ou j’ajuste la suite ?`
+  if((session.reactions||[]).length===0){const line=pickAnimatorLine('relance_apres_silence');return`${captain}, ${line.charAt(0).toLowerCase()}${line.slice(1)}`}
+  if((session.laughs||0)>0)return`Je note que le rire est bien là. On garde cette énergie ou je te prépare un virage inattendu ?`;
+  if((session.streak||0)>=2)return`Belle série. Je peux monter d’un cran, mais seulement si tu en as envie.`;
+  return`Petit point d’étape : l’énergie te convient, ou j’ajuste la suite ?`
 }
 function scheduleAnimateNudge(){
   window.clearTimeout(animateNudgeTimer);
@@ -1660,35 +2259,103 @@ function reactDolciaAnimate(reaction){
   const visual=reaction==='laugh'||reaction==='great'?'delighted':reaction==='calmer'?'calm':reaction==='livelier'?'encouraging':'thinking';
   setDVisualState(visual);save();renderDolciaAnimateLive()
 }
+// Après une session, proposer une vraie suite plutôt que de s'arrêter net — mais jamais inventer un
+// chiffre (calories, distance parcourue...) que Dolcia ne peut pas connaître réellement. On ne
+// s'appuie que sur des lieux déjà chargés et vérifiés (state.allItems), jamais fabriqués pour l'occasion.
+function animateFollowUpSuggestion(session){
+  const kind=experienceKind(session.item);
+  const wantsRefresh=['sport','water','play'].includes(kind);
+  const wantedCategories=wantsRefresh?['food','wellness']:kind==='food'?['nature','fun']:['food','wellness','fun'];
+  const usedId=session.item.id;
+  const candidate=state.allItems
+    .filter(item=>item.id!==usedId&&wantedCategories.includes(item.category)&&geoVisible(item)&&recommendationEligibleNow(item))
+    .sort((a,b)=>(b.score||0)-(a.score||0))[0];
+  if(!candidate)return null;
+  const frame=wantsRefresh
+    ?'Après cette dépense, une pause qui fait du bien :'
+    :kind==='food'
+      ?'Pour prolonger le moment, une idée pour bouger un peu :'
+      :'Pour continuer sur cette lancée :';
+  return{frame,candidate};
+}
+function celebrateAnimateMoment(){
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  const burst=document.createElement('div');
+  burst.className='animate-confetti';
+  burst.setAttribute('aria-hidden','true');
+  burst.innerHTML=Array.from({length:18},(_,i)=>`<i style="--i:${i}"></i>`).join('');
+  document.body.appendChild(burst);
+  setTimeout(()=>burst.remove(),1500);
+}
 function completeDolciaAnimateStep(){
   const session=state.activeAnimate;if(!session)return;
   session.lastInteractionAt=Date.now();
   session.completed=Math.max(session.completed,session.index+1);
   session.elan+=10;
+  if(session.teams){session.teams[session.teams.turn].score+=10;session.teams.turn=session.teams.turn==='a'?'b':'a'}
+  celebrateAnimateMoment();
   if(session.index>=session.item.steps.length-1)return finishDolciaAnimate();
-  session.index+=1;session.captainIndex=(session.captainIndex+1)%(session.roster?.length||1);save();renderDolciaAnimateLive()
+  session.index+=1;session.captainIndex=(session.captainIndex+1)%(session.roster?.length||1);save();renderDolciaAnimateLive();pushAnimateSessionState()
 }
 function finishDolciaAnimate(){
   const session=state.activeAnimate;if(!session)return;
+  stopDolciaTheme();
+  stopAnimatePulse();
+  window.clearTimeout(animateAutoAdvanceTimer);
   window.clearTimeout(animateNudgeTimer);
   const completedAt=new Date().toISOString(),record={id:session.item.id,title:session.item.name,program:session.item.autonomousProgram,startedAt:session.startedAt,completedAt,elan:session.elan,laughs:session.laughs||0,completed:session.completed,total:session.item.steps.length,adjustments:session.adjustments,insideJokes:session.insideJokes||[]};
   state.animateHistory.unshift(record);state.animateHistory=state.animateHistory.slice(0,30);
   if(!state.agenda.some(item=>item.id===session.item.id))state.agenda.push({...session.item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia',completedAt,animateElan:session.elan});
   save();document.querySelector('#animateLive')?.remove();state.activeAnimate=null;
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-finale" id="animateFinale"><article>${dMascotMark('large')}<small>Moment accompli</small><h2>Votre groupe a créé<br>son propre souvenir.</h2><div><b>${record.elan}</b><span>points d’Élan collectif · ${record.laughs} éclat${record.laughs>1?'s':''} de rire</span></div><p>J’ai retenu votre rythme, vos refus et vos clins d’œil — jamais pour vous noter, seulement pour mieux vous retrouver la prochaine fois.</p><button class="primary" onclick="document.querySelector('#animateFinale')?.remove();renderAgenda()">Retrouver ce moment</button></article></div>`)
+  const followUp=animateFollowUpSuggestion(session);
+  const followUpHtml=followUp?`<div class="animate-follow-up"><span class="kicker">${esc(followUp.frame)}</span><strong>${esc(followUp.candidate.name)}</strong><p>${esc(followUp.candidate.address||state.location.name)}</p><button class="secondary" onclick="document.querySelector('#animateFinale')?.remove();openDetail('${followUp.candidate.id}')">Voir cette idée</button></div>`:'';
+  const teamsClosing=session.teams?`<p class="animate-teams-closing">${pickAnimatorLine('feliciter_sans_gagnant',`<b>${esc(session.teams.a.name)}</b>`,`<b>${esc(session.teams.b.name)}</b>`)}</p>`:'';
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-finale" id="animateFinale"><article>${dMascotMark('large')}<small>Moment accompli</small><h2>Votre groupe a créé<br>son propre souvenir.</h2><div><b>${record.elan}</b><span>points d’Élan collectif · ${record.laughs} éclat${record.laughs>1?'s':''} de rire</span></div>${teamsClosing}<p>J’ai retenu votre rythme, vos refus et vos clins d’œil — jamais pour vous noter, seulement pour mieux vous retrouver la prochaine fois.</p>${followUpHtml}<button class="primary" onclick="document.querySelector('#animateFinale')?.remove();renderAgenda()">Retrouver ce moment</button></article></div>`)
 }
-function pauseDolciaAnimate(){stopLiveConversation();window.clearTimeout(animateNudgeTimer);setDVisualState('idle');if('speechSynthesis'in window)window.speechSynthesis.cancel();document.querySelector('#animateLive')?.remove();if(state.activeAnimate){state.activeAnimate.status='paused';save();showToast('Votre session est en pause. D garde votre progression.')}}
+function pauseDolciaAnimate(){stopDolciaTheme();stopLiveConversation();stopAnimatePulse();window.clearTimeout(animateNudgeTimer);window.clearTimeout(animateAutoAdvanceTimer);setDVisualState('idle');if('speechSynthesis'in window)window.speechSynthesis.cancel();document.querySelector('#animateLive')?.remove();if(state.activeAnimate){state.activeAnimate.status='paused';save();showToast('Votre session est en pause. D garde votre progression.')}}
 function stopDolciaAnimate(){pauseDolciaAnimate()}
 
 function detailMapUrl(item){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name,item.address||state.location?.name].filter(Boolean).join(' '))}`}
-function detailQuickActions(item){const added=state.agenda.some(entry=>entry.id===item.id),liked=state.favorites.includes(item.id);return `<div class="detail-sticky-actions"><button class="detail-back" onclick="closeDetail()">← Retour</button><button class="detail-like ${liked?'selected':''}" onclick="rate('${item.id}','favorite')">${liked?'♥ Dans mes envies':'♡ Cette idée me plaît'}</button><button class="detail-map" onclick="window.open('${detailMapUrl(item)}','_blank')">Itinéraire ↗</button><button class="detail-add ${added?'added':''}" onclick="addAgenda('${item.id}')">${added?'Déjà dans mon agenda':'Ajouter à mon agenda'}</button></div>`}
+function detailQuickActions(item){const added=state.agenda.some(entry=>entry.id===item.id),liked=state.favorites.includes(item.id);return `<div class="detail-sticky-actions"><button class="detail-back" onclick="closeDetail()">← Retour</button><button class="detail-like ${liked?'selected':''}" onclick="rate('${item.id}','favorite')">${liked?'♥ Dans mes envies':'♡ Cette idée me plaît'}</button><button class="detail-map" onclick="window.open('${detailMapUrl(item)}','_blank','noopener,noreferrer')">Itinéraire ↗</button><button class="detail-add ${added?'added':''}" onclick="addAgenda('${item.id}')">${added?'Déjà dans mon agenda':'Ajouter à mon agenda'}</button></div>`}
 function saveDetailIdea(id){if(!state.favorites.includes(id))state.favorites.push(id);save();showToast('Cette idée est conservée dans vos envies');const item=state.allItems.find(entry=>entry.id===id)||state.items.find(entry=>entry.id===id);if(item)openDetailRefresh(id)}
+// Le niveau de richesse détermine uniquement CE QUI s'affiche, jamais SI la fiche s'affiche.
+// Une fiche existe toujours — c'est la promesse centrale de cette architecture.
+function detailQuality(item,verified){
+  if(verified&&item.address&&(item.hours?.length||item.isOpen!=null))return'rich';
+  if(item.address||item.date)return'standard';
+  return'minimal';
+}
+// Les actions sont des données, jamais du code par bouton. Chaque action ne peut apparaître que
+// si la donnée réelle qui la justifie existe (evidence) — jamais une action fabriquée pour remplir
+// l'écran. Une seule action principale (priority 1), toujours interne à Dolcia tant qu'aucune
+// réservation directe réelle n'existe — jamais simulée.
+function detailActions(item){
+  const actions=[
+    {type:'add_agenda',label:'Ajouter à mon agenda',priority:1,handler:`addAgenda('${item.id}')`,isExternal:false,evidence:'action interne toujours disponible'},
+    {type:'save_idea',label:'Garder dans mes envies',priority:2,handler:`saveDetailIdea('${item.id}')`,isExternal:false,evidence:'action interne toujours disponible'}
+  ];
+  actions.push({type:'map',label:'Voir sur la carte',priority:10,target:item.googleUrl||detailMapUrl(item),isExternal:true,evidence:item.address?'adresse vérifiée':'recherche par nom et destination, adresse non confirmée'});
+  if(item.phone)actions.push({type:'call',label:'Appeler',priority:11,target:`tel:${item.phone.replace(/\s+/g,'')}`,isExternal:true,evidence:'téléphone vérifié'});
+  if(item.website)actions.push({type:'website',label:'Site officiel',priority:12,target:item.website,isExternal:true,evidence:'site officiel vérifié'});
+  if(item.booking)actions.push({type:'booking',label:'Billetterie',priority:13,target:item.booking,isExternal:true,evidence:'lien de réservation externe fourni'});
+  return actions.sort((a,b)=>a.priority-b.priority);
+}
+function renderDetailActions(actions){
+  return actions.map(a=>{
+    const cls=a.priority===1?'primary':'secondary';
+    if(a.handler)return`<button class="${cls}" onclick="${a.handler}">${esc(a.label)}</button>`;
+    const isTel=a.target.startsWith('tel:');
+    return`<button class="${cls}${isTel?' phone-cta':''}" onclick="${isTel?`window.location.href='${a.target}'`:`window.open('${esc(a.target)}','_blank','noopener,noreferrer')`}" aria-label="${esc(a.label)}${a.isExternal?' (lien externe, sécurisé)':''}">${esc(a.label)}${a.isExternal?' ↗':''}</button>`;
+  }).join('');
+}
+let detailScrollMemory=null;
 async function openDetail(id){
+  detailScrollMemory=window.scrollY;
   const item=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);
   if(!item)return;
   /* La fiche reste utile même lorsqu'une source externe répond mal. */
   const initialPhoto=itemImage(item),initialAddress=item.address||state.location?.name||'Localisation à confirmer';
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal detail-modal" id="modal" onclick="if(event.target===this)closeDetail()"><article class="detail detail-progressive">${detailQuickActions(item)}<div class="detail-image" style="background-image:url('${initialPhoto}')"></div><div class="detail-body"><span class="kicker">Fiche disponible · enrichissement en cours</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p><div class="verified-facts"><div><b>Localisation connue</b><span>${esc(initialAddress)}</span></div><div><b>Pourquoi Dolcia</b><span>${esc(why(item))}</span></div></div><div class="detail-live-status"><span class="loader"></span><p>Dolcia vérifie les horaires, contacts, photos et liens officiels. Vous pouvez déjà revenir, afficher l’itinéraire ou conserver cette idée.</p></div><div class="detail-actions"><button class="primary" onclick="addAgenda('${item.id}')">Ajouter à mon agenda</button><button class="secondary" onclick="saveDetailIdea('${item.id}')">Garder dans mes envies</button><button class="secondary" onclick="window.open('${detailMapUrl(item)}','_blank')">Voir sur la carte</button></div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal detail-modal" id="modal" onclick="if(event.target===this)closeDetail()"><article class="detail detail-progressive">${detailQuickActions(item)}<div class="detail-image" style="background-image:url('${initialPhoto}')"></div><div class="detail-body"><span class="kicker">Fiche disponible · enrichissement en cours</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p><div class="verified-facts"><div><b>Localisation connue</b><span>${esc(initialAddress)}</span></div><div><b>Pourquoi Dolcia</b><span>${esc(why(item))}</span></div></div><div class="detail-live-status"><span class="loader"></span><p>Dolcia vérifie les horaires, contacts, photos et liens officiels. Vous pouvez déjà revenir, afficher l’itinéraire ou conserver cette idée.</p></div><div class="detail-actions">${renderDetailActions(detailActions(item))}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article></div>`);
   let details=null;
   if(item.source==='Google Places'&&item.placeId){
     try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4500),response=await fetch(`/api/place-details?id=${encodeURIComponent(item.placeId)}`,{signal:controller.signal});clearTimeout(timer);details=await response.json()}catch(_){details={verified:false,status:'UNAVAILABLE'}}
@@ -1698,17 +2365,18 @@ async function openDetail(id){
   const photos=(item.photos?.length?item.photos:[itemImage(item)]).slice(0,6);
   const verified=item.source==='Google Places'?Boolean(details?.verified):Boolean(item.official&&item.date&&item.address);
   const facts=[
-    item.address?`<div><b>Adresse</b><span>${esc(item.address)}</span></div>`:'<div><b>Adresse</b><span>Lieu exact à confirmer · la fiche reste consultable</span></div>',
-    item.date?`<div><b>Date</b><span>${new Date(item.date).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})}</span></div>`:'',
-    item.phone?`<div><b>Téléphone</b><span><a href="tel:${esc(item.phone.replace(/\s+/g,''))}" class="phone-link">${esc(item.phone)}</a></span></div>`:'<div><b>Téléphone</b><span>Non communiqué</span></div>',
+    item.address?`<div><b>Adresse</b><span>${esc(item.address)}</span></div>`:'<div><b>Adresse</b><span>À confirmer</span></div>',
+    item.date?`<div><b>Date</b><span>${new Date(item.date).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'})}</span></div>`:(item.timeKnown===false?'<div><b>Horaire</b><span>À confirmer</span></div>':''),
+    item.free?'<div><b>Prix</b><span>Gratuit confirmé</span></div>':item.price!=null?`<div><b>Prix</b><span>${'€'.repeat(Math.min(item.price,4))}</span></div>`:(item.priceKnown===false?'<div><b>Prix</b><span>À confirmer</span></div>':''),
+    item.phone?`<div><b>Téléphone</b><span><a href="tel:${esc(item.phone.replace(/\s+/g,''))}" class="phone-link">${esc(item.phone)}</a></span></div>`:'',
     item.rating?`<div><b>Avis Google</b><span>${item.rating}/5${item.reviews?` · ${item.reviews} avis`:''}</span></div>`:'',
     item.isOpen!=null?`<div><b>Ouverture</b><span>${item.isOpen?'Ouvert actuellement':'Fermé actuellement'}</span></div>`:'',
     item.hours?.length?`<div><b>Horaires</b><span>${item.hours.map(esc).join('<br>')}</span></div>`:''
   ].filter(Boolean).join('');
-  const links=[`<button class="secondary" onclick="window.open('${item.googleUrl?esc(item.googleUrl):detailMapUrl(item)}','_blank')">Voir sur la carte</button>`,item.phone?`<button class="secondary phone-cta" onclick="window.location.href='tel:${esc(item.phone.replace(/\s+/g,''))}'">Appeler</button>`:'',item.website?`<button class="secondary" onclick="window.open('${esc(item.website)}','_blank')">Site officiel</button>`:'',item.booking?`<button class="secondary" onclick="window.open('${esc(item.booking)}','_blank')">Réserver</button>`:''].join('');
+  const actions=detailActions(item),quality=detailQuality(item,verified);
   const modal=document.querySelector('#modal');if(!modal)return;
   modal.setAttribute('onclick','if(event.target===this)closeDetail()');
-  modal.innerHTML=`<article class="detail">${detailQuickActions(item)}<div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${verified?'Information vérifiée':'Fiche utile · informations partielles'}</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p>${item.officialSource?`<div class="source-proof"><b>Confirmé par ${esc(item.officialSource)}</b><span>Source officielle consultée${item.officialCheckedAt?' le '+new Date(item.officialCheckedAt).toLocaleDateString('fr-FR'):''}</span></div>`:''}${item.detailWarning?`<div class="detail-warning">${esc(item.detailWarning)} Vérifiez les informations décisives avant de réserver.</div>`:''}<div class="verified-facts">${facts}</div>${preExperiencePanel(item)}${hasHappened(item)?postExperiencePanel(item):''}<div class="detail-actions"><button class="primary" onclick="addAgenda('${item.id}')">Ajouter à mon agenda</button><button class="secondary" onclick="saveDetailIdea('${item.id}')">Garder dans mes envies</button>${links}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article>`;
+  modal.innerHTML=`<article class="detail">${detailQuickActions(item)}<div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${verified?'Information vérifiée':quality==='minimal'?'Fiche Dolcia · quelques informations à confirmer':'Fiche utile · informations partielles'}</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p>${item.officialSource?`<div class="source-proof"><b>Confirmé par ${esc(item.officialSource)}</b><span>Source officielle consultée${item.officialCheckedAt?' le '+new Date(item.officialCheckedAt).toLocaleDateString('fr-FR'):''}</span></div>`:''}${item.detailWarning?`<div class="detail-warning">${esc(item.detailWarning)} Vérifiez les informations décisives avant de réserver.</div>`:''}<div class="verified-facts">${facts}</div>${preExperiencePanel(item)}${hasHappened(item)?postExperiencePanel(item):''}<div class="detail-actions">${renderDetailActions(actions)}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article>`;
 }
 function preExperiencePanel(item){return `<div class="preference-panel emotion-panel"><span class="emotion-kicker">Avant de le vivre</span><strong>Est-ce que ce moment vous ressemble ?</strong><div class="preference-actions"><button class="${state.favorites.includes(item.id)?'selected':''}" onclick="rate('${item.id}','favorite')">Coup de cœur</button><button class="${state.feedback[item.id]==='like'?'selected':''}" onclick="rate('${item.id}','like')">Ça me donne envie</button><button class="${state.feedback[item.id]==='later'?'selected':''}" onclick="rate('${item.id}','later')">Pas maintenant</button><button class="${state.feedback[item.id]==='dislike'?'selected':''}" onclick="rate('${item.id}','dislike')">Pas pour moi</button></div><small>Ces choix restent privés et affinent uniquement votre concierge.</small></div>`}
 function hasHappened(item){const agendaItem=state.agenda.find(x=>x.id===item.id);return Boolean(agendaItem?.agendaDate&&new Date(agendaItem.agendaDate).getTime()<=Date.now())}
@@ -1716,13 +2384,27 @@ function feelingWeight(value){return({unforgettable:3,loved:2,nice:1,notforme:-2
 function postExperiencePanel(item){const reactions=['Vécu ensemble','À refaire','Pas pour moi','Une belle surprise','Favori de la famille'],memory=state.experienceMemories[item.id]||{};const feelings=[['unforgettable','Inoubliable'],['loved','J’ai adoré'],['nice','Un joli moment'],['notforme','Pas pour moi'],['disappointing','Décevant']];const tags=[['value','Bon rapport qualité-prix'],['family','Parfait avec les enfants'],['couple','Idéal à deux'],['discovery','Belle découverte'],['welcome','Accueil remarquable'],['again','À refaire'],['expensive','Trop cher'],['far','Trop loin'],['touristy','Trop touristique']];const selected=state.experienceTags[item.id]||[];return `<div class="experience-memory"><span class="emotion-kicker">Après l’expérience · Notre constellation</span><h3>Quel souvenir gardez-vous de ce moment ?</h3><div class="memory-reactions">${reactions.map(label=>`<button class="${memory.reaction===label?'selected':''}" onclick="rememberExperience('${item.id}','${label}')">${label}</button>`).join('')}</div><p>Comment vous êtes-vous senti ?</p><div class="feeling-scale">${feelings.map(([id,label])=>`<button class="${state.experienceFeelings[item.id]===id?'selected':''}" onclick="saveFeeling('${item.id}','${id}')">${label}</button>`).join('')}</div><p>Qu’est-ce qui a compté ?</p><div class="memory-tags">${tags.map(([id,label])=>`<button class="${selected.includes(id)?'selected':''}" onclick="toggleExperienceTag('${item.id}','${id}')">${label}</button>`).join('')}</div><small>Votre ressenti nourrit vos prochaines compositions. Vous pouvez tout consulter, corriger ou effacer dans Notre constellation.</small></div>`}
 function selectPhoto(button,url){document.querySelector('#detailHero').style.backgroundImage=`url('${url}')`;document.querySelectorAll('.photo-thumb').forEach(x=>x.classList.remove('active'));button.classList.add('active')}
 function whyDetail(i){return i.source==='OpenAgenda'?'Cette expérience a lieu pendant les dates choisies et correspond à l’ambiance recherchée.':'Cette adresse réelle correspond à vos envies, à votre destination et au rythme du moment.'}
-function closeDetail(){document.querySelector('#modal')?.remove()}
-async function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;const returnTo=state.view;if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
+function closeDetail(){
+  document.querySelector('#modal')?.remove();
+  if(detailScrollMemory!=null){window.scrollTo(0,detailScrollMemory);detailScrollMemory=null}
+}
+function refreshNavBadge(){
+  const badge=document.querySelector('.bottom-nav .nav-item.signature span:last-child');
+  if(badge)badge.textContent=`Mon moment${state.agenda.length?` · ${state.agenda.length}`:''}`;
+}
+let addConfirmTimer=null;
+function showAddConfirmation(message='Ajouté à votre programme'){
+  document.querySelector('#addConfirm')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="add-confirm" id="addConfirm" role="status"><span>${esc(message)}</span><div><button onclick="document.querySelector('#addConfirm')?.remove()">Continuer à explorer</button><button class="primary" onclick="renderAgenda()">Voir mon agenda</button></div></div>`);
+  clearTimeout(addConfirmTimer);
+  addConfirmTimer=setTimeout(()=>document.querySelector('#addConfirm')?.remove(),7000);
+}
+async function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
   const compatibility=momentCompatibility(i);
   if(compatibility==='incompatible')return showToast('Cette activité n’est pas compatible avec votre horaire');
   if(compatibility==='open-not-session'||(compatibility==='unknown'&&requiresPublishedSession(i)))return showToast('Impossible de l’ajouter sans séance réellement confirmée');
   if(compatibility==='unknown')return showToast('Dolcia doit encore confirmer l’horaire avant l’ajout');
-  if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});save();showToast(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda')}else showToast('Cette activité est déjà dans votre agenda');closeDetail();if(returnTo==='surprise')renderSurprise();else if(returnTo==='results')renderResults()}
+  if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});save();if(navigator.vibrate)navigator.vibrate(12);closeDetail();refreshNavBadge();showAddConfirmation(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda')}else{showToast('Cette activité est déjà dans votre agenda');closeDetail()}}
 function agendaDateFor(item,slotLabel=''){if(item.date)return item.date;const date=new Date(state.dateStart);const match=slotLabel.match(/(\d{2}):(\d{2})/);if(match)date.setHours(Number(match[1]),Number(match[2]),0,0);return date.toISOString()}
 function adoptSurprise(){state.program.forEach(slot=>{if(!state.agenda.some(item=>item.id===slot.item.id))state.agenda.push({...slot.item,agendaDate:agendaDateFor(slot.item,slot.label),agendaSlot:slot.label,addedAt:new Date().toISOString(),fromSurprise:true})});state.agenda.sort((a,b)=>new Date(a.agendaDate)-new Date(b.agendaDate));save();showToast('Votre programme est ajouté à l’agenda');renderAgenda()}
 function surprise(forceNew=false){if(!state.allItems.length){state.radius=Math.min(state.radius*1.6,60000);showToast('Dolcia compose votre programme…');return compose()}if(forceNew||state.view!=='surprise'){const pool=[...state.allItems].sort(()=>Math.random()-.5);state.program=buildProgram(pool);if(state.majorChoice)state.program=injectMajorMoment(state.program);state.items=state.program.map(slot=>slot.item)}renderSurprise();showToast(forceNew?'Un nouveau programme vient d’être composé':'Votre programme est prêt')}
@@ -1753,7 +2435,7 @@ function renderAgenda(){
     const header=`<div class="agenda-day-header"><strong>${weekday.charAt(0).toUpperCase()+weekday.slice(1)} ${dateObj.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</strong>${dayKeys.length>1?`<span>Jour ${dayPos+1} sur ${dayKeys.length}</span>`:''}</div>`;
     const dayCards=dayItems.map((item,localIndex)=>{
       const globalIndex=state.agenda.indexOf(item),date=new Date(item.agendaDate||state.dateStart),day=iso(date),time=`${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
-      const card=`<article class="agenda-card agenda-editable ${item.fromSurprise?'from-surprise':''}"><div class="agenda-time"><input type="time" value="${time}" onchange="updateAgendaTime('${item.id}',this.value)"><input type="date" value="${day}" onchange="updateAgendaDate('${item.id}',this.value)"></div><img src="${itemImage(item)}" alt=""><div><span class="agenda-slot">${esc(item.agendaSlot||'Moment choisi')}</span><h3>${esc(item.name)}</h3><p>${esc(item.address||state.location.name)}</p><div class="agenda-tools"><button onclick="moveAgenda(${globalIndex},-1)" ${globalIndex===0?'disabled':''}>↑ Plus tôt</button><button onclick="moveAgenda(${globalIndex},1)" ${globalIndex===state.agenda.length-1?'disabled':''}>↓ Plus tard</button><button onclick="openDetail('${item.id}')">Voir la fiche</button><button onclick="removeAgenda('${item.id}')">Retirer</button></div></div></article>`;
+      const card=`<article class="agenda-card agenda-editable ${item.fromSurprise?'from-surprise':''}"><div class="agenda-time"><input type="time" value="${time}" onchange="updateAgendaTime('${item.id}',this.value)"><input type="date" value="${day}" onchange="updateAgendaDate('${item.id}',this.value)"></div><img src="${itemImage(item)}" alt="" loading="lazy" class="fade-img" onload="this.classList.add('img-loaded')"><div><span class="agenda-slot">${esc(item.agendaSlot||'Moment choisi')}</span><h3>${esc(item.name)}</h3><p>${esc(item.address||state.location.name)}</p><div class="agenda-tools"><button onclick="moveAgenda(${globalIndex},-1)" ${globalIndex===0?'disabled':''}>↑ Plus tôt</button><button onclick="moveAgenda(${globalIndex},1)" ${globalIndex===state.agenda.length-1?'disabled':''}>↓ Plus tard</button><button onclick="openDetail('${item.id}')">Voir la fiche</button><button onclick="removeAgenda('${item.id}')">Retirer</button></div></div></article>`;
       const next=dayItems[localIndex+1];
       return card+(next?agendaTravelConnector(item,next):'');
     }).join('');
@@ -1766,6 +2448,7 @@ function reserveWithDolcia(id,slotLabel=''){
   const date=item.date||agendaDateFor(item,slotLabel||requestedMomentLabel());
   const reservation={id:`DLC-${Date.now().toString(36).toUpperCase()}`,itemId:item.id,name:item.name,address:item.address||state.location.name,date,status:'confirmed',people:currentGroupSize(),rightLabel:item.category==='food'?'Formule Dolcia réservée':'Expérience Dolcia réservée',createdAt:new Date().toISOString()};
   state.reservations.push(reservation);if(!state.agenda.some(x=>x.id===item.id))state.agenda.push({...item,agendaDate:date,agendaSlot:slotLabel||'Réservation Dolcia',reservationId:reservation.id});
+  if(navigator.vibrate)navigator.vibrate(12);
   state.passWallet={status:'active',title:'Mon Pass Dolcia',holder:(JSON.parse(localStorage.getItem('dolcia_profile_v1')||'null')?.name||'Voyageur Dolcia'),rights:state.reservations.filter(r=>r.status!=='cancelled').map(r=>({reservationId:r.id,label:r.rightLabel,status:r.status})),privileges:state.passWallet.privileges||[],updatedAt:new Date().toISOString()};save();renderPass(reservation.id)
 }
 function passToken(reservation){const seed=`${reservation.id}-${Math.floor(Date.now()/60000)}`;let hash=0;for(const char of seed)hash=((hash<<5)-hash)+char.charCodeAt(0);return Math.abs(hash).toString().padStart(8,'0').slice(0,8)}
@@ -1837,4 +2520,58 @@ window.answerDCoach=answerDCoach;
 window.applyProgramDirection=applyProgramDirection;
 window.resetCatalogForRecovery=resetCatalogForRecovery;window.showWithoutAdvancedFilters=showWithoutAdvancedFilters;window.acceptRecoveryBudget=acceptRecoveryBudget;window.acceptRecoveryDistance=acceptRecoveryDistance;
 window.reactDolciaAnimate=reactDolciaAnimate;window.completeDolciaAnimateStep=completeDolciaAnimateStep;window.pauseDolciaAnimate=pauseDolciaAnimate;
+window.shareAnimateSession=shareAnimateSession;window.openAnimateSharePicker=openAnimateSharePicker;window.stopShareAnimateSession=stopShareAnimateSession;window.shareAnimateLink=shareAnimateLink;
+window.openAnimateJoin=openAnimateJoin;window.joinAnimateSession=joinAnimateSession;window.leaveAnimateFollow=leaveAnimateFollow;
+// Mode suiveur : quelqu'un rejoint une session partagée via un lien scanné (QR) ou un code saisi
+// à la main. Vue en lecture seule qui se met à jour toute seule — jamais de contrôle sur l'avancement,
+// seule la personne qui a créé le code garde la main.
+let animateFollowTimer=null;
+function stopAnimateFollow(){window.clearInterval(animateFollowTimer);animateFollowTimer=null}
+function openAnimateJoin(prefillCode){
+  document.querySelector('#animateJoin')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="animateJoin"><article class="animate-join-card"><button class="close" onclick="document.querySelector('#animateJoin')?.remove()">×</button><h3>Rejoindre une session Dolcia Anime</h3><p>Demandez le code à la personne qui anime — 6 caractères, sans espace.</p><input id="animateJoinCode" maxlength="6" placeholder="EX. 6JZ337" value="${esc(prefillCode||'')}" style="text-transform:uppercase"><button class="primary" onclick="joinAnimateSession()">Rejoindre</button></article></div>`);
+  if(prefillCode)joinAnimateSession();
+}
+async function joinAnimateSession(){
+  const input=document.querySelector('#animateJoinCode'),code=(input?.value||'').toUpperCase().trim();
+  if(code.length<4)return showToast('Entrez le code complet, à 6 caractères.');
+  document.querySelector('#animateJoin')?.remove();
+  state.followingAnimateCode=code;
+  renderAnimateFollowerView();
+  await refreshAnimateFollowerState();
+  stopAnimateFollow();
+  animateFollowTimer=window.setInterval(refreshAnimateFollowerState,4000);
+}
+async function refreshAnimateFollowerState(){
+  const code=state.followingAnimateCode;if(!code)return;
+  try{
+    const response=await fetch(`/api/events?service=animate-session&code=${encodeURIComponent(code)}`);
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){
+      stopAnimateFollow();
+      document.querySelector('#animateFollowShell')?.insertAdjacentHTML('afterbegin',`<p class="animate-follow-error">${response.status===410?'Ce code a expiré.':'Session introuvable.'}</p>`);
+      return;
+    }
+    state.followingAnimateState=data.state;
+    renderAnimateFollowerView();
+  }catch{}
+}
+function leaveAnimateFollow(){stopAnimateFollow();state.followingAnimateCode=null;state.followingAnimateState=null;document.querySelector('#animateFollowShell')?.remove()}
+function renderAnimateFollowerView(){
+  document.querySelector('#animateFollowShell')?.remove();
+  const live=state.followingAnimateState;
+  const step=live?.steps?.[live.index];
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live theme-${live?.energyTheme||'signature'}" id="animateFollowShell"><article>
+    <div class="animate-energy-scene" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <button class="close" onclick="leaveAnimateFollow()" aria-label="Quitter le suivi">×</button>
+    <header class="animate-presence">${dMascotMark('large')}<div><small>Vous suivez ${live?live.captain+' · ':''}en direct</small><strong>${esc(live?.name||'En attente…')}</strong></div></header>
+    ${live?`<div class="animate-session-meta"><span>Mission ${(live.index||0)+1}/${live.steps.length}</span><span>${esc(live.captain||'')}</span></div>
+    <h2>${esc(live.name)}</h2>
+    <div class="animate-live-step"><time>${esc(step?.[0]||'')}</time><p>${esc(step?.[1]||'')}</p></div>
+    ${live.teams?`<div class="animate-teams"><div><b>${live.teams.a.score}</b><span>${esc(live.teams.a.name)}</span></div><div class="animate-teams-vs">vs</div><div><b>${live.teams.b.score}</b><span>${esc(live.teams.b.name)}</span></div></div>`:''}
+    <p class="animate-follow-note">Vous suivez en direct — la personne qui anime garde la main sur l'avancement.</p>`:`<p class="animate-follow-note">En attente que la session démarre…</p>`}
+  </article></div>`);
+}
+const urlParams=new URLSearchParams(window.location.search);
+if(urlParams.get('join'))openAnimateJoin(urlParams.get('join'));
 home();
