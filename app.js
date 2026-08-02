@@ -953,7 +953,7 @@ function homePosterInner(moment){
   const ctx=pickHomeSequenceContext(moment);
   const ordinary=ctx==='ordinary';
   const title=moment?(moment.title||moment.name):ordinary?'Votre moment, à construire ensemble.':'Dites-moi ce qui vous ferait plaisir.';
-  const cta=moment?majorMomentAction(moment).button:ordinary?'Laissez-vous guider':'Composer mon moment';
+  const cta=moment?majorMomentAction(moment).button:'Parler à Dolcia';
   const action=moment?`acceptHomeMajor('${esc(moment.id)}')`:'openEclatDialogue()';
   const sequence=HOME_SEQUENCES[ctx][Math.floor(Date.now()/86400000)%HOME_SEQUENCES[ctx].length];
   const playCinema=!homeCinemaAlreadyShownToday();
@@ -987,7 +987,7 @@ function homePhrase(){
 async function loadHomePulse(){
   const today=iso(new Date());
   const list=document.querySelector('#pulseEventList');
-  const emptyPulse=()=>`<div class="pulse-empty"><span>Le champ des possibles reste ouvert</span><strong>Et si votre prochain moment commençait ici ?</strong><p>Dolcia n’affiche que les rendez-vous assez fiables. Les expériences disponibles autour de vous restent accessibles dès maintenant.</p><button onclick="startCompose()">Composer mon moment <b>→</b></button></div>`;
+  const emptyPulse=()=>`<div class="pulse-empty"><span>Le champ des possibles reste ouvert</span><strong>Et si votre prochain moment commençait ici ?</strong><p>Dites simplement à Dolcia quand, avec qui et ce qui vous ferait plaisir. Elle demandera ensuite uniquement le budget nécessaire pour vous proposer quelque chose de juste.</p><button onclick="openEclatDialogue()">Dites-moi ce qui vous ferait plaisir <b>→</b></button></div>`;
   try{
     const [weather,official,tickets,major]=await Promise.allSettled([
       get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),

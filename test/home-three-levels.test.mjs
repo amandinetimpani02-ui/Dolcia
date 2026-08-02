@@ -27,7 +27,10 @@ test('le bouton d’action est un lien texte minimal avec une flèche, jamais un
 
 test('le Home ne montre jamais un écran vide : sans grand moment détecté, une invitation honnête à être guidé prend le relais, jamais une fausse observation', () => {
   assert.match(app, /const title=moment\?\(moment\.title\|\|moment\.name\):ordinary\?'Votre moment, à construire ensemble\.':'Dites-moi ce qui vous ferait plaisir\.'/);
-  assert.match(app, /const cta=moment\?majorMomentAction\(moment\)\.button:ordinary\?'Laissez-vous guider':'Composer mon moment'/);
+  assert.match(app, /const cta=moment\?majorMomentAction\(moment\)\.button:'Parler à Dolcia'/);
+  const emptyPulseBlock = app.match(/const emptyPulse=\(\)=>`[^`]+`;/s)?.[0] || '';
+  assert.match(emptyPulseBlock, /onclick="openEclatDialogue\(\)"/);
+  assert.doesNotMatch(emptyPulseBlock, /startCompose\(\)/);
 });
 
 test('la même affiche se met à jour en place (photo, titre, action) une fois les vraies données chargées, sans reconstruire un composant séparé', () => {

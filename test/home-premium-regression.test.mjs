@@ -9,7 +9,15 @@ const premium = await readFile(new URL('../premium.css', import.meta.url), 'utf8
 test('l’accueil ne montre plus de panne technique au consommateur', () => {
   assert.doesNotMatch(app, /Les sources officielles sont momentanément indisponibles/);
   assert.match(app, /Le champ des possibles reste ouvert/);
-  assert.match(app, /Dolcia n’affiche que les rendez-vous assez fiables/);
+  assert.match(app, /Dites simplement à Dolcia quand, avec qui et ce qui vous ferait plaisir/);
+  assert.match(app, /onclick="openEclatDialogue\(\)"/);
+  assert.doesNotMatch(app.match(/const emptyPulse=\(\)=>`[^`]+`;/s)?.[0] || '', /startCompose\(\)/);
+});
+
+test('la photographie du Home reste réellement visible au-dessus du fond', () => {
+  assert.match(home, /\.home-poster\{[^}]*isolation:isolate/);
+  assert.match(home, /\.home-poster-image\{[^}]*z-index:0/);
+  assert.doesNotMatch(home, /\.home-poster-image\{[^}]*z-index:-1/);
 });
 
 test('le flux officiel tolère des réponses partielles sans casser l’accueil', () => {

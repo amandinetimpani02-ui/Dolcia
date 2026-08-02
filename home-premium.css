@@ -2,8 +2,8 @@
 /* Home v3 — une affiche, pas une fiche. Une image plein écran porte l'émotion ; le texte flotte
    dessus, sans cadre, sans carte, sans bouton rempli. Retour direct d'audit visuel qui a motivé ce
    changement : "aujourd'hui il y a beaucoup de noir, très peu de rêve". */
-.home-poster{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
-.home-poster-image{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;transition:background-image .6s ease}
+.home-poster{position:relative;isolation:isolate;min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:#080909}
+.home-poster-image{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;transition:background-image .6s ease}
 .home-poster-content{position:relative;z-index:1;max-width:820px;padding:0 clamp(24px,7vw,90px) 70px;text-align:left}
 .home-poster-kicker{font-family:var(--display);font-size:clamp(15px,1.8vw,19px);font-weight:400;font-style:italic;color:#f0dba5;margin:0 0 14px;opacity:.92}
 .home-poster-title{font-family:var(--display);font-size:clamp(40px,7vw,88px);font-weight:500;line-height:.98;letter-spacing:-.02em;color:#faf6ee;margin:0 0 14px;max-width:14ch}
