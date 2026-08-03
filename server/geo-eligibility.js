@@ -2,6 +2,24 @@ import { DECISION_CODES as C, validateDecisionCodes, DECISION_CODES_VERSION } fr
 
 export const GEO_RULES_VERSION = '1.1.0';
 
+// ---------------------------------------------------------------------------
+// LA RÈGLE NATIONALE DES PÉPITES — valable pour toute destination Dolcia, pas
+// seulement Le Touquet. Ce n'est jamais une question de distance en kilomètres
+// (50km n'a pas le même sens en zone rurale qu'en zone dense), ni un jugement
+// au cas par cas — c'est un budget de temps de trajet, identique partout :
+//   1. Temps de trajet réel <= budget de la durée du moment × 1,35 pour une
+//      pépite (contre × 1 pour une activité locale ordinaire). Le budget par
+//      durée est défini une seule fois ci-dessous et ne dépend d'aucune ville.
+//   2. L'événement doit être officiel ET daté (un rendez-vous réel et vérifié,
+//      pas un lieu permanent) pour être reconnu comme une pépite prouvée.
+//   3. Si un équivalent de qualité comparable existe déjà localement (ou plus
+//      proche), la pépite lointaine est automatiquement écartée — voir
+//      applyAlternativeCheck ci-dessous. Une pépite ne vaut le détour que si
+//      elle n'existe nulle part de plus proche.
+// Ces trois conditions ensemble définissent "pépite locale" — pas un curseur
+// réglé à l'instinct sur un exemple, et pas la personne qui décide au cas par
+// cas : la règle décide, la même partout en France.
+// ---------------------------------------------------------------------------
 export const GEO_THRESHOLDS = Object.freeze({
   locationReliable: 0.85,
   locationUsable: 0.5,

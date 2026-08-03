@@ -501,10 +501,17 @@ button:focus-visible{outline:2px solid #f1d897;outline-offset:3px}
 
 /* Explorer : des couvertures éditoriales, jamais une succession de formulaires. */
 .catalog-toolbar,.filters-panel,.explorer-brief{
+  position:relative;
   border-color:var(--atelier-line)!important;
   background:linear-gradient(145deg,rgba(28,31,29,.67),rgba(10,12,11,.62))!important;
-  box-shadow:inset 0 1px rgba(255,255,255,.045);
+  box-shadow:inset 0 1px rgba(255,255,255,.045),0 24px 60px -20px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.25);
   backdrop-filter:blur(26px) saturate(1.18);
+}
+/* Le reflet net sur le bord supérieur — la vraie signature du Liquid Glass iOS 26, pas juste du flou. */
+.catalog-toolbar::before,.filters-panel::before,.explorer-brief::before{
+  content:"";position:absolute;top:0;left:6%;right:6%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.5) 45%,rgba(255,255,255,.5) 55%,transparent);
+  pointer-events:none;
 }
 .experience{
   border:1px solid var(--atelier-line)!important;border-radius:var(--atelier-radius-lg)!important;

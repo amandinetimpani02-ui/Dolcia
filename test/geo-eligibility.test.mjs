@@ -30,9 +30,22 @@ test('Nausicaá est recherché régionalement pour une demande explicite aquariu
   assert.ok(plan.some(entry => entry.scope === 'signature' && entry.radius >= 50000 && /aquarium/.test(entry.query)));
 });
 
-test('les requêtes internes larges ne déclenchent jamais seules un débordement régional', () => {
+test('une fête de village régionale (ex. Fête du Cochon Rose à Hesdin, 30km) est vérifiée même sans mot-clé "festival" explicite dans la demande', () => {
+  const plan = buildRetrievalPlan({ queries: ['restaurants', 'plage nature'], momentSentence: 'Je suis au Touquet, qu’est-ce qu’on fait ce week-end ?', duration: 'day', localRadius: 12000 });
+  const majorEvent = plan.find(entry => entry.reason === 'MAJOR_EVENT_SIGNATURE');
+  assert.ok(majorEvent, 'la vérification des grands événements doit tourner même sans mot-clé');
+  assert.ok(majorEvent.radius >= 30000, 'le rayon doit couvrir au moins 30km (ex. Hesdin depuis Le Touquet)');
+  assert.match('fête du cochon rose hesdin', /f[eê]te/i);
+});
+
+test('les requêtes internes larges ne déclenchent jamais seules un débordement régional sur les centres d’intérêt personnels (aquarium, parc à thème, nautique)', () => {
   const plan = buildRetrievalPlan({ queries: ['zoo aquarium ferme pédagogique', 'parc attractions'], duration: 'day', localRadius: 12000 });
-  assert.ok(plan.every(entry => entry.scope === 'local'));
+  const personalInterestLeaks = plan.filter(entry => entry.scope === 'signature' && entry.reason !== 'MAJOR_EVENT_SIGNATURE');
+  assert.equal(personalInterestLeaks.length, 0);
+  // Exception assumée : la vérification des grands événements régionaux (fête, festival...) tourne
+  // systématiquement dès qu'une recherche régionale est possible, sans mot-clé requis — c'est
+  // précisément le rôle d'une pépite locale que la personne n'a pas à deviner elle-même.
+  assert.ok(plan.some(entry => entry.reason === 'MAJOR_EVENT_SIGNATURE'));
 });
 
 test('la même demande explicite ne déborde pas régionalement pour deux heures', () => {

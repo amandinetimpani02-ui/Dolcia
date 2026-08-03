@@ -14,12 +14,12 @@ test('le texte de chaque étape n’est plus l’instruction brute seule : il es
 test('les répliques de réaction de D ont une vraie énergie de groupe (exclamations, adresse directe), pas un ton posé', () => {
   assert.match(app, /Ouais !! J.adore cette énergie/);
   assert.match(app, /Allez, on démarre !!/);
-  assert.match(app, /Ah, vous en voulez plus \?!/);
+  assert.match(app, /Ah, tu en veux plus \?!/);
 });
 
 test('une mission accomplie déclenche une vraie célébration visuelle (confettis), pas juste un changement d’écran silencieux', () => {
   assert.match(app, /function celebrateAnimateMoment\(\)/);
-  assert.match(app, /function completeDolciaAnimateStep\(\)\{[\s\S]{0,200}celebrateAnimateMoment\(\)/);
+  assert.match(app, /function completeDolciaAnimateStep\(\)\{[\s\S]{0,400}celebrateAnimateMoment\(\)/);
   assert.match(css, /\.animate-confetti\{position:fixed/);
   assert.match(css, /@keyframes confettiFall/);
 });

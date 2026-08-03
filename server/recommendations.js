@@ -224,8 +224,15 @@ export default async function handler(req, res) {
   const eligibleCandidates = ranked;
   const travelById = await resolveTravelMinutesBatch({ lat: safeContext.lat, lng: safeContext.lng }, eligibleCandidates, safeContext.travelMode);
   const classified = [];
+  // "Officiel et daté" prouve qu'un événement est vérifié et limité dans le temps — ça ne prouve
+  // pas qu'il est RARE. Un concert gratuit qui revient chaque jeudi tout l'été n'a pas la même
+  // valeur de pépite qu'un festival annuel unique, même si les deux sont officiels et datés.
+  // Repli honnête et assumé : faute d'un vrai signal de récurrence dans les sources (aucune API
+  // utilisée ici ne le fournit), on se base sur des indices simples dans le nom de l'événement.
+  const RECURRING_PATTERN = /\b(tous les|chaque semaine|chaque (lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)|hebdomadaire|du (lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b)/i;
   for (const item of eligibleCandidates) {
     const matchesLocality = destinationLocalityMatch(item, safeContext);
+    const looksRecurring = RECURRING_PATTERN.test(`${item.name || ''} ${item.summary || ''}`);
     const result = await classifyCandidate({
       ...item,
       locationConfidence: item.placeId ? .95 : (item.official ? .9 : .7),
@@ -236,7 +243,14 @@ export default async function handler(req, res) {
       officialEvent: Boolean(item.official && item.date),
       dateCompatible: true,
       audienceCompatible: true,
-      rarityEvidence: item.rarityEvidence || null,
+      // Les sources officielles (DATAtourisme, l'office de tourisme, la billetterie partenaire...)
+      // marquent déjà leurs événements `official:true`, mais ce signal n'était jamais traduit en
+      // preuve de rareté — sans ça, un grand rendez-vous régional restait toujours "hors zone",
+      // même une fois correctement recherché. Un événement officiel et daté (pas un lieu permanent)
+      // est un signal honnête de rareté vérifiée, pas une invention : la date et la source existent
+      // réellement, on ne fait que le reconnaître comme tel — sauf s'il semble récurrent, auquel cas
+      // on ne force pas le niveau "high" et on laisse le moteur géo trancher normalement.
+      rarityEvidence: item.rarityEvidence || (item.official && item.date && !looksRecurring ? { level: 'high', source: item.source || 'Source officielle', sourceType: 'tourism_office', checkedAt: new Date().toISOString() } : null),
       destinationLocalityMatch: matchesLocality,
       travelMinutes: travelById.get(item.id) ?? null
     }, {

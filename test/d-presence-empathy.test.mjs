@@ -20,7 +20,7 @@ test('pendant une session Dolcia Anime, D est grande et centrale (façon coach e
 
 test('un vrai moment d’empathie interrompt le hype à mi-session : D demande sincèrement comment ça va, pas seulement pousser l’énergie', () => {
   assert.match(app, /const midpoint=Math\.floor\(session\.item\.steps\.length\/2\)/);
-  assert.match(app, /dites-moi honnêtement, ça vous plaît toujours autant/);
+  assert.match(app, /dis-moi honnêtement, ça te plaît toujours autant/);
 });
 
 test('les animations du visage et de la présence respectent le mouvement réduit', () => {

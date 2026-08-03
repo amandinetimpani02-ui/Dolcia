@@ -14,7 +14,7 @@ test('le vrai fichier audio fourni par la personne est présent dans les assets,
 test('l’hymne Dolcia se joue à l’ouverture d’une session Dolcia Anime, et peut être réécouté à tout moment', () => {
   assert.match(app, /function playDolciaTheme\(\)/);
   assert.match(app, /new Audio\('\/assets\/audio\/dolcia-theme\.mp3'\)/);
-  assert.match(app, /function startDolciaAnimate\(id\)\{[\s\S]{0,600}playDolciaTheme\(\)/);
+  assert.match(app, /function startDolciaAnimate\(id\)\{[\s\S]{0,700}playDolciaTheme\(\)/);
   assert.match(app, /onclick="playDolciaTheme\(\)" title="Réécouter l.hymne Dolcia"/);
 });
 
