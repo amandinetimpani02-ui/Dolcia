@@ -27,7 +27,11 @@ test('une sortie éloignée doit mériter sa place', () => {
 });
 
 test('la version porte explicitement la vérité du moment', () => {
+<<<<<<< HEAD
   assert.match(client, /20\.15\.0-question-decisive/);
+=======
+  assert.match(client, /21\.40\.1-moteur-comportements/);
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   assert.match(client, /function momentTruth/);
 });
 

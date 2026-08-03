@@ -1,5 +1,15 @@
 # Dolcia — Journal des évolutions (Changelog)
 
+<<<<<<< HEAD
+=======
+## 21.40.1 — consolidation vérifiée
+
+- L'archive `v21.40-moteur-comportements` devient la base consolidée, sans régression fonctionnelle.
+- L'identifiant de build, la version du paquet et le MASTER sont alignés sur la version réellement livrée.
+- Le total documenté correspond à l'exécution réelle : 367 tests réussis sur 367.
+- Le Home, Explorer, les fiches, l'agenda, Dolcia Anime et le moteur de comportements restent fonctionnellement inchangés.
+
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 Journal chronologique de toutes les décisions techniques et corrections apportées au projet, dans
 l'ordre où elles ont eu lieu. Pour comprendre l'état actuel du projet sans lire tout l'historique,
 voir `MASTER.md`. Pour la logique durable du moteur de décision, voir `ARCHITECTURE.md`. Pour la
@@ -661,6 +671,7 @@ Ces comportements sont détectés depuis le contexte ; ils ne doivent pas deveni
   `mountThreeFuturesLegacy()`, du code retiré et jamais appelé, pas une vraie régression.
 - Nouveau test de garde pour empêcher ce type d'incohérence de redériver silencieusement.
 - 302 tests verts après ce premier passage.
+<<<<<<< HEAD
 
 ## Deux previews A/B de la navigation sur le Home — 1er août 2026 (suite du même jour)
 
@@ -752,3 +763,5 @@ Ces comportements sont détectés depuis le contexte ; ils ne doivent pas deveni
 - **Ce qui reste à valider, hors de portée ici** : la consolidation du contrôle sonore en un seul
   bloc reste à tester réellement sur téléphone et ordinateur, comme demandé — ça ne peut se
   vérifier que dans une vraie Preview, pas dans le code seul.
+=======
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae

@@ -3,9 +3,15 @@
 ## État du projet
 
 ```
+<<<<<<< HEAD
 Version           : 21.46
 Production        : oui (Vercel)
 Tests             : 398/398 verts
+=======
+Version           : 21.40.1
+Production        : oui (Vercel)
+Tests             : 367/367 verts
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 Architecture cible : voir ARCHITECTURE.md — Home reconstruit comme une affiche
                       photo plein écran, avec voix intégrée (7 contextes +
                       filet ordinaire, honnête). Classement désir/surprise
@@ -16,6 +22,7 @@ Architecture cible : voir ARCHITECTURE.md — Home reconstruit comme une affiche
                       commune d'accessibilité des fenêtres modales (Échap,
                       piège de focus, inert, bouton Retour mobile). Dolcia
                       Anime : bibliothèque de 20 expériences réelles couvrant
+<<<<<<< HEAD
                       10 catégories, toutes réécrites avec un ton animateur ;
                       audio consolidé en un seul bloc (mute + volume + pouls),
                       atténuation corrigée (ne remonte jamais un volume choisi
@@ -29,6 +36,14 @@ Prochain chantier  : validation à l'oreille, en vraie Preview, de 3 programmes
                       temps → scénario → ancrage → centre mobile →
                       compléments → budget) reste partiellement implémenté —
                       voir ARCHITECTURE.md §2. Puis : présence continue de D dans
+=======
+                      10 catégories (sport, olympiades, famille, couple, amis,
+                      piscine, quiz/blind-test, danse, détente, soirée).
+Prochain chantier  : le moteur de scénarios complet (objectif → temps →
+                      scénario → ancrage → centre mobile → compléments →
+                      budget) reste partiellement implémenté — voir
+                      ARCHITECTURE.md §2. Puis : présence continue de D dans
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
                       la journée (pas seulement sur sollicitation), agenda
                       qui se réorganise sur une phrase dite au D-Coach
                       ("finalement on est fatigués"), enrichissement des
@@ -57,7 +72,11 @@ Application web (vanilla JS, sans framework front), déployée sur Vercel, avec 
 backend de données persistantes. Un seul fichier client principal (`app.js`), un jeu de fonctions
 serverless côté serveur, une suite de tests automatisée qui charge le vrai code de production.
 
+<<<<<<< HEAD
 **État des tests : 279 tests verts.** Lancer `npm test` (ou `node --test test/*.test.mjs`) avant
+=======
+**État des tests : 367 tests verts.** Lancer `npm test` (ou `node --test test/*.test.mjs`) avant
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 tout déploiement. `npm run check` ajoute une vérification de syntaxe sur les fichiers critiques.
 
 ## 2. Structure des fichiers

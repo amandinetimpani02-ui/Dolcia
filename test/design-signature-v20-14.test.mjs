@@ -6,7 +6,11 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../vision-premium.css',import.meta.url),'utf8');
 
 test('la signature atelier reste présente dans v20.15',()=>{
+<<<<<<< HEAD
   assert.match(app,/20\.15\.0-question-decisive/);
+=======
+  assert.match(app,/21\.40\.1-moteur-comportements/);
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   assert.match(css,/Dolcia v20\.14 — Signature Atelier/);
 });
 

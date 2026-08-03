@@ -11,10 +11,18 @@ test('le vrai fichier audio fourni par la personne est présent dans les assets,
   assert.ok(size > 100000, 'le fichier doit être le vrai MP3 fourni, pas un fichier vide ou factice');
 });
 
+<<<<<<< HEAD
 test('l’hymne Dolcia se joue automatiquement à l’ouverture d’une session Dolcia Anime', () => {
   assert.match(app, /function playDolciaTheme\(\)/);
   assert.match(app, /new Audio\('\/assets\/audio\/dolcia-theme\.mp3'\)/);
   assert.match(app, /function startDolciaAnimate\(id\)\{[\s\S]{0,700}playDolciaTheme\(\)/);
+=======
+test('l’hymne Dolcia se joue à l’ouverture d’une session Dolcia Anime, et peut être réécouté à tout moment', () => {
+  assert.match(app, /function playDolciaTheme\(\)/);
+  assert.match(app, /new Audio\('\/assets\/audio\/dolcia-theme\.mp3'\)/);
+  assert.match(app, /function startDolciaAnimate\(id\)\{[\s\S]{0,700}playDolciaTheme\(\)/);
+  assert.match(app, /onclick="playDolciaTheme\(\)" title="Réécouter l.hymne Dolcia"/);
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 });
 
 test('l’hymne s’arrête proprement à la pause et à la fin de session, jamais laissé jouer en arrière-plan', () => {

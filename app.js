@@ -1,5 +1,9 @@
 const app = document.querySelector('#app');
+<<<<<<< HEAD
 const APP_BUILD = '20.15.0-question-decisive';
+=======
+const APP_BUILD = '21.40.1-moteur-comportements';
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 // Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
 // correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
 // vit jamais ici.
@@ -194,8 +198,11 @@ function dRelationshipLine(){
 }
 
 function shell(content, active='discover'){
+<<<<<<< HEAD
   document.body.classList.remove('home-nav-hidden-always','home-nav-hidden-until-scroll','home-nav-revealed');
   window.removeEventListener('scroll',homeNavScrollReveal);
+=======
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="openAccount()">VD</button></div></header>${content}${nav(active)}</main>`;
 }
 function nav(active){return `<nav class="bottom-nav essential-nav" aria-label="Navigation principale"><button class="nav-item ${active==='discover'?'active':''}" onclick="openExplorer()"><span>⌁</span>Explorer</button><button class="nav-item signature ${active==='compose'||active==='agenda'||active==='pass'?'active':''}" onclick="openMyMoment()"><b>D<i>✦</i></b><span>Mon moment${state.agenda.length?` · ${state.agenda.length}`:''}</span></button><button class="nav-item ${active==='services'?'active':''}" onclick="openMeHub()"><span>◯</span>Moi</button></nav>`}
@@ -609,6 +616,7 @@ function playPremiumVoiceBuffered(text,onDone){
 // fichier audio complet — c'est ce qui rapproche vraiment le délai de réaction de celui de Speak,
 // plus que n'importe quelle réécriture de dialogue. Repli en cascade si MediaSource n'est pas
 // utilisable sur l'appareil (certains Safari iOS anciens).
+<<<<<<< HEAD
 // Point d'entrée unique utilisé partout où D parle réellement (Anime, coach). La musique de fond
 // baisse automatiquement pendant que cette fonction parle, et remonte doucement une fois finie —
 // jamais les deux à plein volume en même temps, quel que soit le chemin de secours utilisé en
@@ -618,6 +626,9 @@ function playPremiumVoice(text,onDone){
   playPremiumVoiceInner(text,()=>{restoreTheme?.();onDone()});
 }
 function playPremiumVoiceInner(text,onDone){
+=======
+function playPremiumVoice(text,onDone){
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   const mood=voiceMoodFromText(text);
   if(!('MediaSource'in window)||!window.MediaSource.isTypeSupported?.('audio/mpeg'))return playPremiumVoiceBuffered(text,onDone);
   let settled=false;
@@ -832,6 +843,7 @@ function retiredHomeArchive(){
     ${dropCard('Échappée surprise','24 heures pour décrocher','Un programme complet adapté à votre budget et votre rayon.',IMAGES.outside,'#e2cf9b')}
   </div><button class="desire-cta" onclick="startCompose()"><span>La signature Dolcia</span><strong>Compose-moi mon expérience</strong><b>→</b></button></section>`);loadHomePulse();
 }
+<<<<<<< HEAD
 // Deux previews comparables du comportement de la barre de navigation sur le Home, activables par
 // ?homePreview=A ou ?homePreview=B — jamais actif par défaut, pour ne rien changer en production
 // avant validation. Version A : la barre reste absente tout le temps qu'on est sur le Home.
@@ -856,6 +868,9 @@ function homeNavScrollReveal(){
   else document.body.classList.remove('home-nav-revealed');
 }
 function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Dites-le simplement à Dolcia</label><input id="homeSearch" placeholder="Avec les enfants, face à la mer, sans trop marcher…" onfocus="openEclatDialogue()" readonly></div><button class="voice-live" onclick="openEclatDialogue(true)" aria-label="Dicter mon envie">◉</button></div><div class="home-quick-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openExplorer()">Voir toutes les activités</button></div><div class="pulse-events" id="livePulse"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
+=======
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Dites-le simplement à Dolcia</label><input id="homeSearch" placeholder="Avec les enfants, face à la mer, sans trop marcher…" onfocus="openEclatDialogue()" readonly></div><button class="voice-live" onclick="openEclatDialogue(true)" aria-label="Dicter mon envie">◉</button></div><div class="home-quick-prompts"><button onclick="startLocalDiscovery()">« Je croyais tout connaître ici. »</button><button onclick="openEclatDialogue()">« Deux heures à deux, avec 80 €. »</button><button onclick="openExplorer()">Voir toutes les activités</button></div><div class="pulse-events" id="livePulse"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse()}
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -1536,7 +1551,11 @@ function catalogSelection(){
   if(filters.family!=='all')items=items.filter(item=>catalogFamily(item)===filters.family);
   if(filters.availability==='open')items=items.filter(item=>item.isOpen===true);
   if(filters.availability==='scheduled')items=items.filter(item=>item.date&&item.timeKnown!==false);
+<<<<<<< HEAD
   if(filters.budget&&filters.budget!=='all')items=items.filter(item=>item.free||item.freeAccess||(Number.isInteger(item.price)&&item.price<=Number(filters.budget)));
+=======
+  if(filters.budget&&filters.budget!=='all')items=items.filter(item=>Number.isInteger(item.price)&&item.price<=Number(filters.budget));
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   filters.lenses.forEach(id=>{const definition=adaptiveLensDefinitions().find(lens=>lens.id===id);if(definition)items=items.filter(definition.test)});
   if(filters.query){const q=plainText(filters.query);items=items.filter(item=>plainText(`${item.name||''} ${item.address||''} ${item.category||''}`).includes(q))}
   const geoOrder={core:0,extended:1,location_unknown:2,outside:3};
@@ -1814,6 +1833,7 @@ function whyTodayReasons(item){
 }
 function why(i){const temp=state.weather?.main?.temp??18,vibes=state.answers.vibes||[],compatibility=momentCompatibility(i),group=i.ranking?.groupFit;if(geoWhy(i))return geoWhy(i);if(compatibility==='incompatible')return'Incompatible avec le créneau choisi';if(compatibility==='unknown'||compatibility==='open-not-session')return requiresPublishedSession(i)?'Séance ou réservation à confirmer':'Horaire à vérifier';if(group?.vetoes)return'Une réserve existe dans votre groupe · visible dans Explorer, exclue du programme composé';if(group?.ratio>=.75)return`Point d’accord fort · ${group.matched} affinités reconnues dans votre groupe`;if(compatibility==='autonomous')return'Accès libre possible · conditions à vérifier';if(i.retrievalScope==='signature')return [`Expérience régionale repérée pour votre journée`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,`le déplacement reste indiqué clairement`].filter(Boolean).join(' · ');if(compatibility==='confirmed'&&i.source==='Google Places')return [`Ouvert pour votre créneau`,i.geoEligibility?.travel_minutes!=null?`${i.geoEligibility.travel_minutes} min de trajet`:null,i.rating?`${i.rating}/5 · ${i.reviews||0} avis`:null].filter(Boolean).join(' · ');if(i.ranking?.reasons?.length)return i.ranking.reasons.map(reason=>reason.charAt(0).toUpperCase()+reason.slice(1)).join(' · ');if(i.discoveryPick)return'La pépite que vous n’auriez peut-être pas cherchée';if(i.official&&i.date)return'Événement officiel à votre date';if(temp>=25&&/plage|nautique|voile|surf|paddle|kayak|piscine/.test(plainText(i.name||'')))return'Idéal avec la météo du moment';if((state.tasteProfile[i.category]||0)>1)return'Inspiré de ce que vous aimez déjà';if(matchesIntentions(i,vibes))return'Correspond à votre envie maintenant';if(i.rating>=4.6&&i.reviews>=100)return'Valeur sûre très appréciée';if(i.distance!=null&&i.distance<2)return'Belle idée tout près de vous';return'Sélection Dolcia pour élargir vos envies'}
 function composeCta(){return ({'2h':'Compose-moi 2 heures parfaites',morning:'Compose-moi ma matinée',afternoon:'Compose-moi mon après-midi',afternoon_evening:'Compose-moi la suite de ma journée',evening:'Compose-moi ma soirée',day:'Compose-moi ma journée',stay:'Compose-moi mon séjour'})[state.answers.duration]||'Compose mon moment'}
+<<<<<<< HEAD
 function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Le catalogue n’a pas encore livré la bonne idée.</h3><p>Dolcia peut relancer les sources, affiner votre envie ou créer une expérience autonome sans inventer un événement.</p><div class="empty-actions"><button class="primary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="openDolciaAnimate()">Dolcia anime ce moment</button></div></div>`}
 
 const DOLCIA_ANIMATE_PROGRAMS={
@@ -1884,6 +1904,78 @@ const DOLCIA_ANIMATE_PROGRAMS={
   ]},
   veillee_animee:{title:'La veillée animée',tone:'Histoires et jeux du soir',duration:45,place:'Un espace extérieur ou intérieur autorisé, en soirée',steps:[['00:00','Chacun raconte un souvenir de vacances qui l’a marqué.'],['00:12','Jeu des devinettes : faites deviner un lieu, sans jamais le nommer !'],['00:25','Et maintenant, une histoire à plusieurs voix — chacun ajoute une phrase !'],['00:38','On relit ensemble l’histoire inventée, en riant des meilleurs passages.'],['00:43','On termine calmement, en profitant simplement du moment.']]},
   after_genereux:{title:'L’after généreux',tone:'Prolonger la soirée en douceur',duration:40,place:'Hébergement, terrasse ou espace autorisé',steps:[['00:00','Chacun propose une chanson pour l’ambiance du moment.'],['00:08','Un jeu tout léger : action ou vérité, version douce et bienveillante uniquement.'],['00:20','Un défi collectif drôle et respectueux, choisi par vous tous !'],['00:32','Chacun partage son moment préféré de la soirée.'],['00:38','On termine sur une note joyeuse, à votre rythme.']]}
+=======
+function emptyState(){return `<div class="empty-state"><span class="kicker">Toujours une alternative</span><h3>Le catalogue n’a pas encore livré la bonne idée.</h3><p>Dolcia peut relancer les sources, affiner votre envie ou créer une expérience autonome sans inventer un événement.</p><div class="empty-actions"><button class="primary" onclick="openDolciaAnimate()">Dolcia anime ce moment</button><button class="secondary" onclick="surprise()">${composeCta()}</button><button class="secondary" onclick="openEclatDialogue()">Parler à Dolcia</button></div></div>`}
+
+const DOLCIA_ANIMATE_PROGRAMS={
+  sport:{title:'Cardio doux entre nous',tone:'Bouger ensemble, à son rythme',duration:30,place:'Espace dégagé, plage, parc ou pelouse',phased:true,steps:[
+    ['00:00','Échauffement — mobilisez doucement chevilles, genoux, hanches et épaules, chacun à son rythme, sans forcer.',{phase:'echauffement'}],
+    ['00:05','Échauffement — quelques pas rapides puis lents, en alternance, pour réveiller le corps en douceur.',{phase:'echauffement'}],
+    ['00:10','Cœur de séance — alternez un effort plus soutenu et une récupération plus calme, selon votre ressenti, jamais selon un chrono strict.',{phase:'coeur'}],
+    ['00:18','Cœur de séance — gardez ce rythme qui vous convient ; ralentir n’est jamais un échec, c’est écouter son corps.',{phase:'coeur'}],
+    ['00:24','Retour au calme — ralentissez progressivement, respirez profondément, laissez le rythme cardiaque redescendre.',{phase:'retour'}],
+    ['00:27','Retour au calme — étirements doux, sans à-coup ni douleur, puis hydratez-vous.',{phase:'retour'}]
+  ]},
+  social:{title:'Le grand défi complice',tone:'Rire ensemble',duration:55,place:'Un espace public autorisé, calme et sûr',steps:[['00:00','Choisissez ensemble trois thèmes qui vous font rire.'],['00:05','Défi photo : recréez une scène de film sans accessoire.'],['00:20','Mission duo : faites deviner un souvenir uniquement avec des gestes.'],['00:35','Final collectif : inventez le slogan de votre journée et photographiez-le.'],['00:50','Chacun nomme son moment préféré.']]},
+  party:{title:'La table des jeux cultes',tone:'Fous rires entre adultes',duration:50,place:'Hébergement, salon, terrasse ou espace autorisé',steps:[['00:00','Ni oui ni non express : une minute par personne, avec bienveillance.'],['00:10','Le menteur : chacun raconte trois mini-anecdotes, dont une inventée.'],['00:22','Mime éclair : faites deviner un film, une chanson ou une personne connue du groupe.'],['00:34','Cap ou pas cap complice : proposez uniquement un défi drôle, sûr et respectueux.'],['00:45','Final : élisez ensemble la réplique et le souvenir de la session.']]},
+  family:{title:'L’aventure des petits explorateurs',tone:'Jouer en famille',duration:45,place:'Parc, plage ou hébergement autorisé',steps:[['00:00','L’adulte vérifie l’espace et choisit une zone délimitée.'],['00:05','Cherchez cinq couleurs, trois textures et deux sons.'],['00:18','Construisez une histoire avec ce que vous avez observé.'],['00:30','Défi coopération : rejoignez un point sans lâcher le lien du groupe.'],['00:40','Photo-souvenir et retour au calme.']]},
+  water:{title:'La piscine devient un terrain de jeu',tone:'Parent-enfant',duration:35,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez les règles, la profondeur et la surveillance.'],['00:04','Jeu des couleurs : rejoindre ensemble un repère visible.'],['00:12','Le petit train : avancer lentement en restant à portée de bras.'],['00:20','Les animaux de l’eau : imiter à tour de rôle un déplacement doux.'],['00:28','Retour au calme, respiration et sortie groupée.']]},
+  calm:{title:'La parenthèse qui remet tout à zéro',tone:'Souffler vraiment',duration:20,place:'Espace calme, sûr et autorisé',phased:true,steps:[
+    ['00:00','Installation — installez-vous confortablement, sans gêner le passage, à votre façon.',{phase:'echauffement'}],
+    ['00:02','Respiration — respirez lentement, observez cinq détails autour de vous, sans rien forcer.',{phase:'echauffement'}],
+    ['00:07','Cœur du moment — marche silencieuse ou immobilité, chacun choisit ce qui lui fait du bien.',{phase:'coeur'}],
+    ['00:13','Cœur du moment — restez dans ce calme aussi longtemps que vous le souhaitez, il n’y a rien à réussir.',{phase:'coeur'}],
+    ['00:17','Retour — étirement doux sans douleur ni performance, à votre rythme.',{phase:'retour'}],
+    ['00:19','Retour — choisissez ensemble la suite de votre journée.',{phase:'retour'}]
+  ]},
+  renforcement:{title:'Renforcement doux en duo',tone:'Bouger à deux, sans matériel',duration:25,place:'Un tapis, une pelouse ou un salon dégagé',phased:true,steps:[
+    ['00:00','Échauffement — bougez chevilles, genoux et épaules à votre façon, sans chercher une posture précise.',{phase:'echauffement'}],
+    ['00:04','Échauffement — alternez quelques pas et un léger étirement, chacun à son rythme.',{phase:'echauffement'}],
+    ['00:08','Cœur de séance — un effort soutenu, puis une pause, en vous relayant l’un l’autre si vous êtes deux.',{phase:'coeur'}],
+    ['00:16','Cœur de séance — gardez le rythme qui vous convient ; ralentir n’est jamais un échec.',{phase:'coeur'}],
+    ['00:21','Retour au calme — respirez profondément, étirement libre, sans forcer.',{phase:'retour'}],
+    ['00:24','Retour au calme — un verre d’eau, et on souffle ensemble.',{phase:'retour'}]
+  ]},
+  olympiades_plage:{title:'Les Olympiades du lieu',tone:'Compétition amicale par équipes',duration:60,place:'Plage, parc ou pelouse dégagée, espace autorisé',phased:true,steps:[
+    ['00:00','Échauffement — formez les équipes, bougez librement pour vous réveiller.',{phase:'echauffement'}],
+    ['00:06','Épreuve 1 — un relais simple entre deux repères que vous choisissez vous-mêmes.',{phase:'coeur'}],
+    ['00:18','Épreuve 2 — un jeu d’équilibre ou d’adresse improvisé avec ce que vous avez sous la main.',{phase:'coeur'}],
+    ['00:32','Épreuve 3 — un défi collectif où toute l’équipe doit réussir ensemble.',{phase:'coeur'}],
+    ['00:48','Podium — additionnez les points dans la joie, sans jamais dévaloriser une équipe.',{phase:'retour'}],
+    ['00:55','Retour au calme et photo souvenir si vous le souhaitez.',{phase:'retour'}]
+  ]},
+  defi_5_epreuves:{title:'Le défi des 5 épreuves',tone:'Petites missions enchaînées',duration:40,place:'Intérieur ou extérieur, selon la météo',phased:true,steps:[
+    ['00:00','Présentation des 5 missions à venir, courtes et variées.',{phase:'echauffement'}],
+    ['00:05','Mission 1 — un défi d’adresse simple, à la portée de tous.',{phase:'coeur'}],
+    ['00:13','Mission 2 — un défi de mémoire ou d’observation.',{phase:'coeur'}],
+    ['00:21','Mission 3 — un défi d’équilibre ou de coordination.',{phase:'coeur'}],
+    ['00:29','Mission 4 — un défi collectif à résoudre en équipe.',{phase:'coeur'}],
+    ['00:35','Mission 5 finale, puis on célèbre tout le monde ensemble.',{phase:'retour'}]
+  ]},
+  chasse_tresor:{title:'La chasse aux trésors de vacances',tone:'Enquête en famille',duration:50,place:'Un lieu autorisé, que vous connaissez ou explorez ensemble',steps:[['00:00','L’adulte fixe les limites de la zone de jeu, clairement.'],['00:06','Premier indice : cherchez quelque chose de rond, quelque chose de doux, quelque chose qui brille.'],['00:20','Deuxième indice : reconstituez une petite histoire avec ce que vous avez trouvé.'],['00:35','Défi final : présentez votre trouvaille la plus surprenante au reste du groupe.'],['00:45','On célèbre chaque trouvaille, jamais un classement entre enfants.']]},
+  rdv_complice:{title:'Le rendez-vous complice',tone:'Se retrouver à deux',duration:35,place:'Un endroit calme, chez vous ou en terrasse autorisée',steps:[['00:00','Chacun raconte un souvenir récent qui l’a marqué, sans être interrompu.'],['00:10','Un jeu simple : « ce que j’aimerais qu’on fasse ensemble bientôt ».'],['00:20','Un compliment sincère chacun, dit à voix haute.'],['00:28','Choisissez ensemble une chose à faire dans les prochains jours.'],['00:33','On termine sur ce qu’on retient de ce moment.']]},
+  defi_deux:{title:'Le défi à deux',tone:'Complicité et petits défis',duration:30,place:'N’importe quel endroit calme et autorisé',steps:[['00:00','Un défi de mime : faites deviner un souvenir commun sans un mot.'],['00:08','Un défi d’équilibre ou de précision, léger et sans risque.'],['00:16','Une question à tour de rôle : « une chose que tu ne savais pas sur moi ».'],['00:24','Un défi final choisi par vous deux, dans la bonne humeur.'],['00:28','On termine sur un vrai compliment, chacun son tour.']]},
+  piscine_grand_jeu:{title:'Le grand jeu aquatique',tone:'Familles et amis, dans l’eau',duration:40,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez profondeur, règles et surveillance active.'],['00:05','Relais dans l’eau, à un rythme tranquille, jamais en compétition dangereuse.'],['00:15','Jeu du miroir : imiter les gestes d’un autre, à tour de rôle.'],['00:25','Défi collectif : former une figure tous ensemble, sans précipitation.'],['00:35','Retour au calme, respiration, sortie groupée de l’eau.']]},
+  blind_test:{title:'Le blind test party',tone:'Musique et éclats de rire',duration:35,place:'Un endroit où chacun peut faire écouter un morceau depuis son téléphone',steps:[['00:00','Chacun prépare en secret un titre qui compte pour lui.'],['00:08','Premier tour : faites deviner votre chanson au groupe, un indice à la fois.'],['00:20','Deuxième tour : devinez la chanson d’un autre membre du groupe.'],['00:30','Le groupe vote pour le titre le plus surprenant de la session.'],['00:33','On termine en dansant sur le titre gagnant, si l’envie est là.']]},
+  quiz_eclair:{title:'Le quiz éclair',tone:'Culture, rire et suspense',duration:30,place:'N’importe quel endroit calme',steps:[['00:00','Chaque participant prépare deux questions sur un sujet qu’il connaît bien.'],['00:08','Premier tour : posez vos questions au groupe, à tour de rôle.'],['00:20','Manche bonus : devinez qui, dans le groupe, a écrit quelle question.'],['00:26','Comptez les points ensemble, dans la bonne humeur.'],['00:29','On célèbre les meilleures questions posées, sans jamais désigner un perdant.']]},
+  danse_minute:{title:'La minute qui bouge',tone:'Danser librement, sans pression',duration:15,place:'Un espace dégagé, chez vous ou en extérieur',phased:true,steps:[
+    ['00:00','Installation — mettez une musique que vous aimez, à votre volume.',{phase:'echauffement'}],
+    ['00:02','Bougez librement une minute, sans chercher à bien faire.',{phase:'coeur'}],
+    ['00:08','Recommencez, en essayant un mouvement différent du premier.',{phase:'coeur'}],
+    ['00:12','Terminez par un mouvement que tout le monde imite ensemble.',{phase:'coeur'}],
+    ['00:14','Respirez, souriez, c’est déjà terminé.',{phase:'retour'}]
+  ]},
+  defi_rythme:{title:'Le défi rythme',tone:'Suivre le tempo, ensemble',duration:20,place:'N’importe quel endroit',steps:[['00:00','Le premier tape un rythme simple avec les mains.'],['00:05','Le groupe répète ce rythme ensemble.'],['00:10','Chacun invente à son tour un nouveau rythme à faire reprendre.'],['00:16','Final collectif : combinez deux rythmes différents ensemble.'],['00:19','On applaudit la meilleure invention du groupe.']]},
+  cocooning:{title:'Le moment cocooning',tone:'Douceur et lenteur',duration:25,place:'Un endroit confortable et calme',phased:true,steps:[
+    ['00:00','Installation — mettez-vous à l’aise, sans écran si vous le souhaitez.',{phase:'echauffement'}],
+    ['00:03','Partagez chacun une petite chose agréable vécue aujourd’hui.',{phase:'coeur'}],
+    ['00:12','Un moment de silence partagé, sans obligation de parler.',{phase:'coeur'}],
+    ['00:18','Étirement très doux, ou simplement rester immobile.',{phase:'retour'}],
+    ['00:23','Choisissez ensemble comment prolonger cette douceur.',{phase:'retour'}]
+  ]},
+  veillee_animee:{title:'La veillée animée',tone:'Histoires et jeux du soir',duration:45,place:'Un espace extérieur ou intérieur autorisé, en soirée',steps:[['00:00','Chacun raconte un souvenir de vacances marquant.'],['00:12','Jeu des devinettes : faites deviner un lieu visité sans le nommer.'],['00:25','Histoire à plusieurs voix : chacun ajoute une phrase à tour de rôle.'],['00:38','On vote pour la meilleure histoire inventée ensemble.'],['00:43','On termine calmement, en profitant du moment.']]},
+  after_genereux:{title:'L’after généreux',tone:'Prolonger la soirée en douceur',duration:40,place:'Hébergement, terrasse ou espace autorisé',steps:[['00:00','Chacun propose une chanson pour l’ambiance du moment.'],['00:08','Jeu léger : « action ou vérité » version douce et bienveillante uniquement.'],['00:20','Un défi collectif drôle, sûr et respectueux, choisi par le groupe.'],['00:32','Chacun partage son moment préféré de la soirée.'],['00:38','On termine sur une note joyeuse, à votre rythme.']]}
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 };
 function suggestedAnimateProgram(){const vibes=state.answers.vibes||[],who=state.answers.who;if(state.answers.momentSentence&&/piscine|bassin|eau/.test(plainText(state.answers.momentSentence)))return'water';if(who==='family')return'family';if(vibes.includes('recharge'))return'calm';if(['friends','colleagues'].includes(who)&&vibes.includes('play'))return'party';return'social'}
 function refineAnimateChoice(intent){
@@ -1901,10 +1993,14 @@ function openDolciaAnimate(){
 function previewDolciaAnimate(id){
   const program=DOLCIA_ANIMATE_PROGRAMS[id],target=document.querySelector('#animatePreview');if(!program||!target)return;
   document.querySelectorAll('.animate-choices button').forEach(button=>button.classList.toggle('selected',button.getAttribute('onclick')?.includes(`'${id}'`)));
+<<<<<<< HEAD
   target.innerHTML=`<section><div><span class="kicker">${esc(program.tone)}</span><h3>${esc(program.title)}</h3><p>${esc(program.place)} · ${program.duration} minutes</p></div><div class="animate-start-now"><label><input type="checkbox" id="animateSafety"> On a choisi un endroit sûr, tout le monde est prêt.</label><div><button class="secondary" onclick="addDolciaAnimate('${id}')">Garder pour plus tard</button><button class="primary" onclick="startDolciaAnimate('${id}')">▶ Commencer avec la voix</button></div></div><ol>${program.steps.map(step=>`<li><time>${step[0]}</time><span>${esc(step[1])}</span></li>`).join('')}</ol></section>`;
   // La discovérabilité était le vrai problème signalé : cliquer ne semblait rien faire tant que
   // l'aperçu, placé après toute la grille de choix, restait hors champ. On l'amène à l'écran.
   requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));
+=======
+  target.innerHTML=`<section><div><span class="kicker">${esc(program.tone)}</span><h3>${esc(program.title)}</h3><p>${esc(program.place)} · ${program.duration} minutes</p></div><ol>${program.steps.map(step=>`<li><time>${step[0]}</time><span>${esc(step[1])}</span></li>`).join('')}</ol><label><input type="checkbox" id="animateSafety"> J’ai vérifié le lieu, les règles et la sécurité du groupe.</label><div><button class="secondary" onclick="addDolciaAnimate('${id}')">Ajouter au programme</button><button class="primary" onclick="startDolciaAnimate('${id}')">Commencer avec la voix</button></div></section>`
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 }
 function dolciaAnimateItem(id){
   const program=DOLCIA_ANIMATE_PROGRAMS[id];return{id:`dolcia-animate-${id}-${Date.now()}`,name:program.title,tone:program.tone,category:id==='calm'?'slow':id==='water'?'outside':'active',source:'Programme Dolcia',address:program.place,summary:`Expérience autonome guidée par Dolcia · ${program.duration} minutes`,free:true,price:0,detailsKnown:true,autonomousProgram:id,steps:program.steps,quality:'verified',official:false,photo:IMAGES[id==='family'?'family':id==='calm'?'slow':id==='water'?'outside':'friends']}
@@ -1927,6 +2023,7 @@ function injectDolciaAutonomousChoices(){
 function ensureAnimateSafety(){if(!document.querySelector('#animateSafety')?.checked){showToast('Confirmez d’abord le lieu, les règles et la sécurité du groupe');return false}return true}
 function addDolciaAnimate(id){if(!ensureAnimateSafety())return;const item=dolciaAnimateItem(id);state.allItems.push(item);state.agenda.push({...item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia'});save();document.querySelector('#dolciaAnimate')?.remove();renderAgenda();showToast('Programme Dolcia ajouté à votre agenda')}
 const dolciaTheme={audio:null};
+<<<<<<< HEAD
 function isAnimateMuted(){return Boolean(state.animateMuted)}
 function animateThemeVolume(){return typeof state.animateThemeVolume==='number'?state.animateThemeVolume:.2}
 function setAnimateThemeVolume(value){
@@ -1958,6 +2055,13 @@ function playDolciaTheme(){
     if(dolciaTheme.audio){dolciaTheme.audio.pause();dolciaTheme.audio.currentTime=0}
     dolciaTheme.audio=new Audio('/assets/audio/dolcia-theme.mp3');
     dolciaTheme.audio.volume=animateThemeVolume();
+=======
+function playDolciaTheme(){
+  try{
+    if(dolciaTheme.audio){dolciaTheme.audio.pause();dolciaTheme.audio.currentTime=0}
+    dolciaTheme.audio=new Audio('/assets/audio/dolcia-theme.mp3');
+    dolciaTheme.audio.volume=.85;
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
     dolciaTheme.audio.play().catch(()=>{});
   }catch{}
 }
@@ -2195,7 +2299,11 @@ function renderDolciaAnimateLive(options={}){
   document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live theme-${energyTheme.id}" id="animateLive"><article>
     <div class="animate-energy-scene" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <button class="close" onclick="pauseDolciaAnimate()" aria-label="Mettre la session en pause">×</button>
+<<<<<<< HEAD
     <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct · ${esc(energyTheme.label)}</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><div class="animate-sound-control"><button class="animate-mute-toggle" onclick="toggleAnimateMute()" aria-pressed="${isAnimateMuted()?'true':'false'}">${isAnimateMuted()?'🔇 Son coupé':'🔊 Son'}</button><input type="range" min="0" max="1" step="0.05" value="${animateThemeVolume()}" oninput="setAnimateThemeVolume(this.value)" aria-label="Volume du son d'ambiance, jamais la voix de D"><span class="animate-volume-value">${Math.round(animateThemeVolume()*100)}%</span><button class="animate-pulse-toggle ${animatePulse.active?'active':''}" onclick="toggleAnimatePulse(${energyTheme.bpm})" aria-pressed="${animatePulse.active}" title="Pouls sonore rythmé, pas une musique">Pouls</button></div>${animateTeamsBar(session)}<div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
+=======
+    <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct · ${esc(energyTheme.label)}</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><button class="animate-pulse-toggle" onclick="playDolciaTheme()" title="Réécouter l'hymne Dolcia"><i></i>Hymne Dolcia</button><button class="animate-pulse-toggle ${animatePulse.active?'active':''}" onclick="toggleAnimatePulse(${energyTheme.bpm})" aria-pressed="${animatePulse.active}" title="Pouls sonore rythmé, pas une musique"><i></i>Pouls</button>${animateTeamsBar(session)}<div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
     <p class="animate-coach-line">« ${esc(animateCoachLine(session))} »</p>
     ${session.item.phased&&step[2]?.phase?`<div class="animate-phase-badge phase-${step[2].phase}">${esc(animatePhaseLabel(step[2].phase))}</div>`:''}
     <div class="animate-session-meta"><span>Mission ${session.index+1}/${session.item.steps.length}</span><span>Capitaine · ${esc(animateCaptain(session))}</span><span>${progress}% vécu</span><span>${session.streak||0} série</span></div>

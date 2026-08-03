@@ -23,7 +23,11 @@ test('le groupe peut rire, parler et créer ses clins d’œil sans être noté'
 });
 
 test('D propose de vrais jeux connus dans un thème adulte distinct', () => {
+<<<<<<< HEAD
   for (const game of ['ni oui ni non', 'menteur', 'Mime éclair', 'Cap ou pas cap']) assert.match(app, new RegExp(game, 'i'));
+=======
+  for (const game of ['Ni oui ni non', 'Le menteur', 'Mime éclair', 'Cap ou pas cap']) assert.match(app, new RegExp(game));
+>>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
   assert.match(app, /if\(\['friends','colleagues'\]\.includes\(who\)&&vibes\.includes\('play'\)\)return'party'/);
 });
 
