@@ -676,3 +676,79 @@ Ces comportements sont détectés depuis le contexte ; ils ne doivent pas deveni
   le Home vers un autre écran, vérifié.
 - 380 tests verts après ce chantier. Aucun merge ni déploiement production, comme demandé —
   les deux versions restent à comparer avant toute décision.
+
+## Parcours Dolcia Anime : la découvrabilité du bouton Commencer — 1er août 2026 (suite du même jour)
+
+- Régression réelle confirmée dans le code, pas seulement ressentie : cliquer sur un programme
+  injectait l'aperçu (étapes, case de sécurité, bouton Commencer) dans une zone placée après toute
+  la grille des 20 choix. Rien ne semblait se passer au clic — convention universelle cassée
+  (cliquer doit produire un changement visible immédiat).
+- Corrigé sans toucher au contenu des programmes, comme demandé : l'aperçu défile désormais
+  automatiquement à l'écran dès qu'un programme est choisi, et le bouton "Commencer avec la voix"
+  ainsi que la confirmation de sécurité apparaissent en premier dans l'aperçu — avant la liste
+  détaillée des étapes, plus après.
+- La case de sécurité reste une vraie case à cocher qui bloque effectivement le démarrage
+  (`ensureAnimateSafety()` inchangé dans sa logique) — seul le ton a changé, de "J'ai vérifié le
+  lieu, les règles et la sécurité du groupe" à "On a choisi un endroit sûr, tout le monde est
+  prêt." La garantie de sécurité n'a pas été retirée, seulement reformulée.
+- 383 tests verts après ce correctif.
+
+## Trois blocages audio et personnalité, adressés directement — 1er août 2026 (suite du même jour)
+
+- Retour très ferme reçu : musique inutilisable (ni baisse ni coupure perçue), voix de D couverte,
+  textes ressemblant à un manuel plutôt qu'à un animateur.
+- Vérifié techniquement avant de conclure à un bug : toutes les vraies prises de parole pendant une
+  session passent bien par l'atténuation déjà construite — aucun contournement trouvé. Cause
+  probable identifiée : la voix ne fixe jamais explicitement son propre volume (elle part au
+  maximum du navigateur), rendant une atténuation à 0,12 insuffisante face à une voix déjà forte.
+- Atténuation renforcée à 0,04 (quasi inaudible pendant que D parle, plus une simple baisse).
+- Ajout d'un vrai curseur de volume pour la musique, indépendant de la voix, visible en permanence
+  pendant la session et mémorisé — au-delà du simple interrupteur muet/pas muet construit
+  précédemment.
+- Personnalité : le programme "Cardio doux entre nous" entièrement réécrit avec un ton d'animateur
+  réel (enthousiasme, encouragement, silences) plutôt qu'une description clinique, sur l'exemple
+  exact donné. **Honnêteté sur la limite réelle** : ce chantier ne couvre qu'un programme sur 20 —
+  les 19 autres ont encore leurs textes d'origine et nécessitent la même réécriture, un vrai
+  chantier de contenu à part, pas terminé aujourd'hui.
+- 387 tests verts après ces corrections.
+
+## Audio consolidé en un seul contrôle, bug de ducking corrigé — 1er août 2026 (suite du même jour)
+
+- Retour très précis et vérifié dans le vrai code par la personne : volume par défaut à 85% trop
+  fort ; bug réel dans l'atténuation (elle pouvait remonter un volume que la personne avait
+  volontairement mis à 0, avant de le redescendre) ; trois contrôles sonores concurrents (Hymne,
+  Pouls, Musique) répartis à deux endroits différents de l'écran, aucun garanti visible sans
+  défiler.
+- Volume par défaut ramené à 20%. Atténuation corrigée avec `Math.min(volumeActuel, .04)` — ne
+  remonte jamais un volume choisi plus bas, vérifié avec le scénario exact demandé (musique →
+  curseur à 0 → mute → D parle → fin → toujours coupée).
+- Les trois contrôles regroupés en un seul bloc (`.animate-sound-control`), placé dans l'en-tête de
+  session désormais fixé (`position:sticky`) pour rester visible même si le contenu défile. Couper
+  le son coupe la musique et le pouls ensemble, jamais la voix de D.
+- Trois formulations désignant indirectement un gagnant retirées ("titre gagnant", "meilleure
+  invention", "meilleure histoire") — remplacées par des formulations qui célèbrent collectivement,
+  sans classement.
+- Deux programmes de plus réécrits avec le ton animateur (renforcement, famille) — après le
+  programme sport déjà réécrit précédemment. **Honnêteté sur la limite réelle : 17 programmes sur
+  20 restent avec leur texte d'origine.** Ce chantier de contenu reste loin d'être terminé.
+- 394 tests verts après ces corrections, dont un test simulant le scénario exact demandé avant
+  toute écriture de test formel.
+
+## Les 20 programmes Dolcia Anime entièrement réécrits avec le ton animateur — 1er août 2026 (suite du même jour)
+
+- Poursuite du chantier éditorial laissé explicitement inachevé la fois précédente (3 programmes
+  sur 20) : les 17 programmes restants ont été réécrits avec le même ton animateur (exclamations,
+  encouragement, présence) — même contenu, même sécurité, même honnêteté, ton différent.
+- Deux vrais glissements trouvés et corrigés pendant la vérification, pas après coup : un "toi" en
+  tutoiement s'était glissé dans le texte d'une étape (`defi_deux`), alors que le tutoiement reste
+  réservé à la voix de l'animateur elle-même, jamais au contenu des programmes.
+- Deux faux positifs identifiés dans mes propres tests de garde, corrigés sans toucher au texte
+  réel : "êtes" (vouvoiement légitime) faussement détecté comme "tes" isolé à cause d'un accent que
+  la limite de mot ne gère pas ; "jamais un perdant désigné" faussement détecté comme une
+  désignation de perdant, alors que c'est exactement la formulation qui la refuse.
+- Les 20 programmes sont désormais tous réécrits — plus aucune fiche technique clinique
+  ("Échauffement — mobilisez…") ne subsiste dans la bibliothèque.
+- 398 tests verts après cette réécriture complète.
+- **Ce qui reste à valider, hors de portée ici** : la consolidation du contrôle sonore en un seul
+  bloc reste à tester réellement sur téléphone et ordinateur, comme demandé — ça ne peut se
+  vérifier que dans une vraie Preview, pas dans le code seul.

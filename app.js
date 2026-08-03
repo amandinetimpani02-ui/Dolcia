@@ -1818,72 +1818,72 @@ function emptyState(){return `<div class="empty-state"><span class="kicker">Touj
 
 const DOLCIA_ANIMATE_PROGRAMS={
   sport:{title:'Cardio doux entre nous',tone:'Bouger ensemble, à son rythme',duration:30,place:'Espace dégagé, plage, parc ou pelouse',phased:true,steps:[
-    ['00:00','Échauffement — mobilisez doucement chevilles, genoux, hanches et épaules, chacun à son rythme, sans forcer.',{phase:'echauffement'}],
-    ['00:05','Échauffement — quelques pas rapides puis lents, en alternance, pour réveiller le corps en douceur.',{phase:'echauffement'}],
-    ['00:10','Cœur de séance — alternez un effort plus soutenu et une récupération plus calme, selon votre ressenti, jamais selon un chrono strict.',{phase:'coeur'}],
-    ['00:18','Cœur de séance — gardez ce rythme qui vous convient ; ralentir n’est jamais un échec, c’est écouter son corps.',{phase:'coeur'}],
-    ['00:24','Retour au calme — ralentissez progressivement, respirez profondément, laissez le rythme cardiaque redescendre.',{phase:'retour'}],
-    ['00:27','Retour au calme — étirements doux, sans à-coup ni douleur, puis hydratez-vous.',{phase:'retour'}]
+    ['00:00','Allez, on commence tranquillement ! On réveille les chevilles, les genoux, les épaules… doucement, chacun à son rythme, personne ne force.',{phase:'echauffement'}],
+    ['00:05','Quelques pas plus rapides, puis on ralentit… on sent déjà le corps qui se réveille !',{phase:'echauffement'}],
+    ['00:10','Et voilà, on y est ! On pousse un peu… puis on souffle. À votre rythme, jamais un chrono qui décide pour vous.',{phase:'coeur'}],
+    ['00:18','Vous tenez bien ce rythme, bravo ! Et si vous ralentissez, ce n’est jamais un échec — c’est vous qui savez le mieux.',{phase:'coeur'}],
+    ['00:24','On ralentit tout doucement… respirez profondément… voilà, ça redescend.',{phase:'retour'}],
+    ['00:27','Un dernier étirement, tout en douceur, sans forcer… et un bon verre d’eau. Bravo à tous !',{phase:'retour'}]
   ]},
-  social:{title:'Le grand défi complice',tone:'Rire ensemble',duration:55,place:'Un espace public autorisé, calme et sûr',steps:[['00:00','Choisissez ensemble trois thèmes qui vous font rire.'],['00:05','Défi photo : recréez une scène de film sans accessoire.'],['00:20','Mission duo : faites deviner un souvenir uniquement avec des gestes.'],['00:35','Final collectif : inventez le slogan de votre journée et photographiez-le.'],['00:50','Chacun nomme son moment préféré.']]},
-  party:{title:'La table des jeux cultes',tone:'Fous rires entre adultes',duration:50,place:'Hébergement, salon, terrasse ou espace autorisé',steps:[['00:00','Ni oui ni non express : une minute par personne, avec bienveillance.'],['00:10','Le menteur : chacun raconte trois mini-anecdotes, dont une inventée.'],['00:22','Mime éclair : faites deviner un film, une chanson ou une personne connue du groupe.'],['00:34','Cap ou pas cap complice : proposez uniquement un défi drôle, sûr et respectueux.'],['00:45','Final : élisez ensemble la réplique et le souvenir de la session.']]},
-  family:{title:'L’aventure des petits explorateurs',tone:'Jouer en famille',duration:45,place:'Parc, plage ou hébergement autorisé',steps:[['00:00','L’adulte vérifie l’espace et choisit une zone délimitée.'],['00:05','Cherchez cinq couleurs, trois textures et deux sons.'],['00:18','Construisez une histoire avec ce que vous avez observé.'],['00:30','Défi coopération : rejoignez un point sans lâcher le lien du groupe.'],['00:40','Photo-souvenir et retour au calme.']]},
-  water:{title:'La piscine devient un terrain de jeu',tone:'Parent-enfant',duration:35,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez les règles, la profondeur et la surveillance.'],['00:04','Jeu des couleurs : rejoindre ensemble un repère visible.'],['00:12','Le petit train : avancer lentement en restant à portée de bras.'],['00:20','Les animaux de l’eau : imiter à tour de rôle un déplacement doux.'],['00:28','Retour au calme, respiration et sortie groupée.']]},
+  social:{title:'Le grand défi complice',tone:'Rire ensemble',duration:55,place:'Un espace public autorisé, calme et sûr',steps:[['00:00','Allez, on commence en douceur ! Trouvez ensemble trois thèmes qui vous font toujours rire.'],['00:05','Premier défi photo : recréez une scène de film… sans rien pour vous aider !'],['00:20','À vous deux maintenant : racontez un souvenir juste avec les mains, aucun mot !'],['00:35','Et pour finir, tous ensemble : inventez le slogan de votre journée !'],['00:50','Chacun dit son moment préféré. C’était beau à voir !']]},
+  party:{title:'La table des jeux cultes',tone:'Fous rires entre adultes',duration:50,place:'Hébergement, salon, terrasse ou espace autorisé',steps:[['00:00','On commence léger ! Une minute chacun, sans dire ni oui ni non — plus dur que ça en a l’air !'],['00:10','Au tour du menteur : trois anecdotes, une seule est fausse. À vous de deviner !'],['00:22','Mime éclair ! Un film, une chanson, une personne du groupe… silence total, tout passe par les gestes !'],['00:34','Cap ou pas cap, version complice : uniquement des défis drôles et gentils, promis !'],['00:45','Et pour finir, chacun raconte son moment préféré de la soirée.']]},
+  family:{title:'L’aventure des petits explorateurs',tone:'Jouer en famille',duration:45,place:'Parc, plage ou hébergement autorisé',steps:[['00:00','On part à l’aventure ! Un adulte choisit d’abord une zone bien délimitée.'],['00:05','À vous de trouver cinq couleurs, trois textures et deux sons différents !'],['00:18','Et maintenant, inventons une histoire avec tout ce qu’on a découvert…'],['00:30','Un dernier défi : rejoignez le point ensemble, tous reliés, sans jamais lâcher !'],['00:40','Une belle photo souvenir, et on souffle un peu. Bravo à toute l’équipe !']]},
+  water:{title:'La piscine devient un terrain de jeu',tone:'Parent-enfant',duration:35,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de plonger dans le jeu : on vérifie les règles, la profondeur, et une vraie surveillance active.'],['00:04','Premier jeu : tous ensemble vers le repère coloré, c’est parti !'],['00:12','Maintenant le petit train : on avance tout doucement, toujours à portée de bras.'],['00:20','Chacun son tour, imitez un animal de l’eau… on rigole bien !'],['00:28','On respire, tout doucement… et tous ensemble, on sort de l’eau.']]},
   calm:{title:'La parenthèse qui remet tout à zéro',tone:'Souffler vraiment',duration:20,place:'Espace calme, sûr et autorisé',phased:true,steps:[
-    ['00:00','Installation — installez-vous confortablement, sans gêner le passage, à votre façon.',{phase:'echauffement'}],
-    ['00:02','Respiration — respirez lentement, observez cinq détails autour de vous, sans rien forcer.',{phase:'echauffement'}],
-    ['00:07','Cœur du moment — marche silencieuse ou immobilité, chacun choisit ce qui lui fait du bien.',{phase:'coeur'}],
-    ['00:13','Cœur du moment — restez dans ce calme aussi longtemps que vous le souhaitez, il n’y a rien à réussir.',{phase:'coeur'}],
-    ['00:17','Retour — étirement doux sans douleur ni performance, à votre rythme.',{phase:'retour'}],
-    ['00:19','Retour — choisissez ensemble la suite de votre journée.',{phase:'retour'}]
+    ['00:00','Installez-vous confortablement, à votre façon, sans vous presser.',{phase:'echauffement'}],
+    ['00:02','Respirez lentement… regardez autour de vous, cinq petits détails, sans rien forcer.',{phase:'echauffement'}],
+    ['00:07','Maintenant, marchez en silence, ou restez immobile… ce qui vous fait du bien.',{phase:'coeur'}],
+    ['00:13','Prenez tout le temps qu’il vous faut… il n’y a rien à réussir ici.',{phase:'coeur'}],
+    ['00:17','Un étirement tout doux, à votre rythme, sans forcer.',{phase:'retour'}],
+    ['00:19','Et maintenant, choisissez ensemble la suite de votre journée.',{phase:'retour'}]
   ]},
   renforcement:{title:'Renforcement doux en duo',tone:'Bouger à deux, sans matériel',duration:25,place:'Un tapis, une pelouse ou un salon dégagé',phased:true,steps:[
-    ['00:00','Échauffement — bougez chevilles, genoux et épaules à votre façon, sans chercher une posture précise.',{phase:'echauffement'}],
-    ['00:04','Échauffement — alternez quelques pas et un léger étirement, chacun à son rythme.',{phase:'echauffement'}],
-    ['00:08','Cœur de séance — un effort soutenu, puis une pause, en vous relayant l’un l’autre si vous êtes deux.',{phase:'coeur'}],
-    ['00:16','Cœur de séance — gardez le rythme qui vous convient ; ralentir n’est jamais un échec.',{phase:'coeur'}],
-    ['00:21','Retour au calme — respirez profondément, étirement libre, sans forcer.',{phase:'retour'}],
-    ['00:24','Retour au calme — un verre d’eau, et on souffle ensemble.',{phase:'retour'}]
+    ['00:00','On y va doucement ! On réveille les chevilles, les genoux, les épaules… chacun à sa façon, sans chercher une posture parfaite.',{phase:'echauffement'}],
+    ['00:04','Quelques pas, un petit étirement… tranquillement, on prend le temps.',{phase:'echauffement'}],
+    ['00:08','Allez, un effort ensemble… puis on souffle. Si vous êtes deux, relayez-vous !',{phase:'coeur'}],
+    ['00:16','Vous tenez le rythme, super ! Et ralentir, ce n’est jamais un échec.',{phase:'coeur'}],
+    ['00:21','On respire profondément… un dernier étirement, libre, sans forcer.',{phase:'retour'}],
+    ['00:24','Un bon verre d’eau, et on souffle ensemble. Bien joué !',{phase:'retour'}]
   ]},
   olympiades_plage:{title:'Les Olympiades du lieu',tone:'Compétition amicale par équipes',duration:60,place:'Plage, parc ou pelouse dégagée, espace autorisé',phased:true,steps:[
-    ['00:00','Échauffement — formez les équipes, bougez librement pour vous réveiller.',{phase:'echauffement'}],
-    ['00:06','Épreuve 1 — un relais simple entre deux repères que vous choisissez vous-mêmes.',{phase:'coeur'}],
-    ['00:18','Épreuve 2 — un jeu d’équilibre ou d’adresse improvisé avec ce que vous avez sous la main.',{phase:'coeur'}],
-    ['00:32','Épreuve 3 — un défi collectif où toute l’équipe doit réussir ensemble.',{phase:'coeur'}],
-    ['00:48','Podium — additionnez les points dans la joie, sans jamais dévaloriser une équipe.',{phase:'retour'}],
-    ['00:55','Retour au calme et photo souvenir si vous le souhaitez.',{phase:'retour'}]
+    ['00:00','Allez, formez vos équipes ! On bouge un peu pour se réveiller.',{phase:'echauffement'}],
+    ['00:06','Première épreuve : un relais entre deux points que vous choisissez vous-mêmes !',{phase:'coeur'}],
+    ['00:18','Deuxième épreuve : un jeu d’équilibre, improvisé avec ce que vous avez sous la main !',{phase:'coeur'}],
+    ['00:32','Dernière épreuve : un vrai défi d’équipe, tout le monde doit réussir ensemble !',{phase:'coeur'}],
+    ['00:48','Comptez les points dans la joie — les deux équipes ont été superbes !',{phase:'retour'}],
+    ['00:55','On souffle un peu, et une photo souvenir si le cœur vous en dit.',{phase:'retour'}]
   ]},
   defi_5_epreuves:{title:'Le défi des 5 épreuves',tone:'Petites missions enchaînées',duration:40,place:'Intérieur ou extérieur, selon la météo',phased:true,steps:[
-    ['00:00','Présentation des 5 missions à venir, courtes et variées.',{phase:'echauffement'}],
-    ['00:05','Mission 1 — un défi d’adresse simple, à la portée de tous.',{phase:'coeur'}],
-    ['00:13','Mission 2 — un défi de mémoire ou d’observation.',{phase:'coeur'}],
-    ['00:21','Mission 3 — un défi d’équilibre ou de coordination.',{phase:'coeur'}],
-    ['00:29','Mission 4 — un défi collectif à résoudre en équipe.',{phase:'coeur'}],
-    ['00:35','Mission 5 finale, puis on célèbre tout le monde ensemble.',{phase:'retour'}]
+    ['00:00','Cinq missions vous attendent, courtes et variées. C’est parti !',{phase:'echauffement'}],
+    ['00:05','Première mission : un défi d’adresse, à la portée de tous !',{phase:'coeur'}],
+    ['00:13','Mission 2 : un peu de mémoire et d’observation, maintenant !',{phase:'coeur'}],
+    ['00:21','Mission 3 : équilibre et coordination, on y va !',{phase:'coeur'}],
+    ['00:29','Mission 4, la collective : toute l’équipe doit réussir ensemble !',{phase:'coeur'}],
+    ['00:35','Dernière mission ! Et maintenant, on célèbre tout le monde ensemble, bravo !',{phase:'retour'}]
   ]},
-  chasse_tresor:{title:'La chasse aux trésors de vacances',tone:'Enquête en famille',duration:50,place:'Un lieu autorisé, que vous connaissez ou explorez ensemble',steps:[['00:00','L’adulte fixe les limites de la zone de jeu, clairement.'],['00:06','Premier indice : cherchez quelque chose de rond, quelque chose de doux, quelque chose qui brille.'],['00:20','Deuxième indice : reconstituez une petite histoire avec ce que vous avez trouvé.'],['00:35','Défi final : présentez votre trouvaille la plus surprenante au reste du groupe.'],['00:45','On célèbre chaque trouvaille, jamais un classement entre enfants.']]},
-  rdv_complice:{title:'Le rendez-vous complice',tone:'Se retrouver à deux',duration:35,place:'Un endroit calme, chez vous ou en terrasse autorisée',steps:[['00:00','Chacun raconte un souvenir récent qui l’a marqué, sans être interrompu.'],['00:10','Un jeu simple : « ce que j’aimerais qu’on fasse ensemble bientôt ».'],['00:20','Un compliment sincère chacun, dit à voix haute.'],['00:28','Choisissez ensemble une chose à faire dans les prochains jours.'],['00:33','On termine sur ce qu’on retient de ce moment.']]},
-  defi_deux:{title:'Le défi à deux',tone:'Complicité et petits défis',duration:30,place:'N’importe quel endroit calme et autorisé',steps:[['00:00','Un défi de mime : faites deviner un souvenir commun sans un mot.'],['00:08','Un défi d’équilibre ou de précision, léger et sans risque.'],['00:16','Une question à tour de rôle : « une chose que tu ne savais pas sur moi ».'],['00:24','Un défi final choisi par vous deux, dans la bonne humeur.'],['00:28','On termine sur un vrai compliment, chacun son tour.']]},
-  piscine_grand_jeu:{title:'Le grand jeu aquatique',tone:'Familles et amis, dans l’eau',duration:40,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de commencer : confirmez profondeur, règles et surveillance active.'],['00:05','Relais dans l’eau, à un rythme tranquille, jamais en compétition dangereuse.'],['00:15','Jeu du miroir : imiter les gestes d’un autre, à tour de rôle.'],['00:25','Défi collectif : former une figure tous ensemble, sans précipitation.'],['00:35','Retour au calme, respiration, sortie groupée de l’eau.']]},
-  blind_test:{title:'Le blind test party',tone:'Musique et éclats de rire',duration:35,place:'Un endroit où chacun peut faire écouter un morceau depuis son téléphone',steps:[['00:00','Chacun prépare en secret un titre qui compte pour lui.'],['00:08','Premier tour : faites deviner votre chanson au groupe, un indice à la fois.'],['00:20','Deuxième tour : devinez la chanson d’un autre membre du groupe.'],['00:30','Le groupe vote pour le titre le plus surprenant de la session.'],['00:33','On termine en dansant sur le titre gagnant, si l’envie est là.']]},
-  quiz_eclair:{title:'Le quiz éclair',tone:'Culture, rire et suspense',duration:30,place:'N’importe quel endroit calme',steps:[['00:00','Chaque participant prépare deux questions sur un sujet qu’il connaît bien.'],['00:08','Premier tour : posez vos questions au groupe, à tour de rôle.'],['00:20','Manche bonus : devinez qui, dans le groupe, a écrit quelle question.'],['00:26','Comptez les points ensemble, dans la bonne humeur.'],['00:29','On célèbre les meilleures questions posées, sans jamais désigner un perdant.']]},
+  chasse_tresor:{title:'La chasse aux trésors de vacances',tone:'Enquête en famille',duration:50,place:'Un lieu autorisé, que vous connaissez ou explorez ensemble',steps:[['00:00','Un adulte trace d’abord les limites du jeu, clairement.'],['00:06','Premier indice : trouvez quelque chose de rond, quelque chose de doux, quelque chose qui brille !'],['00:20','Maintenant, inventez une petite histoire avec tout ce que vous avez trouvé !'],['00:35','Défi final : montrez au groupe votre trouvaille la plus surprenante !'],['00:45','On célèbre chaque trouvaille — jamais un classement entre enfants.']]},
+  rdv_complice:{title:'Le rendez-vous complice',tone:'Se retrouver à deux',duration:35,place:'Un endroit calme, chez vous ou en terrasse autorisée',steps:[['00:00','Racontez-vous un souvenir récent qui vous a marqué, sans être interrompu.'],['00:10','Un jeu tout simple maintenant : ce que j’aimerais qu’on fasse bientôt ensemble.'],['00:20','Un vrai compliment, dit à voix haute, chacun son tour.'],['00:28','Et maintenant, choisissez ensemble une chose à faire dans les prochains jours.'],['00:33','On termine sur ce qu’on retient de ce moment, tout simplement.']]},
+  defi_deux:{title:'Le défi à deux',tone:'Complicité et petits défis',duration:30,place:'N’importe quel endroit calme et autorisé',steps:[['00:00','Premier défi : mimez un souvenir commun, pas un mot !'],['00:08','Maintenant un petit défi d’équilibre, léger et sans risque.'],['00:16','Une question chacun : quelque chose que vous ne saviez pas l’un sur l’autre !'],['00:24','Un dernier défi, choisi par vous deux, dans la bonne humeur !'],['00:28','On termine sur un vrai compliment, chacun son tour.']]},
+  piscine_grand_jeu:{title:'Le grand jeu aquatique',tone:'Familles et amis, dans l’eau',duration:40,place:'Bassin autorisé et adapté',steps:[['00:00','Avant de plonger : on confirme la profondeur, les règles, une vraie surveillance active.'],['00:05','Un relais tranquille dans l’eau — on joue, on ne fonce pas !'],['00:15','Le jeu du miroir maintenant : imitez les gestes d’un autre, chacun son tour !'],['00:25','Tous ensemble : formez une figure, doucement, sans précipitation !'],['00:35','On respire, et tout le monde sort de l’eau ensemble.']]},
+  blind_test:{title:'Le blind test party',tone:'Musique et éclats de rire',duration:35,place:'Un endroit où chacun peut faire écouter un morceau depuis son téléphone',steps:[['00:00','En secret, chacun choisit un titre qui compte vraiment pour lui.'],['00:08','Premier tour : faites deviner votre chanson, un indice à la fois !'],['00:20','À vous de deviner, maintenant, la chanson d’un autre !'],['00:30','Le groupe réagit à chaud — les surprises fusent !'],['00:33','Et on termine en dansant tous ensemble sur celles qui ont le plus marqué la soirée !']]},
+  quiz_eclair:{title:'Le quiz éclair',tone:'Culture, rire et suspense',duration:30,place:'N’importe quel endroit calme',steps:[['00:00','Chacun prépare deux questions sur un sujet qu’il connaît bien.'],['00:08','Premier tour : posez vos questions au groupe, chacun son tour !'],['00:20','Manche bonus, amusante : devinez qui a écrit quelle question !'],['00:26','Comptez les points ensemble, dans la bonne humeur.'],['00:29','On célèbre les meilleures questions posées, jamais un perdant désigné.']]},
   danse_minute:{title:'La minute qui bouge',tone:'Danser librement, sans pression',duration:15,place:'Un espace dégagé, chez vous ou en extérieur',phased:true,steps:[
-    ['00:00','Installation — mettez une musique que vous aimez, à votre volume.',{phase:'echauffement'}],
-    ['00:02','Bougez librement une minute, sans chercher à bien faire.',{phase:'coeur'}],
-    ['00:08','Recommencez, en essayant un mouvement différent du premier.',{phase:'coeur'}],
-    ['00:12','Terminez par un mouvement que tout le monde imite ensemble.',{phase:'coeur'}],
-    ['00:14','Respirez, souriez, c’est déjà terminé.',{phase:'retour'}]
+    ['00:00','Mettez une musique que vous aimez, à votre volume, c’est parti !',{phase:'echauffement'}],
+    ['00:02','Une minute, bougez librement, sans chercher à bien faire !',{phase:'coeur'}],
+    ['00:08','On recommence, avec un mouvement différent cette fois !',{phase:'coeur'}],
+    ['00:12','Et pour finir, un mouvement que tout le monde reprend ensemble !',{phase:'coeur'}],
+    ['00:14','Respirez, souriez… et voilà, déjà terminé !',{phase:'retour'}]
   ]},
-  defi_rythme:{title:'Le défi rythme',tone:'Suivre le tempo, ensemble',duration:20,place:'N’importe quel endroit',steps:[['00:00','Le premier tape un rythme simple avec les mains.'],['00:05','Le groupe répète ce rythme ensemble.'],['00:10','Chacun invente à son tour un nouveau rythme à faire reprendre.'],['00:16','Final collectif : combinez deux rythmes différents ensemble.'],['00:19','On applaudit la meilleure invention du groupe.']]},
+  defi_rythme:{title:'Le défi rythme',tone:'Suivre le tempo, ensemble',duration:20,place:'N’importe quel endroit',steps:[['00:00','Le premier invente un petit rythme avec les mains.'],['00:05','Et tout le groupe le reprend ensemble !'],['00:10','Chacun son tour, à vous d’inventer un nouveau rythme à faire reprendre !'],['00:16','Pour finir, combinez deux rythmes différents, tous ensemble !'],['00:19','On applaudit chaque invention du groupe !']]},
   cocooning:{title:'Le moment cocooning',tone:'Douceur et lenteur',duration:25,place:'Un endroit confortable et calme',phased:true,steps:[
-    ['00:00','Installation — mettez-vous à l’aise, sans écran si vous le souhaitez.',{phase:'echauffement'}],
+    ['00:00','Installez-vous confortablement, sans écran si le cœur vous en dit.',{phase:'echauffement'}],
     ['00:03','Partagez chacun une petite chose agréable vécue aujourd’hui.',{phase:'coeur'}],
-    ['00:12','Un moment de silence partagé, sans obligation de parler.',{phase:'coeur'}],
-    ['00:18','Étirement très doux, ou simplement rester immobile.',{phase:'retour'}],
+    ['00:12','Et maintenant, un vrai silence partagé, sans obligation de parler.',{phase:'coeur'}],
+    ['00:18','Un étirement tout doux, ou simplement rester immobile.',{phase:'retour'}],
     ['00:23','Choisissez ensemble comment prolonger cette douceur.',{phase:'retour'}]
   ]},
-  veillee_animee:{title:'La veillée animée',tone:'Histoires et jeux du soir',duration:45,place:'Un espace extérieur ou intérieur autorisé, en soirée',steps:[['00:00','Chacun raconte un souvenir de vacances marquant.'],['00:12','Jeu des devinettes : faites deviner un lieu visité sans le nommer.'],['00:25','Histoire à plusieurs voix : chacun ajoute une phrase à tour de rôle.'],['00:38','On vote pour la meilleure histoire inventée ensemble.'],['00:43','On termine calmement, en profitant du moment.']]},
-  after_genereux:{title:'L’after généreux',tone:'Prolonger la soirée en douceur',duration:40,place:'Hébergement, terrasse ou espace autorisé',steps:[['00:00','Chacun propose une chanson pour l’ambiance du moment.'],['00:08','Jeu léger : « action ou vérité » version douce et bienveillante uniquement.'],['00:20','Un défi collectif drôle, sûr et respectueux, choisi par le groupe.'],['00:32','Chacun partage son moment préféré de la soirée.'],['00:38','On termine sur une note joyeuse, à votre rythme.']]}
+  veillee_animee:{title:'La veillée animée',tone:'Histoires et jeux du soir',duration:45,place:'Un espace extérieur ou intérieur autorisé, en soirée',steps:[['00:00','Chacun raconte un souvenir de vacances qui l’a marqué.'],['00:12','Jeu des devinettes : faites deviner un lieu, sans jamais le nommer !'],['00:25','Et maintenant, une histoire à plusieurs voix — chacun ajoute une phrase !'],['00:38','On relit ensemble l’histoire inventée, en riant des meilleurs passages.'],['00:43','On termine calmement, en profitant simplement du moment.']]},
+  after_genereux:{title:'L’after généreux',tone:'Prolonger la soirée en douceur',duration:40,place:'Hébergement, terrasse ou espace autorisé',steps:[['00:00','Chacun propose une chanson pour l’ambiance du moment.'],['00:08','Un jeu tout léger : action ou vérité, version douce et bienveillante uniquement.'],['00:20','Un défi collectif drôle et respectueux, choisi par vous tous !'],['00:32','Chacun partage son moment préféré de la soirée.'],['00:38','On termine sur une note joyeuse, à votre rythme.']]}
 };
 function suggestedAnimateProgram(){const vibes=state.answers.vibes||[],who=state.answers.who;if(state.answers.momentSentence&&/piscine|bassin|eau/.test(plainText(state.answers.momentSentence)))return'water';if(who==='family')return'family';if(vibes.includes('recharge'))return'calm';if(['friends','colleagues'].includes(who)&&vibes.includes('play'))return'party';return'social'}
 function refineAnimateChoice(intent){
@@ -1901,7 +1901,10 @@ function openDolciaAnimate(){
 function previewDolciaAnimate(id){
   const program=DOLCIA_ANIMATE_PROGRAMS[id],target=document.querySelector('#animatePreview');if(!program||!target)return;
   document.querySelectorAll('.animate-choices button').forEach(button=>button.classList.toggle('selected',button.getAttribute('onclick')?.includes(`'${id}'`)));
-  target.innerHTML=`<section><div><span class="kicker">${esc(program.tone)}</span><h3>${esc(program.title)}</h3><p>${esc(program.place)} · ${program.duration} minutes</p></div><ol>${program.steps.map(step=>`<li><time>${step[0]}</time><span>${esc(step[1])}</span></li>`).join('')}</ol><label><input type="checkbox" id="animateSafety"> J’ai vérifié le lieu, les règles et la sécurité du groupe.</label><div><button class="secondary" onclick="addDolciaAnimate('${id}')">Ajouter au programme</button><button class="primary" onclick="startDolciaAnimate('${id}')">Commencer avec la voix</button></div></section>`
+  target.innerHTML=`<section><div><span class="kicker">${esc(program.tone)}</span><h3>${esc(program.title)}</h3><p>${esc(program.place)} · ${program.duration} minutes</p></div><div class="animate-start-now"><label><input type="checkbox" id="animateSafety"> On a choisi un endroit sûr, tout le monde est prêt.</label><div><button class="secondary" onclick="addDolciaAnimate('${id}')">Garder pour plus tard</button><button class="primary" onclick="startDolciaAnimate('${id}')">▶ Commencer avec la voix</button></div></div><ol>${program.steps.map(step=>`<li><time>${step[0]}</time><span>${esc(step[1])}</span></li>`).join('')}</ol></section>`;
+  // La discovérabilité était le vrai problème signalé : cliquer ne semblait rien faire tant que
+  // l'aperçu, placé après toute la grille de choix, restait hors champ. On l'amène à l'écran.
+  requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 function dolciaAnimateItem(id){
   const program=DOLCIA_ANIMATE_PROGRAMS[id];return{id:`dolcia-animate-${id}-${Date.now()}`,name:program.title,tone:program.tone,category:id==='calm'?'slow':id==='water'?'outside':'active',source:'Programme Dolcia',address:program.place,summary:`Expérience autonome guidée par Dolcia · ${program.duration} minutes`,free:true,price:0,detailsKnown:true,autonomousProgram:id,steps:program.steps,quality:'verified',official:false,photo:IMAGES[id==='family'?'family':id==='calm'?'slow':id==='water'?'outside':'friends']}
@@ -1925,21 +1928,28 @@ function ensureAnimateSafety(){if(!document.querySelector('#animateSafety')?.che
 function addDolciaAnimate(id){if(!ensureAnimateSafety())return;const item=dolciaAnimateItem(id);state.allItems.push(item);state.agenda.push({...item,agendaDate:new Date().toISOString(),agendaSlot:'Programme autonome Dolcia'});save();document.querySelector('#dolciaAnimate')?.remove();renderAgenda();showToast('Programme Dolcia ajouté à votre agenda')}
 const dolciaTheme={audio:null};
 function isAnimateMuted(){return Boolean(state.animateMuted)}
+function animateThemeVolume(){return typeof state.animateThemeVolume==='number'?state.animateThemeVolume:.2}
+function setAnimateThemeVolume(value){
+  state.animateThemeVolume=Math.max(0,Math.min(1,Number(value)));save();
+  if(dolciaTheme.audio&&!isAnimateMuted())dolciaTheme.audio.volume=state.animateThemeVolume;
+  document.querySelectorAll('.animate-volume-value').forEach(label=>label.textContent=`${Math.round(state.animateThemeVolume*100)}%`);
+}
 function toggleAnimateMute(){
   state.animateMuted=!state.animateMuted;save();
-  if(dolciaTheme.audio)dolciaTheme.audio.volume=state.animateMuted?0:.85;
-  const btn=document.querySelector('.animate-mute-toggle');
-  if(btn){btn.textContent=state.animateMuted?'🔇 Musique coupée':'🔊 Musique';btn.setAttribute('aria-pressed',String(state.animateMuted))}
-  if(state.animateMuted&&dolciaTheme.audio)dolciaTheme.audio.pause();
-  else if(!state.animateMuted&&dolciaTheme.audio&&dolciaTheme.audio.paused)dolciaTheme.audio.play().catch(()=>{});
+  if(dolciaTheme.audio)dolciaTheme.audio.volume=state.animateMuted?0:animateThemeVolume();
+  if(state.animateMuted){if(dolciaTheme.audio)dolciaTheme.audio.pause();if(animatePulse.active)stopAnimatePulse()}
+  else if(dolciaTheme.audio&&dolciaTheme.audio.paused)dolciaTheme.audio.play().catch(()=>{});
+  document.querySelectorAll('.animate-mute-toggle').forEach(btn=>{btn.textContent=state.animateMuted?'🔇 Son coupé':'🔊 Son';btn.setAttribute('aria-pressed',String(state.animateMuted))});
 }
-// La musique ne doit jamais couvrir la voix de D — dès qu'une consigne est parlée, le volume
-// baisse automatiquement, puis remonte doucement une fois la phrase terminée. Jamais les deux à
-// plein volume en même temps.
+// La voix ne fixe jamais explicitement son propre volume (elle part donc au maximum du navigateur)
+// — c'est justement pour ça que l'atténuation de la musique doit être quasi totale, pas une simple
+// baisse. Le rapport doit rester net : la voix domine, la musique n'est plus qu'un souvenir de fond.
+// Mais elle ne doit JAMAIS remonter un volume que la personne a déjà choisi plus bas — si le
+// curseur est à 0, l'atténuation doit rester à 0, jamais remonter à .04 puis redescendre.
 function duckDolciaThemeForSpeech(){
   if(!dolciaTheme.audio||isAnimateMuted())return null;
   const restore=dolciaTheme.audio.volume;
-  dolciaTheme.audio.volume=.12;
+  dolciaTheme.audio.volume=Math.min(restore,.04);
   return ()=>{if(dolciaTheme.audio)dolciaTheme.audio.volume=restore}
 }
 function playDolciaTheme(){
@@ -1947,7 +1957,7 @@ function playDolciaTheme(){
   try{
     if(dolciaTheme.audio){dolciaTheme.audio.pause();dolciaTheme.audio.currentTime=0}
     dolciaTheme.audio=new Audio('/assets/audio/dolcia-theme.mp3');
-    dolciaTheme.audio.volume=.85;
+    dolciaTheme.audio.volume=animateThemeVolume();
     dolciaTheme.audio.play().catch(()=>{});
   }catch{}
 }
@@ -2185,7 +2195,7 @@ function renderDolciaAnimateLive(options={}){
   document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-live theme-${energyTheme.id}" id="animateLive"><article>
     <div class="animate-energy-scene" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <button class="close" onclick="pauseDolciaAnimate()" aria-label="Mettre la session en pause">×</button>
-    <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct · ${esc(energyTheme.label)}</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><button class="animate-pulse-toggle" onclick="playDolciaTheme()" title="Réécouter l'hymne Dolcia"><i></i>Hymne Dolcia</button><button class="animate-pulse-toggle ${animatePulse.active?'active':''}" onclick="toggleAnimatePulse(${energyTheme.bpm})" aria-pressed="${animatePulse.active}" title="Pouls sonore rythmé, pas une musique"><i></i>Pouls</button>${animateTeamsBar(session)}<div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
+    <header class="animate-presence">${dMascotMark('large')}<div><small>D anime en direct · ${esc(energyTheme.label)}</small><strong>${esc(session.item.tone||'Votre moment')}</strong></div><div class="animate-sound-control"><button class="animate-mute-toggle" onclick="toggleAnimateMute()" aria-pressed="${isAnimateMuted()?'true':'false'}">${isAnimateMuted()?'🔇 Son coupé':'🔊 Son'}</button><input type="range" min="0" max="1" step="0.05" value="${animateThemeVolume()}" oninput="setAnimateThemeVolume(this.value)" aria-label="Volume du son d'ambiance, jamais la voix de D"><span class="animate-volume-value">${Math.round(animateThemeVolume()*100)}%</span><button class="animate-pulse-toggle ${animatePulse.active?'active':''}" onclick="toggleAnimatePulse(${energyTheme.bpm})" aria-pressed="${animatePulse.active}" title="Pouls sonore rythmé, pas une musique">Pouls</button></div>${animateTeamsBar(session)}<div class="animate-elan"><b>${session.elan}</b><span>Élan collectif</span></div></header>
     <p class="animate-coach-line">« ${esc(animateCoachLine(session))} »</p>
     ${session.item.phased&&step[2]?.phase?`<div class="animate-phase-badge phase-${step[2].phase}">${esc(animatePhaseLabel(step[2].phase))}</div>`:''}
     <div class="animate-session-meta"><span>Mission ${session.index+1}/${session.item.steps.length}</span><span>Capitaine · ${esc(animateCaptain(session))}</span><span>${progress}% vécu</span><span>${session.streak||0} série</span></div>
@@ -2201,7 +2211,7 @@ function renderDolciaAnimateLive(options={}){
     ${animateConversationMarkup(session)}
     <div class="animate-talk"><input id="animateTalkInput" placeholder="Une réaction, une anecdote, un clin d’œil…"><button onclick="askAnimateCoach()">Dire à D</button><button onclick="rememberAnimateJoke()">Garder ce clin d’œil</button></div>
     ${animateSharePanel(session)}
-    <div class="animate-live-actions"><button class="animate-mute-toggle" onclick="toggleAnimateMute()" aria-pressed="${isAnimateMuted()?'true':'false'}">${isAnimateMuted()?'🔇 Musique coupée':'🔊 Musique'}</button><button onclick="speakAnimateStep()">Dites-le à voix haute</button><button class="animate-live-voice" onclick="toggleLiveConversation('animate')" aria-pressed="false"><i></i>Parler à D en direct</button><button onclick="${session.shareCode?'stopShareAnimateSession()':'openAnimateSharePicker()'}">${session.shareCode?'Arrêter le partage':'Partager cette session'}</button><button class="primary" onclick="completeDolciaAnimateStep()">${last?'Clore ce moment':'Mission accomplie →'}</button></div>
+    <div class="animate-live-actions"><button onclick="speakAnimateStep()">Dites-le à voix haute</button><button class="animate-live-voice" onclick="toggleLiveConversation('animate')" aria-pressed="false"><i></i>Parler à D en direct</button><button onclick="${session.shareCode?'stopShareAnimateSession()':'openAnimateSharePicker()'}">${session.shareCode?'Arrêter le partage':'Partager cette session'}</button><button class="primary" onclick="completeDolciaAnimateStep()">${last?'Clore ce moment':'Mission accomplie →'}</button></div>
     <progress value="${session.completed}" max="${session.item.steps.length}"></progress>
     <small class="animate-trust">${session.item.phased?'Cette séance avance seule, au rythme du programme — vous pouvez toujours mettre en pause. ':''}L’Élan mémorise la progression du groupe. Il ne classe jamais les personnes et ne pénalise aucun refus.</small>
   </article></div>`);

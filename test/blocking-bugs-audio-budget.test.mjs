@@ -19,7 +19,7 @@ test('un item non gratuit sans prix réellement connu reste exclu d’un filtre 
 // parlait réellement (synthèse vocale), au risque de couvrir les consignes.
 test('la musique baisse automatiquement pendant que D parle réellement, et remonte une fois terminé', () => {
   assert.match(app, /function duckDolciaThemeForSpeech\(\)\{/);
-  assert.match(app, /dolciaTheme\.audio\.volume=\.12/);
+  assert.match(app, /dolciaTheme\.audio\.volume=Math\.min\(restore,\.04\)/);
   assert.match(app, /function playPremiumVoice\(text,onDone\)\{\n\s*const restoreTheme=duckDolciaThemeForSpeech\(\);/);
 });
 

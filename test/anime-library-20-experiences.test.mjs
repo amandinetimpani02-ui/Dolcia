@@ -37,7 +37,7 @@ test('les nouvelles expériences physiques (renforcement, olympiades, danse) res
 });
 
 test('le nouveau jeu aquatique garde le même rappel de sécurité que le programme piscine déjà existant, jamais une garantie de surveillance inventée', () => {
-  assert.match(programsBlock, /piscine_grand_jeu:\{[\s\S]*?confirmez profondeur, règles et surveillance active/);
+  assert.match(programsBlock, /piscine_grand_jeu:\{[\s\S]*?on confirme la profondeur, les règles, une vraie surveillance active/);
 });
 
 test('toute nouvelle expérience apparaît automatiquement dans le sélecteur Dolcia Anime, sans code supplémentaire (Object.entries déjà générique)', () => {

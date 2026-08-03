@@ -14,7 +14,7 @@ test('Dolcia Anime est une expérience autonome explicitement identifiée', () =
 
 test('le démarrage exige une confirmation de sécurité', () => {
   assert.match(app, /ensureAnimateSafety/);
-  assert.match(app, /J’ai vérifié le lieu, les règles et la sécurité du groupe/);
+  assert.match(app, /On a choisi un endroit sûr, tout le monde est prêt\./);
   assert.match(app, /surveillance adulte active, constante et à portée de bras/);
 });
 

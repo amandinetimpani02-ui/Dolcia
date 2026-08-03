@@ -195,7 +195,7 @@
 .animate-live-step time{display:block;color:#9d712c;font-weight:800}.animate-live-step p{font:25px/1.25 Georgia,serif;margin:10px}
 .animate-live-actions{display:flex;justify-content:center;gap:10px;margin:22px 0}.animate-live progress{width:100%;accent-color:#d5b36a}
 .animate-live>article{width:min(780px,94vw);text-align:left;overflow:hidden}
-.animate-presence{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center}.animate-presence .eclat-d{margin:0}.animate-presence small,.animate-presence strong{display:block}.animate-presence small{color:#bba979;font-size:10px;letter-spacing:.14em;text-transform:uppercase}.animate-presence strong{margin-top:4px;font:24px/1 var(--display)}
+.animate-presence{position:sticky;top:0;z-index:5;background:#0b0d0c;padding:10px 0;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center}.animate-presence .eclat-d{margin:0}.animate-presence small,.animate-presence strong{display:block}.animate-presence small{color:#bba979;font-size:10px;letter-spacing:.14em;text-transform:uppercase}.animate-presence strong{margin-top:4px;font:24px/1 var(--display)}
 /* Présence scénique : D devient grande et centrale en haut de la session, comme un vrai coach face
    à vous, avant de laisser place à la mission — pas une icône reléguée dans un coin de texte. */
 .animate-live .animate-presence{grid-template-columns:1fr;justify-items:center;text-align:center;gap:6px;margin-bottom:8px}
