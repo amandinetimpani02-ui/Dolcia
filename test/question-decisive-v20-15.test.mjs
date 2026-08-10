@@ -5,12 +5,8 @@ import fs from 'node:fs';
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../vision-premium.css',import.meta.url),'utf8');
 
-test('v20.15 annonce la question décisive',()=>{
-<<<<<<< HEAD
-  assert.match(app,/20\.15\.0-question-decisive/);
-=======
-  assert.match(app,/21\.40\.1-moteur-comportements/);
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
+test('v21.50 conserve la question décisive',()=>{
+  assert.match(app,/21\.50\.0-d-vivante-fun/);
 });
 
 test('D ne pose qu une seule précision par moment',()=>{

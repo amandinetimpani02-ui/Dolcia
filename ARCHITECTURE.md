@@ -75,6 +75,31 @@ pris la vedette du Niveau 2.
 
 ---
 
+## 1bis. D et Anime — une personnalité, un rôle d'orchestration
+
+**D est l'identité relationnelle unique. Anime est un mode d'action de D, pas un second personnage
+et pas un catalogue de jeux.** Lorsqu'Anime est actif, D devient responsable du déroulement complet
+de la session selon ce cycle :
+
+```
+accueillir → expliquer → répartir les rôles → lancer → rythmer → faire la transition
+          → observer → adapter ou relancer → conclure
+```
+
+Le moteur de session conserve l'étape courante, les réactions, le rythme, les adaptations et la
+progression. Les équipes, scores, séries et effets de suspense sont des capacités optionnelles : ils
+ne s'activent que lorsque la nature de l'expérience et le groupe les rendent pertinents. Une séance
+calme, de détente ou de bien-être ne devient jamais artificiellement compétitive.
+
+À chaque instant, Anime doit savoir : ce qui vient d'être expliqué, ce que le groupe est en train de
+faire, qui participe, si l'énergie monte ou baisse, quelle transition vient ensuite et comment la
+session se termine. Elle ne génère jamais une consigne déconnectée de la session active et n'invente
+aucun lieu, règle de sécurité ou fait externe.
+
+La conclusion fait partie de l'animation : D annonce clairement la fin, célèbre sans désigner de
+perdant humilié, récapitule la progression réelle et propose une suite seulement si elle est
+pertinente. Une session interrompue reste reprenable sans recommencer à zéro.
+
 ## 2. La hiérarchie de décision (Niveau 2 du Home)
 
 Sept niveaux, dans cet ordre strict. Chaque niveau ne s'active qu'après que le précédent soit
@@ -161,13 +186,13 @@ retirées ou ajoutées.
 
 ---
 
-## 3. Les rôles de mobilité (pas des catégories figées)
+## 3. Les rôles de mobilité, après la barrière de substituabilité
 
-Erreur initiale corrigée pendant la réflexion : la mobilité n'est **pas une propriété de la
-catégorie** ("restaurant = local", "aquarium = régional"). C'est une propriété du **rôle que joue
-l'expérience dans le scénario du jour**. Un restaurant peut être une pépite gastronomique qui
-justifie 40 minutes de route ; le même restaurant, simple pause déjeuner d'un scénario construit
-autour d'autre chose, reste en mobilité locale stricte.
+La mobilité dépend du rôle joué dans le scénario, mais ce principe ne contourne jamais la barrière
+centrale : **la distance se mérite**. Une option plus lointaine ne gagne pas parce qu'elle est mieux
+notée, plus connue ou plus spectaculaire. Restaurant et hôtel ne deviennent jamais des pépites
+lointaines. Une catégorie générique déjà disponible localement reste locale. Le rôle n'est évalué
+qu'après cette vérification de substituabilité.
 
 ### 3.1 Rôle "essentiel du quotidien"
 
@@ -180,23 +205,19 @@ distance). Cette règle **reste intacte et absolue** — voir §4 pour ce qui ch
 
 ### 3.2 Rôle "destination qui structure la journée"
 
-Mobilité régionale, budget de temps de trajet (règle nationale déjà construite : temps, jamais
-kilomètres fixes — voir §8), mais seulement si l'expérience est objectivement la meilleure de sa
-catégorie dans la zone atteignable, jamais simplement la plus proche. Aquariums, zoos, parcs
-d'attractions, grands musées, parcs naturels, accrobranches, grandes expositions.
-
-**"Le meilleur bat le plus proche"** : ancré dans une donnée réelle — le volume d'avis combiné à la
-note (déjà en partie construit avec "Sélection Dolcia") capture objectivement la notoriété la
-plupart du temps. Nausicaá a des dizaines de milliers d'avis, un petit aquarium régional en a
-quelques centaines : la référence ressort du fait, jamais d'un jugement de qualité fabriqué par une
-IA.
+Mobilité régionale possible uniquement lorsque la personne recherche explicitement un scénario
+singulier qui structure la journée et que sa durée rend le trajet cohérent. Une demande générique
+(`aquarium`, `parc`, `activité familiale`) reste locale lorsqu'une alternative raisonnable existe.
+Ainsi, une demande générique d'aquarium ne déclenche pas Nausicaá ; une demande explicite de grande
+journée marine peut ouvrir un scénario régional, si la preuve, la rareté, la singularité et l'effort
+de trajet sont établis. Ce n'est pas la catégorie qui mérite le trajet : c'est le scénario demandé.
 
 ### 3.3 Rôle "pépite qui justifie le trajet à elle seule"
 
 Mobilité exceptionnelle, badge visible (`✨ Vaut le trajet` ou `💎 Pépite Dolcia`), réservée aux
-expériences avec preuve de rareté réelle et forte qualité, déjà construite cette semaine (statut
-`extended` du moteur géo, section 8). N'importe quelle catégorie peut accéder à ce rôle si elle le
-mérite vraiment — y compris un restaurant.
+expériences non substituables localement qui satisfont la doctrine du §8. Restaurant et hôtel en
+sont toujours exclus. Une catégorie générique disponible localement n'y accède jamais par sa note,
+sa notoriété ou sa qualité seules.
 
 ---
 
@@ -367,9 +388,17 @@ kilomètres (un rayon fixe n'a pas le même sens en zone rurale qu'en zone dense
 **temps de trajet**, dépendant de la durée du scénario (§2.3), identique dans son principe partout
 en France (Le Touquet, Lyon, Brest testés avec le même résultat).
 
-Une pépite doit en plus être **officielle et datée** (rendez-vous réel et vérifié, jamais un lieu
-permanent) et ne jamais être un événement manifestement récurrent (chaque semaine) confondu avec une
-vraie rareté.
+Le statut `extended` n'est jamais un simple élargissement géographique. Avant de l'accorder, la
+barrière centrale vérifie ensemble : l'absence d'alternative locale raisonnable, une preuve
+d'existence fiable, une rareté vérifiée, une singularité vérifiée, la capacité seulement lorsqu'elle
+est pertinente et réellement connue, ainsi qu'un effort de trajet expliqué et compatible avec la
+durée. Aucun signal n'est inventé. Une source officielle prouve l'existence, jamais la rareté à elle
+seule. `USER_WIDENED_SEARCH` permet d'explorer plus loin mais ne transforme jamais, seul, une option
+en pépite.
+
+Les quatre sorties sont `core`, `extended`, `outside` et `location_unknown`. `outside` n'est jamais
+proposé. `location_unknown` ne suppose aucune distance. Une activité remplaçable localement reste
+`core` ou est écartée, même si l'option plus lointaine est mieux notée.
 
 ---
 
@@ -396,6 +425,12 @@ se parlent pas. C'est un chantier reconnu comme non résolu à ce jour (voir l'a
 juillet 2026) — cette architecture en pose le principe, sa construction reste à faire.
 
 ### 9.1 Les cinq couches de connaissance du territoire
+
+**Précision explicite pour éviter tout amalgame** : ce principe (y compris les exemples "par temps
+de pluie", "recommandée par les familles") est un principe national, valable pour n'importe quel
+territoire couvert par Dolcia. Le Touquet et Hesdin n'apparaissent dans ce document que comme
+terrains de test concrets utilisés pendant le développement — jamais comme le périmètre réel du
+principe lui-même.
 
 Au-delà d'un item isolé, la connaissance qu'a Dolcia d'un lieu ou d'une expérience se construit en
 cinq couches, jamais confondues entre elles :
@@ -512,3 +547,447 @@ construction initiale.
 
 *Document figé le 31 juillet 2026, à l'issue d'une session de réflexion produit. Toute modification
 future doit être explicite et documentée ici, jamais silencieuse.*
+
+## 13. La pyramide de confiance des sources — chantier stratégique, pas encore construit
+
+Constat honnête, vérifié dans le code, pas supposé : Dolcia n'est aujourd'hui structurellement pas
+nationale. Deux sources existent réellement — `touquet-events.js` (un script qui lit directement
+le site officiel du Touquet, câblé sur cette seule ville) et `datatourisme.js` (une vraie base
+nationale, mais dont la couverture réelle dépend entièrement de ce que chaque territoire y publie
+lui-même, hors du contrôle de Dolcia). Aucune source réseaux sociaux, aucun système de contribution
+des habitants n'existent à ce jour.
+
+Le prochain grand chantier n'est plus le moteur de recommandation — il est déjà solide. C'est
+l'acquisition et la vérification des données, à traiter comme un vrai produit, avec une stratégie
+et des priorités, pas comme une suite de scripts ajoutés au fil de l'eau.
+
+### Les cinq niveaux
+
+1. **Sources officielles** — DATAtourisme, offices de tourisme, mairies, salles de spectacle,
+   bases de loisirs, musées. Confiance la plus élevée, déjà en partie connectée.
+2. **Organisateurs et partenaires vérifiés** — associations, MJC, clubs sportifs, écoles de
+   cirque, fermes, domaines, théâtres indépendants, mais aussi tout établissement (musée, escape
+   game, base nautique, parc de loisirs) qui gère lui-même sa propre fiche via un compte
+   partenaire. **Le mot "vérifié" doit correspondre à une vraie procédure, jamais à une simple
+   inscription** — confirmation de l'existence légale réelle de l'établissement et correspondance
+   de l'adresse déclarée avec une source publique, avant qu'un compte obtienne le droit de publier.
+   Un partenaire ne modifie jamais que sa propre fiche, jamais celle d'un autre. **Le grand public
+   n'est jamais invité à créer une activité** — ce n'est pas sa raison d'ouvrir Dolcia, et lui
+   demander de le faire contredirait la promesse même du produit.
+3. **Réseaux publics** — pages publiques, événements publics visibles sans authentification.
+   **Jamais pour publier automatiquement — uniquement pour détecter une piste à vérifier ensuite**
+   contre une source de niveau 1 ou 2. Un signal de niveau 3, seul, n'est jamais une preuve.
+   Techniquement et légalement limité : les groupes privés Facebook ne sont pas une source
+   exploitable pour une collecte automatique.
+4. **Retours des utilisateurs** — jamais la création d'une fiche, seulement des signaux courts et
+   rapides : "le prix a changé", "c'est fermé aujourd'hui", "les horaires sont faux", "je
+   recommande cette activité", "signaler un problème". Ce sont des corrections et des
+   confirmations, jamais une tâche de rédaction confiée à l'utilisateur.
+5. **La mémoire de Dolcia** — déjà documentée au §9.1 (les cinq couches de connaissance du
+   territoire, les seuils de preuve). Ce niveau n'est pas nouveau, il referme la pyramide.
+
+### Le score de couverture — seulement là où un vrai dénominateur existe
+
+Savoir, territoire par territoire, où la couverture est solide et où elle est faible est une bonne
+idée — mais elle doit respecter exactement la même règle que le reste de cette architecture :
+**jamais un chiffre qui donne une fausse impression de précision** (voir §9.1, "un seuil ne se
+justifie jamais par des adjectifs").
+
+- **Là où un vrai dénominateur existe** (le répertoire national des associations, les registres
+  officiels des offices de tourisme, les bases de données publiques de salles de spectacle) — un
+  vrai pourcentage de couverture est calculable, et légitime à afficher.
+- **Là où aucune vérité de référence n'existe** (réseaux sociaux, pages publiques en général) —
+  aucun pourcentage ne doit être inventé. Le statut reste honnêtement `⚪ non mesurable`, jamais un
+  chiffre qui rassure sans le mériter.
+
+### Non-régression à ajouter à la liste du §12
+
+- Un pourcentage de couverture affiché sans dénominateur réel vérifiable → régression sur ce §13.
+- Une contribution d'habitant publiée sans étape de vérification → régression sur ce §13 et sur la
+  loi constitutionnelle 18 (le silence est préférable à une affirmation fragile).
+
+## 14. Le cycle de vie d'une fiche — de la détection à l'archivage
+
+Ce document répond à une question que la pyramide des sources (§13) ne répond pas encore :
+comment une activité détectée devient-elle une vraie fiche Dolcia, sans qu'un humain la réécrive
+entièrement à la main ? **Une contribution — qu'elle vienne d'une source officielle, d'un
+organisateur ou d'un habitant — n'a jamais pour objectif de produire une fiche complète. Elle a
+pour seul objectif de révéler qu'une activité existe.** Tout le reste est un pipeline, pas une
+tâche de rédaction.
+
+### Les neuf étapes
+
+```
+Détection → Qualification → Fusion des sources → Validation automatique → Enrichissement Dolcia
+→ Contrôles qualité → Publication → Mises à jour → Archivage
+```
+
+1. **Détection** — une activité est repérée, par n'importe quel niveau de la pyramide (§13).
+   Information minimale : nom, lieu, date, source, lien.
+2. **Qualification** — une activité détectée n'entre pas automatiquement dans le périmètre
+   Dolcia. Une assemblée générale de copropriétaires est un événement réel, mais jamais une
+   activité de loisir ; une initiation au canoë, oui. Cette étape écarte ce qui ne correspond pas
+   au périmètre, avant d'investir le moindre effort d'enrichissement sur une entrée qui ne
+   servira jamais.
+3. **Fusion des sources** — si plusieurs sources décrivent la même activité, elles sont
+   rapprochées en une seule entrée, jamais dupliquées.
+4. **Validation automatique** — vérification de cohérence de base (la date existe-t-elle
+   vraiment, l'adresse est-elle géolocalisable, la source est-elle identifiable).
+5. **Enrichissement Dolcia** — complétion automatique à partir de données réellement
+   disponibles (horaires, coordonnées, photos autorisées, tarifs). **Chaque champ enrichi doit
+   passer le même contrôle de preuve que le reste de cette architecture (§9.1, §13) — un champ
+   calculé sans base vérifiable réelle n'est jamais affiché comme un fait.** Une durée estimée sans
+   heure de fin connue, par exemple, reste absente plutôt que devinée.
+6. **Contrôles qualité** — vérification que la fiche respecte le format Dolcia, sans donnée
+   fabriquée pour combler un champ vide.
+7. **Publication** — la fiche apparaît dans l'application, au niveau de richesse honnête que ses
+   données réelles permettent (voir la distinction ci-dessous).
+8. **Mises à jour** — deux logiques différentes selon la nature de l'activité, jamais le même
+   traitement :
+   - **Activité permanente** (musée, escape game, restaurant, parc, zoo) — vit pendant des années,
+     ses mises à jour portent sur des changements ponctuels (horaires, tarifs), jamais sur son
+     existence même.
+   - **Événement ponctuel** (marché, concert, atelier, festival) — a une fin connue ou déductible ;
+     ses mises à jour incluent la question de sa disparition prochaine, pas seulement ses détails.
+9. **Archivage** — une activité permanente fermée définitivement, ou un événement ponctuel passé,
+   sort proprement du catalogue actif — jamais affiché comme s'il était encore valide.
+
+**L'intervention humaine reste l'exception, réservée à deux cas** : un conflit entre plusieurs
+sources qui se contredisent, ou une activité choisie pour un vrai traitement éditorial (voir la
+distinction avec le niveau "riche" ci-dessous). Une modération manuelle systématique de chaque
+nouvelle activité ne passerait jamais à l'échelle nationale — ce pipeline existe précisément pour
+l'éviter.
+
+### Le ton de D varie selon ce qu'on sait déjà, jamais selon un chiffre inventé
+
+Une bonne intuition à formaliser correctement : D ne doit pas parler de la même façon d'une
+activité largement confirmée et d'une activité à peine détectée. Mais un score numérique continu
+(0 à 100) sans formule de calcul documentée serait exactement l'illusion de précision déjà interdite
+au §9.1 et au §13, simplement déplacée vers l'interne plutôt que vers l'utilisateur. Le ton de D
+doit donc varier selon les trois niveaux déjà existants (`detailQuality()`, riche/standard/minimale),
+jamais selon un nombre parallèle inventé pour l'occasion :
+
+- **Riche** → "Je vous recommande vivement…"
+- **Standard** → "J'ai trouvé une activité qui pourrait vous plaire…"
+- **Minimale** → une formulation encore plus prudente, jamais une fausse assurance.
+
+### Deux axes distincts, à ne jamais confondre
+
+**L'étape du pipeline** (où en est le traitement de cette fiche) et **le niveau de richesse**
+(§`detailQuality()`, riche/standard/minimale — ce qu'on sait réellement d'elle) ne sont pas la même
+chose. Une fiche peut avoir traversé tout le pipeline jusqu'à "Publication" et rester honnêtement
+"minimale" si l'enrichissement automatique n'a rien trouvé de plus à ajouter. Le niveau "riche"
+n'est jamais garanti par le seul fait d'avoir traversé le pipeline — il dépend uniquement de la
+quantité de données réellement vérifiées disponibles, jamais de l'effort humain investi pour s'y
+rendre.
+
+### Non-régression à ajouter à la liste du §12
+
+- Un champ "enrichi automatiquement" affiché sans base vérifiable réelle derrière (une moyenne
+  inventée, une estimation isolée présentée comme un fait) → régression sur ce §14 et sur §9.1.
+- Une activité archivée qui continue d'apparaître comme active dans le catalogue → régression sur
+  ce §14.
+
+## 15. Un bug réel trouvé grâce à une question précise — le festival en bloc vs. jour par jour
+
+Question posée directement : le Festival des Tout-Petits remonte-t-il activité par activité, jour
+par jour, ou seulement comme un bloc "du 11 juillet au 23 août" — inutilisable pour répondre à
+"qu'est-ce qu'on fait aujourd'hui précisément" ?
+
+Vérifié dans le code, pas supposé : c'était bien un seul bloc vague. Pire, sa description
+affirmait "chaque rendez-vous conserve sa propre date", ce qui était faux — une seule entrée
+existait réellement. Corrigé le 5 août 2026 avec les dix-neuf vraies dates individuelles, vérifiées
+directement sur `letouquet.com` : chaque rendez-vous a maintenant sa propre entrée, sa propre date,
+son propre lien vers la page officielle correspondante.
+
+Ce cas illustre exactement pourquoi le cycle de vie décrit au §14 doit produire des entrées
+individuelles pour un événement à rendez-vous multiples, jamais une seule entrée "chapeau" qui
+masquerait le détail journalier — sans quoi le pipeline peut être techniquement fonctionnel tout en
+restant inutile pour répondre à la question la plus fréquente : "aujourd'hui, précisément, qu'est-ce
+qu'on fait ?"
+
+## 16. Le festival comme événement parent, ses activités comme enfants autonomes
+
+Vérification demandée directement : le festival remonte-t-il comme un seul bloc, ou activité par
+activité ? Réponse honnête après vérification individuelle de plusieurs pages officielles : les
+titres et dates de 19 rendez-vous existaient déjà, mais aucun ne portait de lien vers son
+événement parent, et seule une minorité avait été vérifiée dans le détail (horaires exacts, âge,
+tarif, lieu, repli pluie).
+
+Corrigé : chaque activité porte désormais un champ `parentEvent` (jamais l'inverse — le festival
+ne remplace jamais ses activités enfants). Les activités individuellement vérifiées sur le site
+officiel (`detailsVerified: true`) portent leurs vrais horaires, âge, tarif et lieu. Les autres
+restent honnêtement minimales (`detailsVerified: false`) — titre et date suffisent à les rendre
+proposables, mais rien n'est deviné pour les champs non vérifiés.
+
+Testé concrètement avant toute déclaration : une requête pour le 15 juillet 2026 retrouve bien
+séparément "Atelier baby gym parent-enfant" (9h30, 11h00, 15h30, 17h00 — 2 à 6 ans — 8€) et "Jeux
+de plein air" (14h à 18h, gratuit), jamais un bloc unique "Festival des Tout-Petits".
+
+## 17. La règle générale — jamais un festival codé en dur, un modèle réutilisable
+
+Le correctif du §16 résout le Festival des Tout-Petits, un seul festival, une seule ville. Ce
+n'est pas une solution nationale — c'est une preuve que le modèle de données fonctionne. La règle
+suivante doit s'appliquer à **tout** événement à programme, dans n'importe quelle ville, sans
+jamais recopier ce travail à la main :
+
+1. **Un festival est un événement parent, jamais une activité proposable en soi.** Il explique et
+   regroupe, il ne se propose jamais directement à la place de ses activités.
+2. **Chaque atelier, spectacle ou animation est un enfant autonome** — sa propre fiche, sa propre
+   date, son propre lien, planifiable et réservable indépendamment du festival.
+3. **Chaque date et chaque créneau doivent être planifiables.** Plusieurs horaires d'une même
+   activité (`slots`) deviennent chacun leur propre entrée avec sa date réelle, jamais un texte qui
+   les concatène ("9h30, 11h00, 15h30 et 17h00" n'est jamais un format valide). Une plage horaire
+   continue (`hoursRange`) reste une seule entrée, mais structurée, jamais un texte libre non
+   plus.
+4. **Une activité enfant n'hérite jamais automatiquement des tarifs, âges ou horaires du festival
+   parent.** Chaque enfant porte ses propres données, vérifiées indépendamment ; le lien
+   `parentEvent` n'est qu'une référence explicative, jamais une source de valeurs par défaut.
+5. **Les détails non vérifiés individuellement restent absents ou signalés comme tels**
+   (`detailsVerified: false`) — jamais complétés par déduction à partir du festival parent ou par
+   estimation.
+
+### Ce qui reste à investiguer avant de coder un nouveau festival — non résolu ici
+
+Avant d'intégrer un nouveau festival (à Lille, à Berck, ou ailleurs), il faut vérifier si le site
+source expose ses sous-événements de façon exploitable automatiquement — un flux structuré
+(JSON-LD, XML), une API ouverte, ou au minimum des pages individuelles à un modèle d'URL
+prévisible. **Cette vérification n'a pas pu être menée pour letouquet.com avec les outils
+disponibles ici** — un simple récupérateur de page ne permet pas d'inspecter le trafic réseau
+qu'une page peut déclencher elle-même (un appel JSON invisible dans le HTML statique). Une vraie
+investigation demande soit l'inspection des outils de développement d'un navigateur réel sur la
+page de liste, soit un contact direct avec l'office de tourisme pour demander un accès à ses
+données structurées — beaucoup utilisent des plateformes (Tourinsoft, e-tourisme) qui exposent
+parfois de vraies API, sans que ce soit garanti pour ce territoire précis.
+
+**Tant que cette vérification n'a pas été faite, aucun nouveau festival ne doit être intégré en
+dur dans le code** — ce serait reproduire exactement le travail artisanal que ce chantier cherche à
+éliminer, une ville à la fois, sans jamais construire le pipeline général.
+
+## 18. Le moteur d'ingestion à connecteurs — troisième voie entre le tout-manuel et l'API magique
+
+**État réel aujourd'hui, vérifié, pas supposé** : un seul festival (Festival des Tout-Petits, Le
+Touquet) a été traité, et seulement 4 de ses 19 activités ont été vérifiées en détail. Aucun autre
+festival, aucune autre fête, nulle part ailleurs en France — y compris la Fête du Cochon Rose à
+Hesdin, testée à plusieurs reprises dans ce document — n'a bénéficié du même travail. Ce n'est pas
+un chantier "en cours" : il n'a pas encore commencé au-delà de ce cas unique.
+
+**Le vrai chantier national n'est pas de coder chaque festival à la main, ni d'attendre qu'une API
+universelle existe.** Il est de construire un moteur d'ingestion d'événements qui transforme
+automatiquement un programme structuré en activités individuelles lorsque la source le permet, et
+qui dégrade proprement le résultat lorsqu'elle ne le permet pas.
+
+### Le principe
+
+```
+Programme détecté (festival, saison culturelle, cycle d'animations)
+        ↓
+Dolcia reconnaît que cette page est un PARENT avec des activités FILLES
+        ↓
+Elle visite automatiquement les pages enfants (quand un connecteur le permet)
+        ↓
+Elle extrait date, heure, âge, prix, lieu, durée
+        ↓
+Elle crée automatiquement les fiches enfants, chacune avec parentEvent
+        ↓
+Le programme devient simplement le parent, jamais l'activité proposée elle-même
+```
+
+### Pas un script universel — des connecteurs réutilisables
+
+Chaque site source a sa propre structure. Il n'existera jamais un lecteur unique capable de
+comprendre tous les sites de France. La bonne architecture est un ensemble de **connecteurs**
+(adaptateurs), chacun spécialisé par famille de site :
+
+- un connecteur pour les offices de tourisme qui partagent une structure de page similaire ;
+- un connecteur pour les plateformes de billetterie/événements standardisées ;
+- un connecteur pour les agendas municipaux ;
+- d'autres à ajouter au fil du temps, jamais tous d'un coup.
+
+Un nouveau festival, sur un site déjà couvert par un connecteur existant, devient immédiatement
+exploitable sans travail manuel. Un festival sur un site sans connecteur reste au niveau
+"Découverte" (§14) — nom, lieu, date — jusqu'à ce qu'un connecteur adapté existe, jamais complété
+par une supposition en attendant.
+
+### Dégrader proprement, jamais fabriquer
+
+Quand un connecteur ne peut pas extraire un champ (heure précise, âge, tarif), la fiche enfant
+reste honnêtement incomplète — exactement la même règle que pour le Festival des Tout-Petits
+(`detailsVerified: false`). Un festival annoncé sans qu'on sache quelle animation se joue tel soir
+précis ne rend aucun service à personne : c'est précisément le cas qu'un connecteur bien conçu doit
+éliminer, pas contourner en devinant.
+
+### Ce qui reste à construire — non commencé
+
+Aucun connecteur n'existe aujourd'hui. Le travail effectué pour le Festival des Tout-Petits (§16,
+§17) est resté entièrement manuel — une preuve que le modèle de données fonctionne, jamais une
+automatisation. Avant d'ajouter de nouvelles fonctionnalités visibles, une vraie phase dédiée à ce
+moteur devrait précéder tout élargissement de la couverture géographique : c'est lui qui donnera au
+moteur de recommandation, déjà avancé, une matière première à la hauteur de son ambition nationale.
+
+## 19. Hypothèse H-12 — évolution progressive de la personnalisation (non implémentée, volontairement)
+
+**Constat déjà établi (§5.4)** : le goût personnel n'entre dans l'ordre de classement d'Explorer
+qu'en tout dernier recours, un choix documenté et assumé (explicabilité, protection des pépites),
+mais qui n'avait jamais envisagé la durée de la relation avec la personne.
+
+**Hypothèse posée, pas tranchée** : après un certain niveau de confiance (un nombre
+d'interactions confirmées à définir), le goût personnel pourrait entrer plus tôt dans l'ordre
+lexicographique du §5.4 — jamais en remplaçant la règle, en ajoutant un palier explicite.
+
+**Pourquoi elle reste une hypothèse, pas un correctif** : aucun vrai utilisateur n'a encore utilisé
+Dolcia. Nous ne savons pas si les personnes préfèrent des recommandations très fiables ou très
+personnalisées à mesure que la relation grandit — c'est une question produit, pas un bug à
+corriger. Cette évolution sera validée ou rejetée après une vraie observation d'usage, jamais
+décidée par supposition.
+
+## 20. La politique de fusion entre sources — pour chaque champ, une priorité et une raison
+
+Chaque information peut provenir de plusieurs sources à la fois. Sans règle explicite, la fusion
+devient un empilement d'exceptions ad hoc. Voici la politique, champ par champ — et pour chacun,
+**la décision de Dolcia qu'il améliore réellement**, pas seulement "une donnée en plus" :
+
+| Information | Source prioritaire | Source secondaire | Ce que ce champ améliore réellement |
+|---|---|---|---|
+| Horaires | Organisateur officiel (partenaire ou site propre) | DATAtourisme, puis Google | Savoir si une activité est réellement ouverte au créneau proposé — sans lui, la fiche reste `timeKnown:false` (§9.1) |
+| Tarif | Organisateur officiel | DATAtourisme, puis estimation par catégorie (§9.1) | Le filtre budget (§2 du code) et le calcul de coût de journée (`estimateItemCost`) |
+| Téléphone, email, site | Organisateur officiel | Google, puis DATAtourisme | L'action "Appeler"/"Site officiel" des fiches (§ actions comme données) — sans lui, l'action reste absente, jamais simulée |
+| Description | Organisateur officiel | Google (résumé éditorial), puis DATAtourisme (`hasDescription`) | La qualité perçue de la fiche riche, jamais un texte qui remplace le classement |
+| Photos | Organisateur officiel | Google, puis DATAtourisme | La même chose — jamais un facteur de classement, uniquement de présentation |
+| Durée | Organisateur officiel | Aucune source fiable actuellement | **Directement le moteur** : savoir si deux activités s'enchaînent sans conflit, et si une journée composée reste réaliste (`buildProgram`) |
+| Accessibilité PMR | Organisateur officiel | Aucune source fiable actuellement | Un nouveau filtre réel (aujourd'hui absent), pas une case cosmétique |
+| Animaux acceptés | Organisateur officiel | Aucune source fiable actuellement | Un nouveau filtre réel, même logique |
+| Langues parlées | Organisateur officiel | Aucune source fiable actuellement | Utile uniquement le jour où Dolcia sert un public non francophone — pas une priorité actuelle |
+
+**Règle générale de fusion, valable pour toute future source (les "15 nouvelles sources" à venir
+n'obligeront jamais à réinventer cette logique)** : la source la plus proche de l'établissement
+lui-même gagne toujours. En cas d'absence, la source suivante du tableau prend le relais. Si
+aucune source ne fournit le champ, il reste honnêtement absent (§9.1, §14) — jamais reconstruit
+par déduction entre deux sources qui se contredisent sans arbitrage explicite.
+
+## 21. Le modèle de confiance enrichi — origine, fraîcheur, raison
+
+Au-delà de `detailsVerified` (oui/non) et `detailQuality` (riche/standard/minimale), chaque champ
+individuel devrait pouvoir répondre, disponible pour l'interface sans être forcément toujours
+affiché :
+- **Origine exacte** — quelle source précise a fourni ce champ précis (pas seulement "vérifié",
+  mais "vérifié par qui").
+- **Date de dernière vérification** — pas seulement "vérifié", mais "vérifié quand".
+- **Niveau de confiance** — un des trois paliers déjà existants (§9.1), jamais un nombre inventé.
+- **Raison** — la règle du tableau du §20 qui a conduit à ce choix, pour qu'une réponse comme
+  *"Les horaires viennent du site officiel, vérifiés il y a deux jours ; le tarif vient de
+  DATAtourisme et n'a pas pu être confirmé aujourd'hui"* devienne possible sans être fabriquée.
+
+**Implémenté partiellement aujourd'hui, sur ce qui vient d'être construit** : l'extraction de
+contact DATAtourisme (§20) porte maintenant l'origine et l'instant de récupération — voir le code.
+Le reste (raison explicite lisible, niveau de confiance par champ plutôt que par fiche entière)
+reste à construire progressivement, champ par champ, jamais tout d'un coup.
+
+## 22. Le modèle de décision par champ — quatre questions, jamais trois
+
+Le §21 pose l'origine, la fraîcheur et le niveau de confiance. Il manque la quatrième question,
+la seule qui rend les trois premières utiles : **comment ce champ influence-t-il réellement une
+décision de Dolcia ?** Sans elle, l'origine et la date restent des métadonnées curieuses, pas de
+l'intelligence exploitable.
+
+Chaque champ individuel d'une fiche devrait pouvoir répondre, en interne, à ces quatre questions —
+jamais toutes affichées à l'utilisateur, mais toutes disponibles pour l'interface et pour le
+moteur :
+
+```
+horaire
+  source            : Office de tourisme
+  dernière vérification : 2026-08-06T14:22:00+02:00
+  niveau            : Officiel
+  utilisé pour      : composition de journée (§5, buildProgram — évite un conflit de créneaux)
+```
+
+**La règle de fond, pour que ce modèle reste honnête et ne dérive jamais** : la case "utilisé
+pour" ne peut renvoyer qu'à une décision **déjà codée et vérifiable** dans le moteur (une ligne de
+`scoreItems`, un filtre réel, une règle de `buildProgram`) — jamais une intention future ou un
+bénéfice supposé. Si un champ n'influence encore aucune décision réelle, la case reste vide plutôt
+que remplie d'une promesse. C'est exactement la même discipline que le reste de cette architecture,
+appliquée cette fois à la structure de la donnée elle-même, pas seulement à son contenu.
+
+**Correspondance avec ce qui existe déjà** : la case "utilisé pour" de chaque champ du tableau du
+§20 est la même information, déjà écrite — ce modèle ne la remplace pas, il lui donne une forme
+individuelle, par champ et par fiche, plutôt qu'un tableau global de référence.
+
+## 23. L'architecture unique des connaissances — une seule page, pas des sections dispersées
+
+Ce document a construit, séparément, la pyramide des sources (§13), le cycle de vie d'une fiche
+(§14), le moteur d'ingestion à connecteurs (§18), la politique de fusion (§20), le modèle de
+confiance (§21) et le modèle de décision par champ (§22). Cette section les relie en une seule
+chaîne, pour qu'aucune future évolution n'oublie où elle s'insère :
+
+```
+Information
+    ↓
+Qualification
+    ↓
+Fusion
+    ↓
+Confiance
+    ↓
+D©cision
+    ↓
+Explication
+    ↓
+Recommandation
+```
+
+- **Information** — une donnée brute apparaît, par n'importe quel niveau de la pyramide (§13).
+- **Qualification** — elle entre ou non dans le périmètre de Dolcia (§14, étape 2).
+- **Fusion** — si plusieurs sources la décrivent, la politique du §20 arbitre laquelle gagne,
+  jamais un mélange silencieux de deux sources contradictoires.
+- **Confiance** — chaque champ retenu porte son origine, sa fraîcheur et son niveau (§21).
+- **Décision** — chaque champ ne compte que s'il influence réellement une règle du moteur (§22,
+  §5) — jamais une donnée stockée sans effet.
+- **Explication** — la fonction `why()` traduit cette chaîne en une phrase compréhensible, jamais
+  une justification inventée après coup (déjà vérifié et documenté au §9).
+- **Recommandation** — ce que la personne voit enfin, avec la certitude que chaque étape en amont
+  peut être remontée et expliquée si elle demande "pourquoi celle-ci ?".
+
+**C'est la philosophie de Dolcia résumée en une seule chaîne** : aucune étape ne peut être
+sautée, aucune donnée n'atteint la recommandation sans avoir traversé la qualification, la
+fusion et la confiance — et aucune n'est retenue si elle n'aboutit à aucune décision réelle.
+
+## 24. Le cycle d'amélioration continue — la dernière brique, pas encore active
+
+Le §23 explique comment Dolcia décide. Il manquait comment Dolcia progresse. Cette section pose
+le cycle, sans prétendre qu'il tourne déjà — il ne le peut pas, faute d'usage réel à observer.
+
+```
+Observation
+    ↓
+Mesure
+    ↓
+D©cision
+    ↓
+Évolution
+```
+
+- **Observation** — les vrais signaux d'usage : une recommandation cliquée, ignorée, ajoutée à
+  l'agenda, une pépite proposée puis choisie ou jamais retenue. Rien de nouveau à construire ici :
+  la plupart de ces événements existent déjà comme actions dans le code (`addAgenda`, `rate`,
+  `saveFeeling`) — ce qui manque est de les agréger dans le temps, pas de les créer.
+- **Mesure** — transformer ces signaux en une vraie statistique, seulement une fois qu'un volume
+  suffisant existe. C'est précisément ici que prendrait forme le "taux de surprise" ou le "taux de
+  pépites" — refusé plus tôt dans cette conversation comme un chiffre qu'on ne pouvait pas encore
+  mesurer honnêtement. Ce chantier ne l'invente pas rétroactivement : il construit l'endroit où ce
+  chiffre naîtra le jour où il existera réellement.
+- **Décision** — une hypothèse documentée (comme H-12, §19) est confirmée ou infirmée par cette
+  mesure, jamais par intuition.
+- **Évolution** — le changement n'entre dans le moteur qu'après cette décision, et cette décision
+  elle-même devient une ligne du `CHANGELOG.md`, justifiée par la mesure qui l'a produite — jamais
+  un ajustement silencieux.
+
+**Ce cycle applique à l'évolution du produit lui-même la même règle que toute cette architecture
+applique aux données** : aucune conviction, même la mienne ou celle d'Amandine, ne remplace une
+preuve. Une intuition peut proposer une hypothèse (§19) ; seule une observation réelle peut la
+faire devenir une règle.
+
+**État aujourd'hui, honnêtement** : les trois premières étapes sont prêtes à recevoir de la donnée
+réelle. La quatrième n'a encore rien à évoluer, puisqu'aucune mesure n'existe encore. Ce n'est pas
+un chantier à construire davantage aujourd'hui — c'est un chantier qui attend son premier usage
+réel pour commencer à tourner.

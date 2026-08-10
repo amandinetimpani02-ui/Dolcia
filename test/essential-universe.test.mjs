@@ -6,13 +6,14 @@ const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
 const css = await readFile(new URL('../premium.css', import.meta.url), 'utf8');
 const nav = app.slice(app.indexOf('function nav('), app.indexOf('function openMyMoment'));
 
-test('la navigation ne présente que trois univers', () => {
-  assert.match(nav, />Explorer</);
-  assert.match(nav, /Mon moment/);
+test('la navigation distingue clairement idées, composition, agenda et profil', () => {
+  assert.match(nav, />Mes idées</);
+  assert.match(nav, /Créer mon moment/);
+  assert.match(nav, />Agenda/);
   assert.match(nav, />Moi</);
-  assert.equal((nav.match(/class="nav-item/g) || []).length, 3);
+  assert.equal((nav.match(/class="nav-item/g) || []).length, 4);
   assert.doesNotMatch(nav, />Programme/);
-  assert.doesNotMatch(nav, />Mon Pass/);
+  assert.doesNotMatch(nav, />Mon moment</);
 });
 
 test('budget, tout compris et Pass restent accessibles sans onglet supplémentaire', () => {

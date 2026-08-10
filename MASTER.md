@@ -3,15 +3,9 @@
 ## État du projet
 
 ```
-<<<<<<< HEAD
 Version           : 21.46
 Production        : oui (Vercel)
-Tests             : 398/398 verts
-=======
-Version           : 21.40.1
-Production        : oui (Vercel)
-Tests             : 367/367 verts
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
+Tests             : 406/406 verts
 Architecture cible : voir ARCHITECTURE.md — Home reconstruit comme une affiche
                       photo plein écran, avec voix intégrée (7 contextes +
                       filet ordinaire, honnête). Classement désir/surprise
@@ -22,7 +16,6 @@ Architecture cible : voir ARCHITECTURE.md — Home reconstruit comme une affiche
                       commune d'accessibilité des fenêtres modales (Échap,
                       piège de focus, inert, bouton Retour mobile). Dolcia
                       Anime : bibliothèque de 20 expériences réelles couvrant
-<<<<<<< HEAD
                       10 catégories, toutes réécrites avec un ton animateur ;
                       audio consolidé en un seul bloc (mute + volume + pouls),
                       atténuation corrigée (ne remonte jamais un volume choisi
@@ -36,14 +29,6 @@ Prochain chantier  : validation à l'oreille, en vraie Preview, de 3 programmes
                       temps → scénario → ancrage → centre mobile →
                       compléments → budget) reste partiellement implémenté —
                       voir ARCHITECTURE.md §2. Puis : présence continue de D dans
-=======
-                      10 catégories (sport, olympiades, famille, couple, amis,
-                      piscine, quiz/blind-test, danse, détente, soirée).
-Prochain chantier  : le moteur de scénarios complet (objectif → temps →
-                      scénario → ancrage → centre mobile → compléments →
-                      budget) reste partiellement implémenté — voir
-                      ARCHITECTURE.md §2. Puis : présence continue de D dans
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
                       la journée (pas seulement sur sollicitation), agenda
                       qui se réorganise sur une phrase dite au D-Coach
                       ("finalement on est fatigués"), enrichissement des
@@ -72,11 +57,7 @@ Application web (vanilla JS, sans framework front), déployée sur Vercel, avec 
 backend de données persistantes. Un seul fichier client principal (`app.js`), un jeu de fonctions
 serverless côté serveur, une suite de tests automatisée qui charge le vrai code de production.
 
-<<<<<<< HEAD
-**État des tests : 279 tests verts.** Lancer `npm test` (ou `node --test test/*.test.mjs`) avant
-=======
-**État des tests : 367 tests verts.** Lancer `npm test` (ou `node --test test/*.test.mjs`) avant
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
+**État des tests : 442 tests verts.** Lancer `npm test` (ou `node --test test/*.test.mjs`) avant
 tout déploiement. `npm run check` ajoute une vérification de syntaxe sur les fichiers critiques.
 
 ## 2. Structure des fichiers
@@ -159,16 +140,21 @@ style Liquid Glass sur la barre de filtres.
 qui change selon les réponses), Plan B météo qui réorganise réellement le programme (pas un simple
 tri), suggestion honnête après une activité physique.
 
-**Coach / Animateur (Dolcia Anime)** — visage expressif de D selon l'humeur, présence géante en
-session, équipes façon Belambra Games avec score, confettis à chaque mission réussie, programmes
-sport et bien-être structurés en trois phases qui avancent seules (mains libres), continuité
-reconnue d'une session à l'autre à partir de l'historique réel, thème musical réel intégré, sessions
-partagées (SMS/email/lien/QR — chacun suit sur son propre téléphone).
+**Coach / Animateur (Dolcia Anime)** — D reste la personnalité relationnelle ; Anime est son rôle
+d'animateur numérique de bout en bout, pas un générateur de jeux. Elle accueille, explique les
+règles, répartit les rôles et les équipes lorsque c'est pertinent, cadence les séquences, orchestre
+les transitions, tient les scores et le suspense pour les formats compétitifs, encourage, relance,
+adapte la difficulté ou l'énergie et conclut réellement la session. Le code porte déjà le visage
+expressif de D selon l'humeur, sa présence géante en session, les capitaines tournants, les réactions
+du groupe, les ajustements de rythme, les programmes sport et bien-être structurés en trois phases,
+la continuité issue de l'historique réel, le thème musical et les sessions partagées
+(SMS/email/lien/QR — chacun suit sur son propre téléphone).
 
-**Géographie** — moteur de confiance géographique à trois statuts (core/extended/outside), règle
-"jamais hors commune" pour le courant (restaurants, sorties), règle nationale de budget de temps de
-trajet pour les pépites (jamais un rayon fixe en kilomètres), détection des événements
-manifestement récurrents pour ne pas les confondre avec une vraie rareté.
+**Géographie** — moteur de confiance à quatre statuts (`core`, `extended`, `outside`,
+`location_unknown`). La distance se mérite : restaurant et hôtel ne deviennent jamais des pépites
+lointaines ; une catégorie générique reste locale si une alternative raisonnable existe ; une source
+officielle prouve l'existence, jamais la rareté. `extended` exige preuve, rareté, singularité,
+capacité lorsqu'elle est pertinente et connue, effort expliqué et absence d'équivalent local.
 
 **Partenaires** — Studio partenaire avec soumission de campagne réellement persistée (Supabase) ;
 une campagne approuvée et chiffrable devient automatiquement une alerte réelle, en réutilisant le

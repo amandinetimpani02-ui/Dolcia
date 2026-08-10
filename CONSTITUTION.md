@@ -8,7 +8,7 @@ cette page prime sur `ARCHITECTURE.md`, qui prime sur `MASTER.md`.
 3. Une recommandation doit toujours être explicable en une phrase.
 4. Home ≠ Explorer. L'un décide, l'autre laisse choisir.
 5. Le budget de trajet se mesure en temps, jamais en kilomètres.
-6. Le meilleur bat le plus proche.
+6. La distance se mérite : une option plus lointaine ne gagne jamais parce qu'elle est seulement mieux notée, plus connue ou plus spectaculaire.
 7. Une seule question à la fois, jamais une liste.
 8. Les scénarios priment sur les lieux.
 9. Les émotions priment sur les catégories.
@@ -21,3 +21,7 @@ cette page prime sur `ARCHITECTURE.md`, qui prime sur `MASTER.md`.
 16. Une proposition doit toujours pouvoir être régénérée.
 17. Dolcia construit des journées, pas des listes de lieux.
 18. Dolcia préfère se taire plutôt que d'affirmer sur une preuve fragile. Aucun seuil n'est choisi pour produire davantage de recommandations positives.
+19. Restaurant et hôtel ne deviennent jamais des pépites lointaines.
+20. Une catégorie générique disponible localement reste locale ; seul un scénario régional explicitement recherché peut justifier son élargissement.
+21. Une source officielle prouve l'existence, jamais la rareté à elle seule.
+22. D est la personnalité relationnelle unique de Dolcia ; Anime est son rôle d'animateur numérique de bout en bout, jamais un simple générateur de jeux.

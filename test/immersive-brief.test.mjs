@@ -7,7 +7,9 @@ const css = await readFile(new URL('../premium.css', import.meta.url), 'utf8');
 
 test('le brief conserve une seule conversation en quatre décisions', () => {
   assert.match(app, /Une seule conversation/);
-  assert.match(app, /0\$\{brief\.step\+1\} \/ 04/);
+  assert.match(app, /0\$\{brief\.step\+1\} \/ 05/);
+  assert.match(app, /Qu’est-ce qui pourrait gâcher le moment \?/);
+  assert.match(app, /Éviter de trop marcher/);
   assert.match(app, /Votre moment prend vie/);
 });
 

@@ -17,8 +17,8 @@ test('l’atténuation pendant que D parle est quasi totale (0,04), pas une simp
 });
 
 test('le programme sport démontre le ton animateur attendu (enthousiasme, encouragement) plutôt qu’une description clinique', () => {
-  const fn = app.match(/sport:\{title:'Cardio doux entre nous'[\s\S]*?\]\},/)?.[0] || '';
-  assert.match(fn, /Allez, on commence tranquillement/);
-  assert.match(fn, /bravo/i);
+  const fn = app.match(/sport:\{title:'Cardio Club avec D'[\s\S]*?\]\},/)?.[0] || '';
+  assert.match(fn, /Bienvenue au Club Dolcia/);
+  assert.match(fn, /célèbre|encouragements/i);
   assert.doesNotMatch(fn, /^.*Échauffement — mobilisez/, 'l’ancienne formulation clinique ne doit plus être présente');
 });

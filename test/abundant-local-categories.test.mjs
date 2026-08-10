@@ -52,9 +52,10 @@ test('un restaurant ou une sortie proposé plus loin ressemble à une combine : 
   assert.match(app, /WIDEN_ELIGIBLE_CATEGORIES\.includes\(item\.category\)&&Boolean/);
 });
 
-test('un hôtel qui manque au budget en ville est une rareté réelle et explicable : lui seul peut être élargi sur demande', () => {
+test('un hôtel peut être exploré plus loin sur demande explicite, sans jamais devenir une pépite extended', () => {
   assert.match(app, /if\(!WIDEN_ELIGIBLE_CATEGORIES\.includes\(category\)\)return false/);
   assert.match(app, /function confirmWidenAbundant\(category\)\{\s*if\(!WIDEN_ELIGIBLE_CATEGORIES\.includes\(category\)\)return/);
+  assert.match(readFileSync(new URL('../server/geo-eligibility.js', import.meta.url), 'utf8'), /NEVER_DISTANT_KINDS[^\n]*'hotel'/);
 });
 
 test('on ne propose d’élargir que si ça servirait réellement à quelque chose (une option plus loin correspond au budget), plafonné à 20km', () => {

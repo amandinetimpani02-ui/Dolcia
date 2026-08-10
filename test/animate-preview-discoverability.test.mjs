@@ -14,7 +14,7 @@ test('cliquer sur un programme amène automatiquement l’aperçu à l’écran,
 
 test('le bouton Commencer et la confirmation de sécurité apparaissent immédiatement en haut de l’aperçu, avant la liste détaillée des étapes — pas après', () => {
   const fn = app.match(/function previewDolciaAnimate\(id\)\{[\s\S]*?\n\}/)?.[0] || '';
-  const startIdx = fn.indexOf('Commencer avec la voix');
+  const startIdx = fn.indexOf('Parler à D avant la séance');
   const stepsIdx = fn.indexOf('<ol>');
   assert.ok(startIdx > -1 && stepsIdx > -1 && startIdx < stepsIdx, 'le bouton doit précéder la liste des étapes dans le HTML');
 });

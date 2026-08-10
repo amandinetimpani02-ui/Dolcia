@@ -1,5 +1,5 @@
 const SIGNATURE = [
-  { match: /aquarium|animaux|zoo|faune|parc animalier/i, queries: ['aquarium', 'zoo parc animalier'], radius: 55000, reason: 'ANIMAL_SIGNATURE' },
+  { match: /aquarium|animaux|zoo|faune|parc animalier|journ[eé]e marine|monde marin/i, queries: ['aquarium', 'zoo parc animalier'], radius: 55000, reason: 'ANIMAL_SIGNATURE' },
   { match: /parc.*attraction|parc.*theme|fete foraine/i, queries: ['parc attractions parc à thème'], radius: 45000, reason: 'THEME_PARK_SIGNATURE' },
   { match: /nautique|char a voile|foil|kitesurf|surf|voile|catamaran/i, queries: ['base nautique char à voile', 'wing foil kitesurf surf voile'], radius: 30000, reason: 'COAST_SIGNATURE' }
 ];
@@ -24,9 +24,12 @@ export function buildRetrievalPlan({ queries = [], duration = '2h', momentSenten
   // mots réellement exprimés par l'utilisateur, ou par son choix explicite d'élargir — ce sont des
   // centres d'intérêt personnels, pas des pépites que Dolcia doit deviner à sa place.
   const corpus = plain(widened ? `${queries.join(' ')} ${momentSentence}` : momentSentence);
-  const regional = SIGNATURE.filter(rule => rule.match.test(corpus)).flatMap(rule => rule.queries.map(query => ({ query, radius: rule.radius, scope: 'signature', reason: rule.reason })));
+  const explicitRegionalScenario = /grande journee|journee (marine|complete|signature)|experience (marine|singuliere|regionale)|destination [a-z]/i.test(corpus);
+  const regional = SIGNATURE
+    .filter(rule => rule.match.test(corpus) && (widened || explicitRegionalScenario))
+    .flatMap(rule => rule.queries.map(query => ({ query, radius: rule.radius, scope: 'signature', reason: rule.reason, explicitRegionalScenario })));
   // Les grands événements régionaux, eux, sont vérifiés systématiquement dès qu'une recherche
   // régionale est possible — jamais conditionnés à un mot-clé tapé par la personne.
-  regional.push({ query: MAJOR_EVENT_SIGNATURE.queries[0], radius: MAJOR_EVENT_SIGNATURE.radius, scope: 'signature', reason: MAJOR_EVENT_SIGNATURE.reason });
+  regional.push({ query: MAJOR_EVENT_SIGNATURE.queries[0], radius: MAJOR_EVENT_SIGNATURE.radius, scope: 'signature', reason: MAJOR_EVENT_SIGNATURE.reason, explicitRegionalScenario: false });
   return [...local, ...regional].filter((item, index, all) => all.findIndex(other => other.query === item.query && other.scope === item.scope) === index).slice(0, 30);
 }

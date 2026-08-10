@@ -35,8 +35,8 @@ test('plus aucune formulation ne désigne indirectement un gagnant (titre gagnan
 });
 
 test('le programme renforcement et le programme famille sont maintenant réécrits avec le ton animateur, pas seulement le programme sport', () => {
-  const renfo = app.match(/renforcement:\{title:'Renforcement doux en duo'[\s\S]*?\]\},/)?.[0] || '';
-  assert.match(renfo, /On y va doucement/);
+  const renfo = app.match(/renforcement:\{title:'Le Challenge Tonique de D'[\s\S]*?\]\},/)?.[0] || '';
+  assert.match(renfo, /D accueille l’équipe/);
   const family = app.match(/family:\{title:'L’aventure des petits explorateurs'[\s\S]*?\]\},/)?.[0] || '';
   assert.match(family, /On part à l’aventure/);
 });

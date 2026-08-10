@@ -8,6 +8,11 @@ import pushSubscriptionsHandler from '../server/push-subscriptions.js';
 import flashNotifyHandler from '../server/flash-notify.js';
 import animateSessionsHandler from '../server/animate-sessions.js';
 import partnerCampaignsHandler from '../server/partner-campaigns.js';
+import touquetEventsHandler from '../server/touquet-events.js';
+import datatourismeHandler from '../server/datatourisme.js';
+import majorEventsHandler from '../server/major-events.js';
+import partnerEventsHandler from '../server/partner-events.js';
+import ticketmasterEventsHandler from '../server/ticketmaster-events.js';
 
 const CATS = [
   { type: "Concert & Musique", words: ["concert", "musique", "music"] },
@@ -57,6 +62,11 @@ export default async function handler(req, res) {
   if (req.query.service === 'flash-notify') return flashNotifyHandler(req, res);
   if (req.query.service === 'animate-session') return animateSessionsHandler(req, res);
   if (req.query.service === 'partner-campaigns') return partnerCampaignsHandler(req, res);
+  if (req.query.service === 'touquet') return touquetEventsHandler(req, res);
+  if (req.query.service === 'datatourisme') return datatourismeHandler(req, res);
+  if (req.query.service === 'major-events') return majorEventsHandler(req, res);
+  if (req.query.service === 'partner-events') return partnerEventsHandler(req, res);
+  if (req.query.service === 'ticketmaster') return ticketmasterEventsHandler(req, res);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

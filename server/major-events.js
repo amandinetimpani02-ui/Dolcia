@@ -1,4 +1,4 @@
-import { cached, remember } from './utils.js';
+import { cached, remember } from '../api/utils.js';
 
 const FEEDS = [
   ['soccer', 'fifa.world'],

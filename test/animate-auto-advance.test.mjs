@@ -10,7 +10,7 @@ test('les horaires du programme (HH:MM = minutes écoulées) sont correctement c
 
 test('un programme sportif structuré avance automatiquement, sans avoir à toucher l’écran — impossible autrement pendant un effort physique', () => {
   assert.match(app, /function scheduleAnimateAutoAdvance\(session\)/);
-  assert.match(app, /if\(!session\.item\.phased\)return/);
+  assert.match(app, /if\(!session\.item\.phased\|\|session\.status!=='active'\)return/);
   assert.match(app, /scheduleAnimateAutoAdvance\(session\)/);
 });
 

@@ -4,13 +4,15 @@ import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 
-test('le bouton "Explorer" de la navigation ouvre bien le catalogue, pas l’écran d’accueil — sinon il ne sert à rien depuis l’intérieur de l’appli', () => {
+test('Mes idées qualifie le moment avant d’ouvrir le catalogue', () => {
   const navFn = app.match(/function nav\(active\)\{[^\n]*\}/)?.[0] || '';
-  assert.match(navFn, /onclick="openExplorer\(\)"><span>⌁<\/span>Explorer/);
-  assert.doesNotMatch(navFn, /onclick="home\(\)"><span>⌁<\/span>Explorer/);
+  assert.match(navFn, /onclick="beginExplore\(\)"/);
+  assert.match(navFn, /Mes idées/);
+  assert.match(app, /function beginExplore\(\)\{if\(!state\.momentQualified\)return openEclatDialogue\(false,'explore'\);openExplorer\(\)\}/);
 });
 
-test('openExplorer affiche directement les résultats déjà chargés, ou relance la composition si nécessaire — jamais un simple retour à l’accueil', () => {
+test('openExplorer affiche les résultats chargés ou récupère le catalogue', () => {
   assert.match(app, /async function openExplorer\(force=false\)\{/);
+  assert.match(app, /if\(!state\.momentQualified\)return openEclatDialogue\(false,'explore'\)/);
   assert.match(app, /if\(state\.allItems\.length&&!force\)return renderResults\(\)/);
 });

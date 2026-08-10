@@ -32,7 +32,8 @@ test('la confirmation propose deux choix explicites, jamais l’ouverture automa
 
 test('le badge du nombre d’éléments se met à jour seul, sans reconstruire toute la barre de navigation', () => {
   assert.match(app, /function refreshNavBadge\(\)\{/);
-  assert.match(app, /const badge=document\.querySelector\('\.bottom-nav \.nav-item\.signature span:last-child'\)/);
+  assert.match(app, /const agendaButton=\[\.\.\.document\.querySelectorAll\('\.bottom-nav \.nav-item'\)\]/);
+  assert.match(app, /agendaButton\.innerHTML=.*Agenda/);
 });
 
 test('la distinction entre ajout vérifié et ajout autonome (à vérifier) reste préservée dans le nouveau message', () => {

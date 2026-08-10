@@ -5,8 +5,10 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../premium.css',import.meta.url),'utf8');
 
-test('le D ouvre un coach contextuel au lieu de rejouer un parcours fixe',()=>{
-  assert.match(app,/function openMyMoment\(\)\{openDCoach\(\)\}/);
+test('Créer mon moment ouvre D et son parcours contextuel avant composition',()=>{
+  assert.match(app,/function openMyMoment\(\)\{openComposition\(\)\}/);
+  assert.match(app,/function openComposition\(\)\{if\(state\.program\.length\)return renderSurprise\(\);startCompose\(\)\}/);
+  assert.match(app,/function startCompose\(\)[\s\S]*?openEclatDialogue\(false,'compose'\)/);
   assert.match(app,/function dCoachNextQuestion\(\)/);
   assert.match(app,/Une question à la fois\. Jamais deux fois la même/);
 });

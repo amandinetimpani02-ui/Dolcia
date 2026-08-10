@@ -25,9 +25,14 @@ test('une localisation non fiable ne rejoint jamais un programme premium', async
   assert.equal(result.status, 'location_unknown');
 });
 
-test('Nausicaá est recherché régionalement pour une demande explicite aquarium', () => {
+test('une demande générique aquarium reste locale', () => {
   const plan = buildRetrievalPlan({ queries: ['zoo aquarium ferme pédagogique'], momentSentence: 'Je veux visiter un aquarium', duration: 'day', localRadius: 12000 });
-  assert.ok(plan.some(entry => entry.scope === 'signature' && entry.radius >= 50000 && /aquarium/.test(entry.query)));
+  assert.ok(plan.every(entry => entry.reason !== 'ANIMAL_SIGNATURE'));
+});
+
+test('un scénario marin explicitement recherché peut ouvrir une exploration régionale', () => {
+  const plan = buildRetrievalPlan({ queries: ['zoo aquarium ferme pédagogique'], momentSentence: 'Je veux une grande journée marine singulière', duration: 'day', localRadius: 12000 });
+  assert.ok(plan.some(entry => entry.scope === 'signature' && entry.explicitRegionalScenario === true && /aquarium/.test(entry.query)));
 });
 
 test('une fête de village régionale (ex. Fête du Cochon Rose à Hesdin, 30km) est vérifiée même sans mot-clé "festival" explicite dans la demande', () => {
@@ -90,20 +95,23 @@ test('une activité ordinaire hors destination ne devient jamais locale grâce �
 });
 
 test('une pépite extérieure reste possible si sa rareté est prouvée et le trajet compatible', async () => {
+  const checkedAt = new Date().toISOString();
   const result = await classifyCandidate(candidate({
     lat: 50.60,
     lng: 1.65,
     destinationLocalityMatch: false,
     retrievalScope: 'signature',
     categoryScope: 'wide',
-    rarityEvidence: { level: 'high', source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt: new Date().toISOString() }
+    rarityEvidence: { level: 'high', source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt },
+    proofEvidence: { verified: true, source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt },
+    singularityEvidence: { verified: true, source: 'Dossier organisateur', sourceType: 'editorial_verified', checkedAt }
   }), context({ duration: 'day', surface: 'explorer' }), { travelMinutes: async () => 28 });
   assert.equal(result.status, 'extended');
   assert.equal(result.premium_eligible, true);
   assert.ok(result.decision_codes.includes('HIGH_RARITY'));
 });
 
-test('un parc de loisirs proche peut compléter Le Touquet sans devenir une excursion régionale', async () => {
+test('un parc de loisirs générique hors destination reste refusé sans scénario régional explicite', async () => {
   const result = await classifyCandidate(candidate({
     id: 'labyparc-proche',
     lat: 50.50,
@@ -113,9 +121,10 @@ test('un parc de loisirs proche peut compléter Le Touquet sans devenir une excu
     category: 'outside',
     rarityEvidence: { level: 'low' }
   }), context({ duration: 'day', surface: 'explorer' }), { travelMinutes: async () => 12 });
-  assert.equal(result.status, 'extended');
-  assert.equal(result.premium_eligible, true);
-  assert.ok(result.decision_codes.includes('NEARBY_COMPLEMENT'));
+  assert.equal(result.status, 'outside');
+  assert.equal(result.premium_eligible, false);
+  assert.ok(result.decision_codes.includes('GENERIC_LOCAL_PRIORITY'));
+  assert.ok(result.decision_codes.includes('EXPLICIT_REGIONAL_SCENARIO_MISSING'));
 });
 
 test('une activité nautique à Hardelot disparaît si une activité équivalente existe au Touquet', () => {

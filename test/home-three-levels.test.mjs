@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../home-premium.css', import.meta.url), 'utf8');
+const premium = readFileSync(new URL('../premium.css', import.meta.url), 'utf8');
 
 test('la phrase varie d’un jour à l’autre, jamais un h1 figé', () => {
   assert.match(app, /function homePhrase\(\)\{/);
@@ -27,16 +28,19 @@ test('le bouton d’action est un lien texte minimal avec une flèche, jamais un
 
 test('le Home ne montre jamais un écran vide : sans grand moment détecté, une invitation honnête à être guidé prend le relais, jamais une fausse observation', () => {
   assert.match(app, /const title=moment\?\(moment\.title\|\|moment\.name\):ordinary\?'Votre moment, à construire ensemble\.':'Dites-moi ce qui vous ferait plaisir\.'/);
-  assert.match(app, /const cta=moment\?majorMomentAction\(moment\)\.button:ordinary\?'Laissez-vous guider':'Composer mon moment'/);
+  assert.match(app, /const cta=moment\?majorMomentAction\(moment\)\.button:'Parler à Dolcia'/);
 });
 
 test('la même affiche se met à jour en place (photo, titre, action) une fois les vraies données chargées, sans reconstruire un composant séparé', () => {
   assert.match(app, /function renderHomeMajor\(moment\)\{const target=document\.querySelector\('#homePoster'\);if\(!target\)return;target\.innerHTML=homePosterInner\(moment\)\}/);
 });
 
-test('la recherche, les suggestions et les événements du jour restent après l’affiche, jamais dans le premier écran', () => {
-  assert.match(app, /<section class="home-level3">/);
-  assert.match(app, /class="home-quick-prompts"/);
+test('le Home propose trois chemins utiles et non redondants', () => {
+  assert.match(app, /class="home-paths"/);
+  assert.match(app, /Créer mon moment/);
+  assert.match(app, /Choisir parmi mes idées/);
+  assert.match(app, /Mon coach-animateur/);
+  assert.match(premium, /\.home-paths/);
 });
 
 test('le style de l’affiche existe (photo plein cadre, texte flottant, aucun cadre), avec un indice de défilement respectueux du mouvement réduit', () => {

@@ -13,7 +13,7 @@ test('le texte de chaque étape n’est plus l’instruction brute seule : il es
 
 test('les répliques de réaction de D ont une vraie énergie de groupe (exclamations, adresse directe), pas un ton posé', () => {
   assert.match(app, /Ouais !! J.adore cette énergie/);
-  assert.match(app, /Allez, on démarre !!/);
+  assert.match(app, /Le Club Dolcia est ouvert/);
   assert.match(app, /Ah, tu en veux plus \?!/);
 });
 

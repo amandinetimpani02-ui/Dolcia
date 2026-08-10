@@ -1,24 +1,17 @@
 import { DECISION_CODES as C, validateDecisionCodes, DECISION_CODES_VERSION } from './decision-codes.js';
 
-export const GEO_RULES_VERSION = '1.1.0';
+export const GEO_RULES_VERSION = '2.0.0';
 
 // ---------------------------------------------------------------------------
-// LA RÈGLE NATIONALE DES PÉPITES — valable pour toute destination Dolcia, pas
-// seulement Le Touquet. Ce n'est jamais une question de distance en kilomètres
-// (50km n'a pas le même sens en zone rurale qu'en zone dense), ni un jugement
-// au cas par cas — c'est un budget de temps de trajet, identique partout :
-//   1. Temps de trajet réel <= budget de la durée du moment × 1,35 pour une
-//      pépite (contre × 1 pour une activité locale ordinaire). Le budget par
-//      durée est défini une seule fois ci-dessous et ne dépend d'aucune ville.
-//   2. L'événement doit être officiel ET daté (un rendez-vous réel et vérifié,
-//      pas un lieu permanent) pour être reconnu comme une pépite prouvée.
-//   3. Si un équivalent de qualité comparable existe déjà localement (ou plus
-//      proche), la pépite lointaine est automatiquement écartée — voir
-//      applyAlternativeCheck ci-dessous. Une pépite ne vaut le détour que si
-//      elle n'existe nulle part de plus proche.
-// Ces trois conditions ensemble définissent "pépite locale" — pas un curseur
-// réglé à l'instinct sur un exemple, et pas la personne qui décide au cas par
-// cas : la règle décide, la même partout en France.
+// DOCTRINE NATIONALE : la distance se mérite. Une option éloignée n'est jamais
+// retenue parce qu'elle est simplement mieux notée ou plus spectaculaire.
+// `extended` exige une preuve d'existence, une rareté vérifiée, une singularité
+// vérifiée, un trajet compatible et explicable, ainsi que l'absence d'équivalent
+// local raisonnable (contrôlée par applyAlternativeCheck). La capacité n'est
+// exigée que lorsqu'elle est réellement pertinente pour l'expérience ; elle
+// n'est jamais inventée. Restaurant et hôtel ne deviennent jamais des pépites
+// lointaines. Une catégorie générique (aquarium, parc...) n'est régionale que
+// dans un scénario explicitement recherché, jamais pour une demande générique.
 // ---------------------------------------------------------------------------
 export const GEO_THRESHOLDS = Object.freeze({
   locationReliable: 0.85,
@@ -72,6 +65,24 @@ export function evaluateRarityEvidence(value) {
   return { level: 'high', evidence: value, codes: [C.HIGH_RARITY, C.EVIDENCE_VALID] };
 }
 
+function evaluateVerifiedSignal(value, validCode, missingCode) {
+  if (!value?.verified || !value.source || !value.checkedAt || !TRUSTED_EVIDENCE_TYPES.has(value.sourceType)) {
+    return { valid: false, evidence: null, code: missingCode };
+  }
+  const checkedAt = new Date(value.checkedAt).getTime();
+  if (!Number.isFinite(checkedAt) || Math.abs(Date.now() - checkedAt) / 86400000 > EVIDENCE_MAX_AGE_DAYS) {
+    return { valid: false, evidence: null, code: missingCode };
+  }
+  return { valid: true, evidence: value, code: validCode };
+}
+
+const NEVER_DISTANT_KINDS = new Set(['food', 'restaurant', 'cafe', 'bar', 'lodging', 'hotel', 'campground']);
+const GENERIC_LOCAL_FIRST_KINDS = new Set(['aquarium', 'theme_park', 'family_standard']);
+
+function normalizedKind(candidate) {
+  return String(candidate.experienceKind || candidate.category || '').toLowerCase();
+}
+
 export async function classifyCandidate(candidate, context, services = {}) {
   const codes = [], blocking = [], evidence = [];
   const confidence = Number(candidate.locationConfidence ?? (Number.isFinite(candidate.lat) && Number.isFinite(candidate.lng) ? 0.9 : 0));
@@ -113,24 +124,52 @@ export async function classifyCandidate(candidate, context, services = {}) {
   if (rarity === 'unknown' && candidate.retrievalScope === 'signature') codes.push(C.SOURCE_EVIDENCE_MISSING);
   codes.push(context.userWidenedSearch ? C.USER_WIDENED_SEARCH : C.DEFAULT_SCOPE);
 
+  const proof = evaluateVerifiedSignal(candidate.proofEvidence, C.PROOF_VALID, C.PROOF_MISSING);
+  const singularity = evaluateVerifiedSignal(candidate.singularityEvidence, C.SINGULARITY_VALID, C.SINGULARITY_MISSING);
+  codes.push(proof.code, singularity.code);
+  if (proof.evidence) evidence.push(proof.evidence);
+  if (singularity.evidence) evidence.push(singularity.evidence);
+
+  const capacityRelevant = candidate.capacityRelevant === true;
+  const capacity = capacityRelevant
+    ? evaluateVerifiedSignal(candidate.capacityEvidence, C.CAPACITY_VALID, C.CAPACITY_MISSING_WHEN_RELEVANT)
+    : { valid: true, evidence: null, code: C.CAPACITY_NOT_APPLICABLE };
+  codes.push(capacity.code);
+  if (capacity.evidence) evidence.push(capacity.evidence);
+
   // Une faible distance à vol d'oiseau ne suffit pas : sur une baie, une rivière ou
   // une frontière communale, le trajet réel et la destination choisie priment.
   const localityMismatch = candidate.destinationLocalityMatch === false && distance > 2;
   const localFit = candidate.retrievalScope !== 'signature' && !localityMismatch && distance <= Math.min(8, Math.max(3, baseBudget / 4)) && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && !blocking.length;
-  const complementKinds = new Set(['theme_park', 'aquarium', 'major_event', 'special_workshop']);
-  const immediateComplement = candidate.retrievalScope !== 'signature' && complementKinds.has(candidate.experienceKind) && localityMismatch && distance <= 8 && travelMinutes != null && travelMinutes <= 15 && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && !blocking.length;
-  if (immediateComplement) codes.push(C.NEARBY_COMPLEMENT);
+  const kind = normalizedKind(candidate);
+  const neverDistant = NEVER_DISTANT_KINDS.has(kind);
+  const genericLocalFirst = GENERIC_LOCAL_FIRST_KINDS.has(kind);
+  const explicitRegionalScenario = candidate.explicitRegionalScenario === true || context.explicitRegionalScenario === true;
+  if (neverDistant) codes.push(C.CATEGORY_NEVER_DISTANT);
+  else if (genericLocalFirst) codes.push(C.GENERIC_LOCAL_PRIORITY);
+  if (genericLocalFirst) codes.push(explicitRegionalScenario ? C.EXPLICIT_REGIONAL_SCENARIO : C.EXPLICIT_REGIONAL_SCENARIO_MISSING);
+
+  const effortExplanation = travelMinutes == null
+    ? null
+    : `${travelMinutes} min de trajet · expérience rare et singulière vérifiée`;
+  codes.push(effortExplanation ? C.DISTANCE_EXPLAINED : C.DISTANCE_EXPLANATION_MISSING);
+
+  const doctrineSatisfied = proof.valid && rarity === 'high' && singularity.valid && capacity.valid && Boolean(effortExplanation);
+  const categoryAllowsExtended = !neverDistant && (!genericLocalFirst || explicitRegionalScenario);
   let status = localFit ? 'core' : 'outside';
-  if (!blocking.length && !localFit && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && (immediateComplement || rarity === 'high' || context.userWidenedSearch)) status = 'extended';
+  if (!blocking.length && !localFit && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && doctrineSatisfied && categoryAllowsExtended) status = 'extended';
   if (codes.includes(C.HOURS_UNKNOWN) && context.surface !== 'explorer') { blocking.push(C.HOURS_UNKNOWN); status = 'outside'; }
-  return finish(status, codes, [...new Set(blocking)], evidence, distance, travelMinutes, confidence, context);
+  return finish(status, codes, [...new Set(blocking)], evidence, distance, travelMinutes, confidence, context, effortExplanation);
 }
 
 export function applyAlternativeCheck(items = []) {
   const cores = items.filter(item => item.result?.status === 'core');
   return items.map(item => {
     if (item.result?.status !== 'extended') return item;
-    const equivalent = cores.some(core => core.category === item.category && core.experienceKind === item.experienceKind && Math.abs((core.qualityScore || 0) - (item.qualityScore || 0)) <= 10);
+    const equivalent = cores.some(core => {
+      if (item.substitutabilityKey && core.substitutabilityKey) return item.substitutabilityKey === core.substitutabilityKey;
+      return core.category === item.category && core.experienceKind === item.experienceKind;
+    });
     const betterRegional = !equivalent && items.some(other =>
       other.id !== item.id &&
       other.result?.status === 'extended' &&
@@ -140,14 +179,14 @@ export function applyAlternativeCheck(items = []) {
     );
     const rejected = equivalent || betterRegional;
     const code = equivalent ? C.CORE_EQUIVALENT_EXISTS : betterRegional ? C.BETTER_REGIONAL_ALTERNATIVE_EXISTS : C.NO_CORE_EQUIVALENT;
-    return { ...item, result: finish(rejected ? 'outside' : 'extended', [...item.result.decision_codes, code], rejected ? [...item.result.blocking_reasons, code] : item.result.blocking_reasons, item.result.evidence, item.result.distance_km, item.result.travel_minutes, item.result.location_confidence, { travelMode: item.result.travel_mode }) };
+    return { ...item, result: finish(rejected ? 'outside' : 'extended', [...item.result.decision_codes, code], rejected ? [...item.result.blocking_reasons, code] : item.result.blocking_reasons, item.result.evidence, item.result.distance_km, item.result.travel_minutes, item.result.location_confidence, { travelMode: item.result.travel_mode }, item.result.effort_explanation) };
   });
 }
 
-function finish(status, codes, blocking, evidence, distance, travelMinutes, confidence, context) {
+function finish(status, codes, blocking, evidence, distance, travelMinutes, confidence, context, effortExplanation = null) {
   const unique = [...new Set(codes)], validation = validateDecisionCodes(unique);
   if (!validation.valid) throw new Error(`Invalid decision codes: ${JSON.stringify(validation)}`);
-  const rarityTrustedWhenRequired = status !== 'extended' || unique.includes(C.NEARBY_COMPLEMENT) || unique.includes(C.HIGH_RARITY) || unique.includes(C.USER_WIDENED_SEARCH);
+  const rarityTrustedWhenRequired = status !== 'extended' || unique.includes(C.HIGH_RARITY);
   const premiumEligible = ['core', 'extended'].includes(status) && blocking.length === 0 && !unique.includes(C.HOURS_UNKNOWN) && rarityTrustedWhenRequired && !unique.includes(C.EVIDENCE_UNTRUSTED_SOURCE);
-  return { status, premium_eligible: premiumEligible, decision_codes_version: DECISION_CODES_VERSION, geo_rules_version: GEO_RULES_VERSION, decision_codes: unique, distance_km: distance == null ? null : Math.round(distance * 10) / 10, travel_minutes: travelMinutes, travel_mode: context.travelMode || 'driving', location_confidence: confidence, blocking_reasons: [...new Set(blocking)], evidence };
+  return { status, premium_eligible: premiumEligible, decision_codes_version: DECISION_CODES_VERSION, geo_rules_version: GEO_RULES_VERSION, decision_codes: unique, distance_km: distance == null ? null : Math.round(distance * 10) / 10, travel_minutes: travelMinutes, travel_mode: context.travelMode || 'driving', effort_explanation: effortExplanation, location_confidence: confidence, blocking_reasons: [...new Set(blocking)], evidence };
 }

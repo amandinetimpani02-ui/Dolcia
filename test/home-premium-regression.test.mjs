@@ -9,7 +9,7 @@ const premium = await readFile(new URL('../premium.css', import.meta.url), 'utf8
 test('l’accueil ne montre plus de panne technique au consommateur', () => {
   assert.doesNotMatch(app, /Les sources officielles sont momentanément indisponibles/);
   assert.match(app, /Le champ des possibles reste ouvert/);
-  assert.match(app, /Dolcia n’affiche que les rendez-vous assez fiables/);
+  assert.match(app, /Dolcia cherche uniquement des rendez-vous assez fiables/);
 });
 
 test('le flux officiel tolère des réponses partielles sans casser l’accueil', () => {

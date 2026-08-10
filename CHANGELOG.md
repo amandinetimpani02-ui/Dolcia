@@ -1,19 +1,19 @@
 # Dolcia — Journal des évolutions (Changelog)
 
-<<<<<<< HEAD
-=======
-## 21.40.1 — consolidation vérifiée
-
-- L'archive `v21.40-moteur-comportements` devient la base consolidée, sans régression fonctionnelle.
-- L'identifiant de build, la version du paquet et le MASTER sont alignés sur la version réellement livrée.
-- Le total documenté correspond à l'exécution réelle : 367 tests réussis sur 367.
-- Le Home, Explorer, les fiches, l'agenda, Dolcia Anime et le moteur de comportements restent fonctionnellement inchangés.
-
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
 Journal chronologique de toutes les décisions techniques et corrections apportées au projet, dans
 l'ordre où elles ont eu lieu. Pour comprendre l'état actuel du projet sans lire tout l'historique,
 voir `MASTER.md`. Pour la logique durable du moteur de décision, voir `ARCHITECTURE.md`. Pour la
 vision et la philosophie, voir `VISION.md`.
+
+## Anime devient un véritable animateur numérique — 10 août 2026
+
+- D reste la personnalité relationnelle unique ; Anime devient explicitement son rôle d'animation.
+- Le contrat couvre tout le cycle : accueil, règles, rôles et équipes, rythme, transitions, scores
+  et suspense lorsque pertinents, encouragements, relances, adaptation et conclusion.
+- Les scores et la compétition restent interdits par défaut dans les séances calmes et de bien-être.
+- Le prompt Anime et les libellés utilisateur ne présentent plus le produit comme un simple
+  générateur de jeux.
+- Ajout de 4 tests de contrat Anime ; suite complète : 442/442 tests réussis.
 
 ## Moteur de vérité géographique - 16 juillet 2026
 
@@ -671,7 +671,6 @@ Ces comportements sont détectés depuis le contexte ; ils ne doivent pas deveni
   `mountThreeFuturesLegacy()`, du code retiré et jamais appelé, pas une vraie régression.
 - Nouveau test de garde pour empêcher ce type d'incohérence de redériver silencieusement.
 - 302 tests verts après ce premier passage.
-<<<<<<< HEAD
 
 ## Deux previews A/B de la navigation sur le Home — 1er août 2026 (suite du même jour)
 
@@ -763,5 +762,118 @@ Ces comportements sont détectés depuis le contexte ; ils ne doivent pas deveni
 - **Ce qui reste à valider, hors de portée ici** : la consolidation du contrôle sonore en un seul
   bloc reste à tester réellement sur téléphone et ordinateur, comme demandé — ça ne peut se
   vérifier que dans une vraie Preview, pas dans le code seul.
-=======
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
+
+## Consolidation Vercel — 5 sources événementielles routées, api/ passe de 11 à 6 fichiers — 1er août 2026 (suite du même jour)
+
+- Consolidation strictement technique, comme demandé : aucun algorithme de recherche, de
+  recommandation ou d'ingestion modifié, aucun test métier retouché — seuls des chemins de fichiers
+  ont changé.
+- Vérifié avant toute chose : la base réelle avait 11 fichiers dans `/api` (pas 14 comme dans une
+  autre session), donc déjà sous la limite de 12 du plan Hobby. Consolidé quand même, en prévention,
+  puisque la marge restante n'était que d'une seule fonction.
+- Cinq fichiers déplacés de `/api` vers `/server` (`touquet-events.js`, `datatourisme.js`,
+  `major-events.js`, `partner-events.js`, `ticketmaster-events.js`), routés depuis `api/events.js`
+  via `?service=touquet|datatourisme|major-events|partner-events|ticketmaster` — exactement le même
+  motif déjà en place pour `recommendations`/`flash-offers`/`coach`/etc.
+- Les 8 appels correspondants dans `app.js` mis à jour vers `/api/events?service=...`.
+- Trois tests corrigés (chemins d'import seulement, jamais leurs assertions) après le déplacement.
+- 406 tests verts après cette consolidation — exactement le même compte qu'avant, confirmant
+  qu'aucun test n'a été perdu ni affaibli.
+- `api/` passe de 11 à 6 fichiers — marge confortable avant la limite de 12 du plan Hobby.
+
+## Priorité 1 exécutée : DATAtourisme, extraction de contact rendue robuste — 1er août 2026 (suite du même jour)
+
+- Recherche réelle effectuée sur un script en production (github.com/cquest/datatourisme) traitant
+  de vraies données DATAtourisme : révèle que le JSON-LD brut préfixe ses propriétés
+  (schema:telephone, foaf:homepage, schema:email) et enveloppe ses valeurs dans {'@value': ...} —
+  une forme différente de celle initialement codée.
+- Extraction rendue robuste aux deux conventions (simple et préfixée/@value), plutôt que de
+  parier sur une seule sans certitude sur la forme exacte renvoyée par l'API REST en production.
+- Testé concrètement avec les deux formes avant toute déclaration de succès.
+- Horaires et tarifs restent volontairement inactifs — aucun nom de champ n'a pu être vérifié
+  avec une certitude suffisante pour risquer de casser la requête existante en ajoutant un
+  paramètre `fields` qui remplacerait toute la sélection par défaut.
+- 410 tests verts (406 avant ce chantier, +4 sur cette session DATAtourisme : contact simple,
+  double convention, absence honnête, horaires/tarifs inactifs).
+
+## Priorité 2 : premier connecteur généralisable, deux territoires réels — 1er août 2026 (suite du même jour)
+
+- Comparaison réelle Le Touquet / Chartres effectuée avant tout code : formats de date différents,
+  présence de lieu variable, structures de page totalement différentes — confirme la nécessité de
+  séparer extraction (par source) et normalisation (commune).
+- `server/festival-model.js` créé : la couche 2, commune à toute source. `normalizeOccurrence()`
+  échoue visiblement (exception) si un champ obligatoire manque ou si une date n'est pas au format
+  ISO — jamais une donnée devinée pour combler le vide. Chaque champ (lieu, tarif, âge, horaire)
+  porte son propre statut vérifié/non vérifié/absent, jamais un seul booléen global.
+  `dedupeOccurrences()` fusionne les doublons entre sources en gardant la version la plus vérifiée.
+- **Trouvaille importante en cours de route** : `chartrestivales.com` interdit explicitement
+  l'accès automatisé (robots.txt). Aucun scraper live construit pour ce site — les occurrences de
+  `server/chartres-events.js` viennent d'une vérification manuelle par recherche, exactement
+  documentée comme telle dans le code, jamais présentée comme une extraction automatique qu'elle
+  n'est pas.
+- `server/touquet-events.js` refactorisé : le programme du Festival des Tout-Petits est maintenant
+  exporté au niveau du module et passe aussi, intégralement, par le modèle commun
+  (`normalizeTouquetFestivalWithSharedModel`) — la preuve que les deux cas réels (Touquet,
+  Chartres) utilisent le même modèle, sans dupliquer les données existantes.
+- **Critère de réussite explicite vérifié** : 410 tests avant ce chantier, toujours 410 après le
+  refactoring de Touquet (aucune régression), +7 nouveaux tests sur l'architecture à deux couches
+  — 417 au total.
+
+## Intégration DATAtourisme approfondie — occurrences multiples, description, PMR — 1er août 2026 (suite du même jour)
+
+**Découverte majeure, vérifiée sur la documentation officielle de l'ontologie** : `takesPlaceAt`
+pointe vers un type `Period`, avec une sous-classe explicite `RecurrentPeriod` distincte de
+`LimitedPeriod`. Notre `normalize()` précédent ne faisait aucune différence entre les deux et ne
+prenait que la première date trouvée n'importe où dans l'objet — perdant potentiellement le même
+type de programmation multi-dates qu'on a dû reconstruire à la main pour Le Touquet et Chartres.
+
+- `extractOccurrences()` ajoutée : gère `takesPlaceAt` en objet unique OU en tableau, produit une
+  occurrence par entrée réelle, jamais écrasées en une seule date. Distingue les périodes
+  récurrentes (avec jours de semaine et bornes réelles) des périodes simples — sans jamais
+  expanser une récurrence en dates individuelles devinées.
+- `description` (hasDescription.shortDescription) désormais extraite.
+- `reducedMobilityAccess` (PMR) désormais lue quand disponible — en sachant, d'après une vraie
+  discussion du forum DATAtourisme, que ce champ arrive parfois vide spécifiquement pour les
+  données issues d'Apidae. On continue de le lire pour les producteurs qui le fournissent
+  correctement, sans renoncer par anticipation.
+- Recherche complémentaire menée sur une éventuelle relation parent/enfant native dans l'ontologie
+  (type `subEvent`/`hasProgram`) : **aucune preuve trouvée, ni confirmée ni infirmée** — recherche
+  documentaire seule, sans accès à de vraies données pour vérifier au-delà.
+- Testé avec quatre structures réalistes (occurrence unique, plusieurs occurrences explicites,
+  période récurrente, absence totale de date) avant toute déclaration de succès.
+- 422 tests verts (417 avant ce chantier, +5 nouveaux).
+- **Non fait, comme demandé explicitement** : aucun test sur un troisième territoire à système
+  producteur différent (nécessiterait un vrai accès API en direct, indisponible ici) ; aucune
+  activation du paramètre `fields` pour les horaires/tarifs (toujours non vérifié avec certitude
+  suffisante).
+
+## Script de diagnostic DATAtourisme — le test de vérité, à exécuter côté Vercel — 1er août 2026 (suite du même jour)
+
+- `scripts/datatourisme-truth-test.mjs` créé : interroge la vraie API DATAtourisme sur 5
+  territoires réels et différents (Le Touquet, Chartres, Annecy, Angoulême, Strasbourg), conserve
+  chaque réponse brute, la compare champ par champ avec la sortie de `normalize()`.
+- **Ne peut pas être exécuté depuis l'environnement de développement de Claude** : ni
+  `DATATOURISME_KEY` ni l'accès réseau à `api.datatourisme.fr` n'y sont disponibles. Écrit pour
+  tourner là où les deux existent réellement (Vercel, ou en local avec la variable positionnée).
+- La clé n'est jamais écrite dans le fichier de résultat produit.
+- Logique de comparaison testée isolément avec des données simulées avant livraison — fonctionne
+  correctement, en attente d'une vraie exécution avec accès réseau réel.
+# v21.48.0 — Calendrier exact & cercle réellement présent
+
+- Le parcours principal demande désormais les dates et heures exactes de début et de fin avant toute recommandation.
+- Les rendez-vous datés (événement unique, concert, spectacle, finale, éclipse et pépite locale) sont recherchés sur le créneau réellement choisi.
+- Après « En famille » ou « Entre amis », Dolcia demande les profils réellement présents et croise leurs sensibilités.
+- Le retour à « Pour moi » désélectionne explicitement tout ancien groupe.
+- Les proches durables et les invités temporaires sont séparés ; un groupe temporaire reçoit un code/lien et expire réellement à la fin du séjour.
+- Le résumé du programme affiche le créneau complet et les prénoms des personnes présentes.
+- 452 contrôles passent, dont 6 nouveaux garde-fous dédiés au calendrier et au cercle.
+# v21.49.0 — D Coach-animateur & agenda premium
+
+- Le Home donne un accès explicite à « Mon coach-animateur ».
+- D apparaît en grand et discute avec le groupe avant la séance : énergie, ressort ludique et style d’animation.
+- Les séances « Cardio Club avec D » et « Challenge Tonique de D » deviennent de vraies séances sportives structurées, concrètes et ludiques.
+- D conduit la séance en direct, parle, chronomètre, encourage, propose des variantes et s’adapte aux réactions explicites.
+- Un arrêt immédiat « Douleur / on arrête » suspend la séance et donne une consigne de sécurité adaptée.
+- Le premier filtre contient désormais un agenda mensuel premium avec arrivée, départ, plage de séjour, jours, nuits et heures exactes.
+- Les cartes et fiches indiquent la durée ainsi que sa provenance : source confirmée, programme D ou estimation Dolcia.
+- 457 contrôles passent sans échec.

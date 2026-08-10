@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { classifyCandidate, GEO_THRESHOLDS } from '../server/geo-eligibility.js';
 
 function baseCandidate(overrides = {}) {
+  const checkedAt = new Date().toISOString();
   return {
     id: 'candidate', locationConfidence: .9, businessStatus: 'OPERATIONAL',
     retrievalScope: 'signature', categoryScope: 'wide',
     openingPeriods: [{ open: { day: 4, time: '2000' }, close: { day: 4, time: '2359' } }],
     official: true, date: '2026-08-13T21:00:00+02:00',
     destinationLocalityMatch: false,
-    rarityEvidence: { level: 'high', source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt: new Date().toISOString() },
+    rarityEvidence: { level: 'high', source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt },
+    proofEvidence: { verified: true, source: 'Office de tourisme', sourceType: 'tourism_office', checkedAt },
+    singularityEvidence: { verified: true, source: 'Dossier organisateur', sourceType: 'editorial_verified', checkedAt },
     ...overrides
   };
 }

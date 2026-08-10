@@ -33,6 +33,11 @@ légère ; hébergement proposé si nécessaire.
 
 **Gratuit / petit budget.** Limité aux activités réellement gratuites ou à entrée libre prouvée.
 
+**Mobilité.** Les besoins ordinaires sont satisfaits dans la destination. Une demande générique
+d'aquarium, de parc, de restaurant, d'hôtel ou d'activité familiale ne part pas plus loin si une
+alternative locale raisonnable existe. Une exploration régionale n'entre dans le produit que pour
+un scénario explicitement recherché ou une vraie pépite prouvée ; l'effort est toujours annoncé.
+
 **Pluie.** Priorité spa, musée, cinéma, bowling, atelier, restaurant.
 
 **Retour régulier.** Le parcours le plus stratégique et le moins avancé aujourd'hui — quelqu'un qui
@@ -52,7 +57,7 @@ banque d'images sous licence, ou séance photo dédiée) avant de pouvoir les in
 | Explorer | Un espace de découverte |
 | Fiche détail | Preuve et action |
 | Agenda | Le programme réel, regroupé par jour |
-| Dolcia Anime | L'animateur en direct |
+| Dolcia Anime | D devient l'animateur numérique du moment, de l'accueil à la conclusion |
 | Cercle / compte | Qui accompagne la personne |
 | Studio partenaire | Où un partenaire déclare une offre |
 
@@ -69,6 +74,25 @@ banque d'images sous licence, ou séance photo dédiée) avant de pouvoir les in
 Voir `UX_GUIDELINES.md` pour le détail. En résumé : une idée par écran, cliquer aussi valable que
 parler, aucune animation sans raison, aucun écran ne doit ressembler à un prototype.
 
+### Dolcia Anime — un animateur numérique, pas un générateur de jeux
+
+D reste la personnalité relationnelle unique de Dolcia. **Anime est son rôle d'animation** : une
+présence qui prend en charge le déroulement d'un moment tout en laissant le groupe libre de ses
+choix. Une session complète doit pouvoir comprendre :
+
+1. **Accueil** — D reconnaît le groupe, le contexte et l'énergie du moment.
+2. **Cadre et règles** — elle explique une seule action claire à la fois, avec les précautions utiles.
+3. **Mise en mouvement** — elle répartit les rôles ou forme des équipes uniquement lorsque cela sert l'expérience.
+4. **Rythme et transitions** — elle lance, temporise et relie les séquences sans temps mort inutile.
+5. **Scores et suspense** — ils sont utilisés pour les expériences compétitives, jamais imposés à une séance calme ou de bien-être.
+6. **Encouragements et relances** — D valorise sans infantiliser et relance sans mettre la pression.
+7. **Adaptation en direct** — difficulté, durée, énergie, règles ou prochaine étape évoluent selon les réactions réelles du groupe.
+8. **Conclusion** — D clôt le moment, célèbre ce qui a été vécu et conserve uniquement les souvenirs et préférences autorisés.
+
+Anime peut animer un jeu connu, une enquête, une activité sportive, une séance de détente, un défi
+familial ou un moment collectif. Le jeu est un contenu possible ; **l'animation de bout en bout est
+le produit**.
+
 ## 6. Roadmap fonctionnelle
 
 | Palier | Objectif |
@@ -76,7 +100,7 @@ parler, aucune animation sans raison, aucun écran ne doit ressembler à un prot
 | Socle vérité | Éliminer les fausses notes |
 | Expérience | Rendre Dolcia évidente |
 | Mémoire & groupe | Comprendre les personnes |
-| Dolcia Anime | Créer du loisir autonome |
+| Dolcia Anime | Orchestrer un moment vivant de bout en bout |
 | Studio partenaire | Publier et mesurer |
 | **Moteur de scénarios** | **Chantier actuel** |
 | Marketplace | Réserver et payer |

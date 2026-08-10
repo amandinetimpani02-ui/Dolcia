@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — Trois plans en fondu</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;overflow:hidden;font-family:"Playfair Display",Georgia,serif}
+  .scene{position:fixed;inset:0}
+  .plan{position:absolute;inset:-4%;background-size:cover;background-position:center;opacity:0;
+    animation:cycle 18s ease-in-out infinite, drift 18s ease-in-out infinite}
+  .plan1{background-image:url('../assets/hero-le-touquet.png');animation-delay:0s, 0s}
+  .plan2{background-image:url('https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=1600&q=85');animation-delay:6s, 0s}
+  .plan3{background-image:url('https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1600&q=85');animation-delay:12s, 0s}
+  @keyframes cycle{0%,4%{opacity:0}8%,28%{opacity:1}33%,100%{opacity:0}}
+  @keyframes drift{from{transform:scale(1.05)}to{transform:scale(1.14)}}
+  .scrim{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 40%,transparent 62%)}
+  .content{position:absolute;left:0;right:0;bottom:9vh;padding:0 7vw;color:#faf6ee;opacity:0;
+    animation:appear 1.6s ease 1.4s forwards}
+  @keyframes appear{to{opacity:1}}
+  .content p{font-style:italic;font-size:clamp(20px,3vw,32px);margin-bottom:18px}
+  .content a{font-size:clamp(15px,1.8vw,18px);color:#faf6ee;text-decoration:none;border-bottom:1px solid rgba(240,219,165,.5);padding-bottom:4px}
+  .content a b{color:#f0dba5;margin-left:8px}
+  .notice{position:fixed;top:0;left:0;right:0;background:#b5482f;color:#fff;font-family:sans-serif;
+    font-size:13px;padding:12px 20px;text-align:center;z-index:5}
+  .tag{position:fixed;bottom:16px;left:16px;color:rgba(255,255,255,.4);font-family:sans-serif;font-size:11px}
+</style>
+</head>
+<body>
+<div class="notice">⚠️ Un seul plan est une vraie photo Le Touquet (le premier). Les deux autres sont des photos génériques de banque d'images (pas Le Touquet) — juste pour montrer le rythme du fondu. Juge uniquement la mécanique, pas le contenu de ces deux-là.</div>
+<div class="scene">
+  <div class="plan plan1"></div>
+  <div class="plan plan2"></div>
+  <div class="plan plan3"></div>
+  <div class="scrim"></div>
+  <div class="content"><p>J'ai pensé à quelque chose pour aujourd'hui.</p><a href="#">Laissez-vous guider <b>→</b></a></div>
+</div>
+<span class="tag">C — trois plans, fondu toutes les 6s (cycle 18s)</span>
+</body>
+</html>

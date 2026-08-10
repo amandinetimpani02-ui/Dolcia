@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const api=fs.readFileSync(new URL('../api/major-events.js',import.meta.url),'utf8');
+const api=fs.readFileSync(new URL('../server/major-events.js',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 
 assert.match(api,/astronomy-solar-eclipse-2026-08-12/);
@@ -14,10 +14,6 @@ assert.match(app,/moment\.broadcastable===true/);
 assert.match(app,/moment\.kind==='astronomy'/);
 assert.match(app,/L’horaire local précis devra être confirmé/);
 assert.match(app,/days=30&lat=/);
-<<<<<<< HEAD
-  assert.match(app,/20\.15\.0-question-decisive/);
-=======
-  assert.match(app,/21\.40\.1-moteur-comportements/);
->>>>>>> 04f5afeae402fd69b23a6176fa905b97407db1ae
+  assert.match(app,/21\.50\.0-d-vivante-fun/);
 
 console.log('major moments: ok');
