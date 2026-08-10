@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Photo animée lentement</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;overflow:hidden;font-family:"Playfair Display",Georgia,serif}
+  .scene{position:fixed;inset:0}
+  .photo{position:absolute;inset:-6%;background:url('../assets/hero-le-touquet.png') center/cover;
+    animation:live 26s ease-in-out infinite alternate}
+  @keyframes live{
+    0%{transform:scale(1.08) translate(0,0)}
+    50%{transform:scale(1.16) translate(-2.5%,-1.5%)}
+    100%{transform:scale(1.1) translate(1.5%,1%)}
+  }
+  .scrim{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 40%,transparent 62%)}
+  .content{position:absolute;left:0;right:0;bottom:9vh;padding:0 7vw;color:#faf6ee;opacity:0;
+    animation:appear 1.6s ease 1.4s forwards}
+  @keyframes appear{to{opacity:1}}
+  .content p{font-style:italic;font-size:clamp(20px,3vw,32px);margin-bottom:18px}
+  .content a{font-size:clamp(15px,1.8vw,18px);color:#faf6ee;text-decoration:none;border-bottom:1px solid rgba(240,219,165,.5);padding-bottom:4px}
+  .content a b{color:#f0dba5;margin-left:8px}
+  .tag{position:fixed;top:16px;left:16px;color:rgba(255,255,255,.4);font-family:sans-serif;font-size:11px}
+</style>
+</head>
+<body>
+<div class="scene"><div class="photo"></div><div class="scrim"></div>
+  <div class="content"><p>J'ai pensé à quelque chose pour aujourd'hui.</p><a href="#">Laissez-vous guider <b>→</b></a></div>
+</div>
+<span class="tag">A — photo animée (vraie photo Le Touquet, mouvement continu 26s)</span>
+</body>
+</html>

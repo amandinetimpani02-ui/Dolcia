@@ -1,0 +1,4 @@
+.detail-progressive .detail-live-status{display:flex;gap:14px;align-items:center;margin:20px 0;padding:15px 17px;border:1px solid rgba(220,190,125,.25);border-radius:16px;background:rgba(220,190,125,.07);color:var(--muted,#aaa)}
+.detail-progressive .detail-live-status .loader{width:20px;height:20px;min-width:20px;border-width:2px}
+.detail-progressive .detail-live-status p{margin:0;font-size:.9rem;line-height:1.45}
+.build-mark{display:block;margin-top:16px;color:rgba(255,255,255,.28);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase}

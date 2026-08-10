@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.vercel/
+node_modules/
+.qa/
+docx_review/
+*.zip
+*.pdf
+Dolcia_Product_Book_*.docx
+IP_DEPOSIT_*/
+

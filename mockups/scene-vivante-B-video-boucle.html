@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Vidéo courte en boucle</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;overflow:hidden;font-family:"Playfair Display",Georgia,serif}
+  .scene{position:fixed;inset:0}
+  video,.fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .fallback{background:url('../assets/hero-le-touquet.png') center/cover;filter:grayscale(.3) brightness(.7)}
+  .scrim{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 40%,transparent 62%)}
+  .content{position:absolute;left:0;right:0;bottom:9vh;padding:0 7vw;color:#faf6ee;opacity:0;
+    animation:appear 1.6s ease 1.4s forwards}
+  @keyframes appear{to{opacity:1}}
+  .content p{font-style:italic;font-size:clamp(20px,3vw,32px);margin-bottom:18px}
+  .content a{font-size:clamp(15px,1.8vw,18px);color:#faf6ee;text-decoration:none;border-bottom:1px solid rgba(240,219,165,.5);padding-bottom:4px}
+  .content a b{color:#f0dba5;margin-left:8px}
+  .notice{position:fixed;top:0;left:0;right:0;background:#b5482f;color:#fff;font-family:sans-serif;
+    font-size:13px;padding:12px 20px;text-align:center;z-index:5}
+  .tag{position:fixed;bottom:16px;left:16px;color:rgba(255,255,255,.4);font-family:sans-serif;font-size:11px}
+</style>
+</head>
+<body>
+<div class="notice">⚠️ Aucune vraie vidéo disponible ici — ce prototype montre uniquement la structure et le rythme d'apparition du texte. La sensation réelle d'une vidéo ne peut pas être jugée sans un vrai fichier vidéo de Le Touquet (personnes sur la plage, marché, terrasse animée…).</div>
+<div class="scene">
+  <video autoplay muted loop playsinline poster="../assets/hero-le-touquet.png">
+    <!-- <source src="/assets/videos/le-touquet-scene.mp4" type="video/mp4"> -->
+  </video>
+  <div class="fallback"></div>
+  <div class="scrim"></div>
+  <div class="content"><p>J'ai pensé à quelque chose pour aujourd'hui.</p><a href="#">Laissez-vous guider <b>→</b></a></div>
+</div>
+<span class="tag">B — structure vidéo (photo statique en attendant un vrai fichier)</span>
+</body>
+</html>

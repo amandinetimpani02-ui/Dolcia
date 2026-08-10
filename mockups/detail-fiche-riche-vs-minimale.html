@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dolcia — Fiche riche vs fiche minimale</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--display:"Playfair Display",Georgia,serif;--sans:"Manrope",sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0a0908;color:#f4efe4;font-family:var(--sans);padding:28px}
+  h1{font-family:var(--display);font-size:22px;margin:0 0 24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .col-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9a968d;margin:0 0 10px}
+  .fiche{background:#111315;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+  .fiche-image{height:160px;background:linear-gradient(135deg,#2a2f28,#1a2420);display:flex;align-items:center;justify-content:center;color:#5a6156;font-size:11px}
+  .fiche-body{padding:20px}
+  .kicker{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#d7bd82;margin:0 0 8px;display:block}
+  h2{font-family:var(--display);font-size:24px;font-weight:500;margin:0 0 10px}
+  .facts{display:grid;gap:8px;margin:14px 0;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)}
+  .facts div{display:flex;justify-content:space-between;font-size:12px}
+  .facts b{color:#9a968d;font-weight:500}
+  .facts span{color:#e8e2d5;text-align:right}
+  .facts .missing span{color:#c98a5c;font-style:italic}
+  .actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .actions button{border:0;border-radius:12px;padding:12px 14px;font-size:12px;font-weight:600;text-align:left;cursor:default}
+  .primary{background:#d7bd82;color:#0a0908}
+  .secondary{background:rgba(255,255,255,.06);color:#d5d1c8;border:1px solid rgba(255,255,255,.1)!important}
+  .ext{color:#a99a6b!important;font-size:10px;font-weight:400}
+</style>
+</head>
+<body>
+<h1>Deux cas réels — même architecture, contenu différent</h1>
+<div class="grid">
+  <div>
+    <p class="col-label">1 — Fiche riche</p>
+    <div class="fiche">
+      <div class="fiche-image">Photo Nausicaá</div>
+      <div class="fiche-body">
+        <span class="kicker">Information vérifiée</span>
+        <h2>Nausicaá</h2>
+        <div class="facts">
+          <div><b>Adresse</b><span>Bd Sainte-Beuve, Boulogne-sur-Mer</span></div>
+          <div><b>Téléphone</b><span>03 21 30 74 00</span></div>
+          <div><b>Avis Google</b><span>4.7/5 · 12 000 avis</span></div>
+          <div><b>Ouverture</b><span>Ouvert actuellement</span></div>
+          <div><b>Horaires</b><span>9h–18h30</span></div>
+        </div>
+        <div class="actions">
+          <button class="primary">Ajouter à mon agenda</button>
+          <button class="secondary">Garder dans mes envies</button>
+          <button class="secondary">Voir sur la carte <span class="ext">↗ adresse vérifiée</span></button>
+          <button class="secondary">Appeler <span class="ext">↗ téléphone vérifié</span></button>
+          <button class="secondary">Site officiel <span class="ext">↗ site vérifié</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="col-label">2 — Fiche minimale</p>
+    <div class="fiche">
+      <div class="fiche-image">Photo générique (catégorie)</div>
+      <div class="fiche-body">
+        <span class="kicker">Fiche Dolcia · quelques informations à confirmer</span>
+        <h2>Petit marché de quartier</h2>
+        <div class="facts">
+          <div class="missing"><b>Adresse</b><span>À confirmer</span></div>
+        </div>
+        <p style="font-size:11px;color:#6b6860;margin:8px 0 0">Téléphone, avis, horaires : omis — non décisifs et inconnus, jamais remplis artificiellement.</p>
+        <div class="actions">
+          <button class="primary">Ajouter à mon agenda</button>
+          <button class="secondary">Garder dans mes envies</button>
+          <button class="secondary">Voir sur la carte <span class="ext">↗ recherche par nom, adresse non confirmée</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
