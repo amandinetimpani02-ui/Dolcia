@@ -140,7 +140,13 @@ export async function classifyCandidate(candidate, context, services = {}) {
   // Une faible distance à vol d'oiseau ne suffit pas : sur une baie, une rivière ou
   // une frontière communale, le trajet réel et la destination choisie priment.
   const localityMismatch = candidate.destinationLocalityMatch === false && distance > 2;
-  const localFit = candidate.retrievalScope !== 'signature' && !localityMismatch && distance <= Math.min(8, Math.max(3, baseBudget / 4)) && codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) && !blocking.length;
+  // La matrice de trajet enrichit le résultat, mais sa panne ne doit jamais faire disparaître
+  // toute une destination alors que les coordonnées Google sont fiables. En l'absence de temps
+  // routier, on conserve uniquement un noyau local volontairement prudent à vol d'oiseau.
+  // Le trajet reste affiché comme indisponible : aucune durée n'est inventée.
+  const fallbackLocalKm = Math.min(8, Math.max(2, baseBudget / 10));
+  const travelLocallyUsable = codes.includes(C.TRAVEL_COMPATIBLE_WITH_DURATION) || (travelMinutes == null && distance <= fallbackLocalKm);
+  const localFit = candidate.retrievalScope !== 'signature' && !localityMismatch && distance <= Math.min(8, Math.max(3, baseBudget / 4)) && travelLocallyUsable && !blocking.length;
   const kind = normalizedKind(candidate);
   const neverDistant = NEVER_DISTANT_KINDS.has(kind);
   const genericLocalFirst = GENERIC_LOCAL_FIRST_KINDS.has(kind);
@@ -187,6 +193,9 @@ function finish(status, codes, blocking, evidence, distance, travelMinutes, conf
   const unique = [...new Set(codes)], validation = validateDecisionCodes(unique);
   if (!validation.valid) throw new Error(`Invalid decision codes: ${JSON.stringify(validation)}`);
   const rarityTrustedWhenRequired = status !== 'extended' || unique.includes(C.HIGH_RARITY);
-  const premiumEligible = ['core', 'extended'].includes(status) && blocking.length === 0 && !unique.includes(C.HOURS_UNKNOWN) && rarityTrustedWhenRequired && !unique.includes(C.EVIDENCE_UNTRUSTED_SOURCE);
+  // Explorer peut montrer un lieu réel dont les horaires ne sont pas publiés, en l'étiquetant
+  // clairement « à vérifier ». Le programme composé reste strict et l'exclut automatiquement.
+  const hoursUsable = !unique.includes(C.HOURS_UNKNOWN) || context.surface === 'explorer';
+  const premiumEligible = ['core', 'extended'].includes(status) && blocking.length === 0 && hoursUsable && rarityTrustedWhenRequired && !unique.includes(C.EVIDENCE_UNTRUSTED_SOURCE);
   return { status, premium_eligible: premiumEligible, decision_codes_version: DECISION_CODES_VERSION, geo_rules_version: GEO_RULES_VERSION, decision_codes: unique, distance_km: distance == null ? null : Math.round(distance * 10) / 10, travel_minutes: travelMinutes, travel_mode: context.travelMode || 'driving', effort_explanation: effortExplanation, location_confidence: confidence, blocking_reasons: [...new Set(blocking)], evidence };
 }

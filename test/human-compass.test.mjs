@@ -27,7 +27,7 @@ test('une sortie éloignée doit mériter sa place', () => {
 });
 
 test('la version porte explicitement la vérité du moment', () => {
-  assert.match(client, /21\.50\.0-d-vivante-fun/);
+  assert.match(client, /21\.52\.0-api-results-restored/);
   assert.match(client, /function momentTruth/);
 });
 
