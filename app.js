@@ -873,7 +873,7 @@ function homeNavScrollReveal(){
   if(poster&&window.scrollY>poster.offsetHeight*.6)document.body.classList.add('home-nav-revealed');
   else document.body.classList.remove('home-nav-revealed');
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button></div><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button></div><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div id="tasteAnticipation" hidden></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -916,7 +916,18 @@ function answerEclatCustomDate(){
   if(!startDate||!startTime||!endDate||!endTime)return showToast('Indiquez les dates et les heures de début et de fin');
   const start=new Date(`${startDate}T${startTime}:00`),end=new Date(`${endDate}T${endTime}:00`);
   if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime())||end<=start)return showToast('La fin doit être postérieure au début');
-  state.eclatBrief.answers.dateObject=start.toISOString();state.eclatBrief.answers.endDateObject=end.toISOString();state.eclatBrief.answers.date='custom';state.eclatBrief.answers.duration=startDate!==endDate?'stay':duration||'2h';state.eclatBrief.step=1;renderEclatQuestion()
+  state.eclatBrief.answers.dateObject=start.toISOString();state.eclatBrief.answers.endDateObject=end.toISOString();state.eclatBrief.answers.date='custom';state.eclatBrief.answers.duration=startDate!==endDate?'stay':duration||'2h';
+  if(state.eclatBrief.answers.duration==='stay')return renderAccommodationQuestion();
+  state.eclatBrief.step=1;renderEclatQuestion()
+}
+function renderAccommodationQuestion(){
+  const target=document.querySelector('#eclatQuestion');if(!target)return;
+  target.innerHTML=`<div class="dialogue-progress"><i style="--progress:22%"></i><span>UNE QUESTION UTILE</span></div><h2>Avez-vous déjà un logement pour ce séjour ?</h2><p>Résidence secondaire, location déjà réservée, ou famille sur place : je ne chercherai pas d'hébergement si vous en avez déjà un.</p><div class="dialogue-choices"><button onclick="answerAccommodation(false)"><span>Oui, j'ai déjà où loger</span><b>→</b></button><button onclick="answerAccommodation(true)"><span>Non, je cherche un hébergement</span><b>→</b></button></div>`;
+  requestAnimationFrame(()=>target.classList.add('question-arrival'));updateEclatScene()
+}
+function answerAccommodation(needsAccommodation){
+  state.answers.needsAccommodation=needsAccommodation;
+  state.eclatBrief.step=1;renderEclatQuestion()
 }
 function selectSoloMoment(){
   state.groupParticipants=state.groupParticipants.map(person=>({...person,selected:person.id==='me'}));
@@ -926,11 +937,23 @@ function eclatAvailableProfiles(){expireTemporaryGroups();return state.circlePro
 function renderEclatGroupQuestion(){
   const target=document.querySelector('#eclatQuestion'),brief=state.eclatBrief;if(!target||!brief)return;
   const profiles=eclatAvailableProfiles(),selected=new Set(brief.answers.participantIds||state.groupParticipants.filter(person=>person.selected!==false).map(person=>person.id));selected.add('me');brief.answers.participantIds=[...selected];
-  target.innerHTML=`<div class="dialogue-progress"><i style="--progress:50%"></i><span>LES PERSONNES PRÉSENTES</span></div><h2>Qui sera vraiment avec vous ?</h2><p>Dolcia croisera les profils sélectionnés. Le téléphone est à une personne ; l’expérience appartient au groupe.</p><div class="eclat-group-picker"><button class="group-person selected" disabled><b>M</b><span><strong>Moi</strong><small>Organisateur</small></span><i>Présent</i></button>${profiles.map(person=>`<button class="group-person ${selected.has(person.id)?'selected':''}" onclick="toggleEclatParticipant('${person.id}')"><b>${esc(person.name).slice(0,1)}</b><span><strong>${esc(person.name)}</strong><small>${esc([person.relationship,person.ageBand,person.kind==='temporary'?'Invité temporaire':'Profil durable'].filter(Boolean).join(' · '))}</small></span><i>${selected.has(person.id)?'Présent':'Ajouter'}</i></button>`).join('')}</div><div class="eclat-group-actions"><button onclick="openEclatQuickPerson('durable')">+ Ajouter un proche durablement</button><button onclick="openEclatQuickPerson('temporary')">+ Créer un groupe temporaire</button></div>${state.temporaryGroups.length?`<div class="temporary-group-summary">${state.temporaryGroups.map(group=>`<span><b>${esc(group.name)}</b> · code ${group.code} · expire le ${new Date(group.expiresAt).toLocaleDateString('fr-FR')}</span>`).join('')}</div>`:''}<button class="eclat-group-confirm" onclick="confirmEclatGroup()">Continuer avec ${selected.size} personne${selected.size>1?'s':''} →</button>`;
+  target.innerHTML=`<div class="dialogue-progress"><i style="--progress:50%"></i><span>LES PERSONNES PRÉSENTES</span></div><h2>Qui sera vraiment avec vous ?</h2><p>Dolcia croisera les profils sélectionnés. Le téléphone est à une personne ; l’expérience appartient au groupe.</p><div class="eclat-group-picker"><button class="group-person selected" disabled><b>M</b><span><strong>Moi</strong><small>Organisateur</small></span><i>Présent</i></button>${profiles.map(person=>`<button class="group-person ${selected.has(person.id)?'selected':''}" onclick="toggleEclatParticipant('${person.id}')"><b>${esc(person.name).slice(0,1)}</b><span><strong>${esc(person.name)}</strong><small>${esc([person.relationship,person.ageBand,person.kind==='temporary'?'Invité temporaire':'Profil durable'].filter(Boolean).join(' · '))}</small></span><i>${selected.has(person.id)?'Présent':'Ajouter'}</i></button>`).join('')}</div><div class="eclat-group-actions"><button onclick="openEclatQuickPerson('durable')">+ Ajouter un proche durablement</button><button onclick="openEclatQuickPerson('temporary')">+ Créer un groupe temporaire</button></div>${state.temporaryGroups.length?`<div class="temporary-group-summary">${state.temporaryGroups.map(group=>`<span><b>${esc(group.name)}</b> · code ${group.code} · expire le ${new Date(group.expiresAt).toLocaleDateString('fr-FR')}</span>`).join('')}</div>`:''}<button class="eclat-group-confirm" onclick="confirmEclatGroup()">Continuer avec ${selected.size} personne${selected.size>1?'s':''} →</button><button class="eclat-group-skip" onclick="skipEclatGroupDetail()">Recherche rapide · ne pas détailler qui sera là</button>`;
   requestAnimationFrame(()=>target.classList.add('question-arrival'));updateEclatScene()
 }
 function toggleEclatParticipant(id){const ids=new Set(state.eclatBrief?.answers.participantIds||['me']);ids.has(id)?ids.delete(id):ids.add(id);ids.add('me');state.eclatBrief.answers.participantIds=[...ids];renderEclatGroupQuestion()}
 function confirmEclatGroup(){const brief=state.eclatBrief;if(!brief)return;const ids=new Set(brief.answers.participantIds||['me']);state.groupParticipants=state.circleProfiles.map(person=>({...person,role:person.id==='me'?'organizer':'participant',selected:ids.has(person.id)}));brief.step=2;save();renderEclatQuestion()}
+function skipEclatGroupDetail(){
+  /* Recherche rapide : le contexte "avec qui" (famille, amis...) reste utilisé pour adapter les
+     catégories et le ton (voir context.who dans server/recommendations.js), mais aucun profil
+     individuel n'est exigé. Personne n'est ajouté au Cercle, aucun goût croisé n'est appliqué —
+     seulement le type de groupe déjà choisi à l'écran précédent. */
+  const brief=state.eclatBrief;if(!brief)return;
+  state.groupParticipants=state.circleProfiles.map(person=>({...person,role:person.id==='me'?'organizer':'participant',selected:person.id==='me'}));
+  brief.answers.participantIds=['me'];
+  brief.answers.quickGroup=true;
+  brief.step=2;save();renderEclatQuestion();
+  showToast('Recherche rapide · Dolcia adapte selon « '+({couple:'en amoureux',family:'en famille',friends:'entre amis',colleagues:'entre collègues'}[brief.answers.who]||'ce contexte')+' » sans profils détaillés')
+}
 function openEclatQuickPerson(kind){
   document.querySelector('#eclatQuickPerson')?.remove();const temporary=kind==='temporary';
   document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="eclatQuickPerson"><article class="circle-person-modal"><button class="close" onclick="document.querySelector('#eclatQuickPerson')?.remove()">×</button><span class="kicker">${temporary?'Groupe temporaire':'Profil durable'}</span><h2>${temporary?'Inviter pour ce séjour':'Ajouter au Cercle'}</h2>${temporary?'<label>Nom du groupe<input id="quickGroupName" placeholder="Ex. Week-end entre amis"></label><label>Prénoms, séparés par des virgules<input id="quickPersonNames" placeholder="Lina, Marc, Sam"></label>':'<label>Prénom<input id="quickPersonNames" placeholder="Prénom"></label><label>Votre lien<select id="quickRelation"><option>Conjoint·e</option><option>Enfant</option><option>Ami·e</option><option>Famille</option><option>Collègue</option></select></label>'}<button class="primary" onclick="saveEclatQuickPerson('${kind}')">${temporary?'Créer le code et inviter':'Ajouter à ce moment'}</button>${temporary?'<small>Le partage cessera automatiquement à la date de fin choisie.</small>':''}</article></div>`)
@@ -1082,6 +1105,14 @@ function homePhrase(){
   else pool=['J’ai pensé à quelque chose pour aujourd’hui.','Qu’est-ce qui vous ferait plaisir, là ?','Le temps libre commence maintenant.'];
   return pool[day%pool.length];
 }
+function renderTasteAnticipation(event){
+  const target=document.querySelector('#tasteAnticipation');if(!target)return;
+  if(!event){target.innerHTML='';target.hidden=true;return}
+  target.hidden=false;
+  const days=Math.max(0,Math.round((new Date(event.date)-new Date())/86400000));
+  const when=days===0?'aujourd’hui':days===1?'demain':`dans ${days} jours`;
+  target.innerHTML=`<button class="taste-anticipation" onclick="openHomeEvent('${esc(event.id||'')}')"><span class="kicker">Proche de vos goûts appris</span><strong>${esc(event.name)}</strong><small>${when} · vous appréciez souvent ce type d’expérience</small><b>→</b></button>`;
+}
 async function loadHomePulse(){
   const today=iso(new Date());
   const list=document.querySelector('#pulseEventList');
@@ -1090,7 +1121,7 @@ async function loadHomePulse(){
     const [weather,official,tickets,major]=await Promise.allSettled([
       get(`/api/weather?lat=${state.location.lat}&lng=${state.location.lng}`),
       get(`/api/events?service=touquet&after=${today}&before=${today}`),
-      get(`/api/events?service=ticketmaster&lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${today}`),
+      get(`/api/events?service=ticketmaster&lat=${state.location.lat}&lng=${state.location.lng}&radius=12&after=${today}&before=${iso(new Date(Date.now()+3*86400000))}`),
       get(`/api/events?service=major-events&date=${today}&days=30&lat=${state.location.lat}&lng=${state.location.lng}`)
     ]);
     if(state.view!=='home')return;
@@ -1103,7 +1134,12 @@ async function loadHomePulse(){
     const raw=[...officialEvents,...ticketEvents];
     let normalized=[];
     try{normalized=Array.isArray(raw)?normalizeEvents(raw):[]}catch(_){normalized=[]}
-    const events=dedupe(normalized).slice(0,3);
+    const events=dedupe(normalized).filter(event=>!event.date||iso(new Date(event.date))===today).slice(0,3);
+    // Notification proactive fondée sur un vrai signal appris (state.tasteProfile), jamais un
+    // texte générique. Seuil volontairement élevé (>=3) pour ne signaler que les catégories
+    // réellement confirmées par plusieurs retours positifs, jamais un simple like isolé.
+    const upcomingTasteMatches=dedupe(normalized).filter(event=>event.date&&iso(new Date(event.date))!==today&&(state.tasteProfile[event.category]||0)>=3).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,1);
+    renderTasteAnticipation(upcomingTasteMatches[0]||null);
     const majorSeed=major.status==='fulfilled'&&Array.isArray(major.value?.events)?major.value.events:[];
     try{state.majorMoments=detectMajorMoments(normalized,majorSeed.map(event=>({...event,kind:event.kind||'event',score:Number(event.score)||100})))||[]}catch(_){state.majorMoments=[]}
     renderHomeMajor(state.majorMoments[0]||null);
@@ -1336,7 +1372,7 @@ function queriesForVibes(){
   if(state.answers.who==='family'&&state.answers.familyRhythm==='balanced')selected.unshift('atelier enfants encadré club enfants','spa massage parents proche activité enfants','activité parents enfants même lieu');
   return [...new Set([...selected,...broad])];
 }
-function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),types=p.types||[],placeText=`${p.name||''} ${types.join(' ')}`.toLowerCase(),business=/restaurant|cafe|bar|lodging|campground|store|office|spa|school|travel_agency|tourist_information|amusement_park|theme_park/.test(placeText),naturalType=types.some(type=>['beach','park','natural_feature','hiking_area','national_park'].includes(type)),publicName=/\b(plage|beach|parc public|jardin public|square|promenade|digue|front de mer|sentier|for[eê]t|belv[eé]d[eè]re|point de vue|panorama|r[eé]serve naturelle)\b/i.test(String(p.name||'').trim()),freeAccess=!business&&(naturalType||publicName),experienceKind=/aquarium/.test(placeText)?'aquarium':/parc.*attraction|theme.?park|labyrinthe|labyparc|bagatelle/.test(placeText)?'theme_park':/foil|kitesurf|surf|paddle|kayak|voile|catamaran|nautique|aquatique/.test(placeText)?'water':/reserve naturelle|plage|promenade|sentier|hiking|natural_feature|point de vue|panorama|for[eê]t/.test(placeText)?'nature':/restaurant|cafe|food/.test(placeText)?'food':category(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),experienceKind,address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,freeAccessEvidence:freeAccess?'Lieu naturel ou espace public documenté par Google Places':null,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null,types}})}
+function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),types=p.types||[],placeText=`${p.name||''} ${types.join(' ')}`.toLowerCase(),business=/restaurant|cafe|bar|lodging|campground|store|office|spa|school|travel_agency|tourist_information|amusement_park|theme_park|\bclub\b|location|ecole|école|cours de|activit[eé]s? nautiques?|sport|caddy|cabine/.test(placeText),naturalType=types.some(type=>['beach','park','natural_feature','hiking_area','national_park'].includes(type)),publicName=/\b(plage|beach|parc public|jardin public|square|promenade|digue|front de mer|sentier|for[eê]t|belv[eé]d[eè]re|point de vue|panorama|r[eé]serve naturelle)\b/i.test(String(p.name||'').trim()),freeAccess=!business&&(naturalType||publicName),experienceKind=/aquarium/.test(placeText)?'aquarium':/parc.*attraction|theme.?park|labyrinthe|labyparc|bagatelle/.test(placeText)?'theme_park':/foil|kitesurf|surf|paddle|kayak|voile|catamaran|nautique|aquatique/.test(placeText)?'water':/reserve naturelle|plage|promenade|sentier|hiking|natural_feature|point de vue|panorama|for[eê]t/.test(placeText)?'nature':/restaurant|cafe|food/.test(placeText)?'food':category(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),experienceKind,address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,freeAccessEvidence:freeAccess?'Lieu naturel ou espace public documenté par Google Places':null,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null,types}})}
 async function enrichPlaceAvailability(items){
   const evening=['evening','afternoon_evening'].includes(state.answers.duration),priority=item=>(item.retrievalScope==='signature'?45:0)+(evening&&['food','night','culture','slow','outside'].includes(item.category)?30:0);
   const candidates=items.filter(item=>item.source==='Google Places'&&item.placeId).sort((a,b)=>priority(b)-priority(a)||(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0)).slice(0,60);
@@ -1531,7 +1567,7 @@ function programBalanceScore(item,label,previousBand,previousEnergy=null,rhythmC
   if(energyChoice==='continue'){if(energy==='high')score+=30;if(energy==='soft')score-=10}
   if(energyChoice==='contrast'){if(energy==='soft')score+=24;if(energy==='high')score-=18}
   if(energyChoice==='recover'){if(energy==='soft')score+=34;if(energy==='high')score-=34}
-  if(/Dîner/.test(label)){
+  if(/D[ée]jeuner|Dîner/.test(label)){
     if(diningChoice==='signature'&&['signature','exceptional'].includes(band))score+=30;
     if(diningChoice==='light'&&['light','balanced'].includes(band))score+=26;
     if(diningChoice==='budget'&&['free','light'].includes(band))score+=32;
@@ -1560,10 +1596,26 @@ function buildAlternatives(pool){
 
 function requiresPublishedSession(item){return /cinema|cinéma|theatre|théâtre|spectacle|visite guidee|visite guidée|atelier|cours|stage|excursion|croisiere|croisière|e.?foil|wing.?foil|kite|surf|char à voile|char a voile|paddle|kayak|catamaran|voile|tennis|padel|squash|badminton|golf|piscine|spa|massage|thalasso|escape game|laser game|bowling|location|école|ecole/.test(`${item.name||''} ${(item.types||[]).join(' ')}`.toLowerCase())}
 function requestedMomentLabel(){const date=new Date(state.dateStart),hours=String(date.getHours()).padStart(2,'0'),minutes=String(date.getMinutes()).padStart(2,'0');return `${hours}:${minutes} · Votre moment`}
+// Lieux repères dont le jour réel d'activité (marché, brocante...) diffère des horaires
+// génériques du bâtiment que Google Places peut renvoyer. Vérifié par recherche réelle, jamais
+// une règle générale appliquée à tous les marchés de France — seulement ce cas précis, nommé.
+// Le Touquet : marché principal les lundi, jeudi, samedi (source : ville du Touquet, Petit Futé,
+// plusieurs guides concordants). La poissonnerie ouvre en plus vendredi/dimanche, mais le marché
+// dans son ensemble — celui que Dolcia propose comme sortie — ne justifie l'étiquette "aujourd'hui"
+// que ces trois jours.
+const KNOWN_MARKET_DAYS=[{match:/march[eé] couvert/i,cityMatch:/touquet/i,days:[1,4,6],label:'marché couvert du Touquet (lundi, jeudi, samedi)'}];
+function knownMarketOpenToday(item){
+  const text=`${item.name||''}`,addr=`${item.address||''}`;
+  const rule=KNOWN_MARKET_DAYS.find(entry=>entry.match.test(text)&&entry.cityMatch.test(addr+' '+ (state.location.name||'')));
+  if(!rule)return null;
+  return rule.days.includes(new Date(state.dateStart).getDay());
+}
 function momentCompatibility(item){
   const label=requestedMomentLabel();
   if(item.date){if(item.timeKnown===false)return'unknown';const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime())||!sameDay(eventDate,state.dateStart))return'incompatible';const delta=Math.abs(eventDate.getHours()*60+eventDate.getMinutes()-(new Date(state.dateStart).getHours()*60+new Date(state.dateStart).getMinutes()));return delta<=120?'confirmed':'incompatible'}
   if(item.source!=='Google Places')return'unknown';
+  const marketToday=knownMarketOpenToday(item);
+  if(marketToday===false)return'incompatible';
   if(requiresPublishedSession(item))return item.detailsKnown&&isOpenForSlot(item,label)?'open-not-session':'unknown';
   if(item.detailsKnown&&item.openingPeriods?.length)return isOpenForSlot(item,label)?'confirmed':'incompatible';
   if(item.freeAccess)return'autonomous';
@@ -1588,7 +1640,12 @@ function programTemplates(){
     evening:[['19:00 · Ouvrir la soirée',['slow','outside','food','culture']],['21:00 · Le temps fort',['slow','outside','night','culture']],['23:00 · Prolonger',['night','outside','slow']]],
     afternoon_evening:[['16:00 · Première échappée',['active','culture','outside','slow']],['18:30 · Transition plaisir',['food','outside','culture']],['20:30 · Le temps fort',['night','culture','food','slow']],['22:30 · Prolonger si vous en avez envie',['night','food','outside']]],
     day:[['09:30 · Commencer la journée',['outside','active','culture']],['12:30 · Déjeuner',['food']],['15:00 · Activité de l’après-midi',['active','culture','slow','outside']],['19:30 · Dîner',['food']],['22:30 · Événement ou sortie du soir',['night','culture','outside']]],
-    stay:[[`Votre hébergement · ${nights} nuit${nights>1?'s':''}`,['hotel']],...Array.from({length:tripDays()},(_,index)=>[[`Jour ${index+1} · Expérience phare`,['outside','culture','active','slow']],[`Jour ${index+1} · Dîner ou soirée`,['food','night']]]).flat()]
+    stay:[...(state.answers.needsAccommodation===false?[]:[[`Votre hébergement · ${nights} nuit${nights>1?'s':''}`,['hotel']]]),...Array.from({length:tripDays()},(_,index)=>[
+      [`Jour ${index+1} · 09:30 · Commencer la journée`,['outside','active','culture']],
+      [`Jour ${index+1} · 12:30 · Déjeuner`,['food']],
+      [`Jour ${index+1} · 15:00 · Expérience de l'après-midi`,['outside','culture','active','slow']],
+      [`Jour ${index+1} · 19:30 · Dîner ou soirée`,['food','night']]
+    ]).flat()]
   };
   return (templates[state.answers.duration||'2h']||templates['2h']).filter(([label])=>isFutureSlot(label));
 }
@@ -1772,7 +1829,8 @@ function renderResults(){
   }
   setTimeout(()=>mountThreeFutures(),0);
   setTimeout(startMomentWatch,0);
-  app.innerHTML=shell(`<section class="explore-signature result-signature"><div class="explore-signature-copy"><span class="kicker">Votre terrain de jeu · ${esc(state.location.name)}</span><h1>Qu’allons-nous<br><em>vivre maintenant ?</em></h1><p>Écrivez une envie. Les meilleures idées remontent pendant que vous parlez, sans jamais cacher le reste.</p></div><div class="living-brief"><span class="eclat-mini">D<i>✦</i></span><div><label for="catalogSearch">Dites-le simplement à Dolcia</label><input id="catalogSearch" value="${esc(filters.query)}" placeholder="Avec les enfants, face à la mer, sans trop marcher…" oninput="liveCatalogSearch(this.value)"><small><b></b><span>${items.length} possibilités explorées maintenant</span></small></div><button class="voice-live" onclick="startCatalogVoice()" aria-label="Dicter mon envie">◉</button></div><div class="signature-actions"><button class="signature-compose" onclick="surprise()"><span>Dolcia s’occupe de tout</span><strong>${composeCta()}</strong><b>→</b></button><button class="signature-adjust" onclick="openEclatDialogue()">Préciser mon moment</button></div></section><section class="catalog-shell result-first"><div class="catalog-toolbar compact-toolbar"><div class="catalog-families">${families.filter(([id])=>(id==='all'||counts[id]>0)&&(id!=='hotel'||state.answers.duration==='stay')).map(([id,label])=>`<button class="${filters.family===id?'selected':''}" onclick="setCatalogFamily('${id}')">${label}<small>${counts[id]}</small></button>`).join('')}</div><details class="advanced-refinements"><summary><span>Affiner les résultats</span><small>Distance, disponibilité, confiance et tri</small><b>+</b></summary><div class="catalog-controls"><select onchange="setCatalogSort(this.value)"><option value="recommended" ${filters.sort==='recommended'?'selected':''}>Les plus pertinents</option><option value="distance" ${filters.sort==='distance'?'selected':''}>Les plus proches</option><option value="rating" ${filters.sort==='rating'?'selected':''}>Les mieux notés</option><option value="new" ${filters.sort==='new'?'selected':''}>Événements en premier</option></select><select onchange="setCatalogAvailability(this.value)"><option value="all" ${filters.availability==='all'?'selected':''}>Toutes les disponibilités</option><option value="open" ${filters.availability==='open'?'selected':''}>Ouverts maintenant</option><option value="scheduled" ${filters.availability==='scheduled'?'selected':''}>Événements avec horaire</option></select><select onchange="setCatalogBudget(this.value)"><option value="all" ${!filters.budget||filters.budget==='all'?'selected':''}>Tous budgets</option><option value="0" ${filters.budget==='0'?'selected':''}>€ Économique</option><option value="1" ${filters.budget==='1'?'selected':''}>€€ Modéré</option><option value="2" ${filters.budget==='2'?'selected':''}>€€€ Confort</option><option value="3" ${filters.budget==='3'?'selected':''}>€€€€ Premium</option></select><button onclick="startCompose()">Date, groupe et budget</button></div><div class="refinement-lenses">${adaptiveLensDefinitions().filter(lens=>state.allItems.some(lens.test)).map(lens=>`<button class="${['signature','pepite'].includes(lens.id)?'lens-signature ':''}${(filters.lenses||[]).includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')">${lens.label}</button>`).join('')}</div></details></div><div class="catalog-summary"><strong>${items.length} idées disponibles</strong><span>Classées selon votre moment · jamais selon le montant payé par un partenaire</span></div>${filters.family==='hotel'?abundantWidenPrompt('hotel'):''}${items.length?`<div class="catalog-list">${shown.map((item,index)=>experience(item,index,'')).join('')}</div>`:zeroResultRecovery({embedded:true})}${shown.length<items.length?`<button class="catalog-more" onclick="showMoreCatalog()">Découvrir ${Math.min(60,items.length-shown.length)} idées de plus</button>`:''}</section>`,'discover')
+  app.innerHTML=shell(`<section class="explore-signature result-signature"><div class="explore-signature-copy"><span class="kicker">Votre terrain de jeu · ${esc(state.location.name)}</span><h1>Qu’allons-nous<br><em>vivre maintenant ?</em></h1><p>Écrivez une envie. Les meilleures idées remontent pendant que vous parlez, sans jamais cacher le reste.</p></div><div class="living-brief"><span class="eclat-mini">D<i>✦</i></span><div><label for="catalogSearch">Dites-le simplement à Dolcia</label><input id="catalogSearch" value="${esc(filters.query)}" placeholder="Avec les enfants, face à la mer, sans trop marcher…" oninput="liveCatalogSearch(this.value)"><small><b></b><span>${items.length} possibilités explorées maintenant</span></small></div><button class="voice-live" onclick="startCatalogVoice()" aria-label="Dicter mon envie">◉</button></div><div class="signature-actions"><button class="signature-compose" onclick="surprise()"><span>Dolcia s’occupe de tout</span><strong>${composeCta()}</strong><b>→</b></button><button class="signature-adjust" onclick="openEclatDialogue()">Préciser mon moment</button></div></section><section class="catalog-shell result-first"><div class="catalog-toolbar compact-toolbar"><div class="catalog-families">${families.filter(([id])=>(id==='all'||counts[id]>0)&&(id!=='hotel'||state.answers.duration==='stay')).map(([id,label])=>`<button class="${filters.family===id?'selected':''}" onclick="setCatalogFamily('${id}')">${label}<small>${counts[id]}</small></button>`).join('')}</div><details class="advanced-refinements"><summary><span>Affiner les résultats</span><small>Distance, disponibilité, confiance et tri</small><b>+</b></summary><div class="catalog-controls"><select onchange="setCatalogSort(this.value)"><option value="recommended" ${filters.sort==='recommended'?'selected':''}>Les plus pertinents</option><option value="distance" ${filters.sort==='distance'?'selected':''}>Les plus proches</option><option value="rating" ${filters.sort==='rating'?'selected':''}>Les mieux notés</option><option value="new" ${filters.sort==='new'?'selected':''}>Événements en premier</option></select><select onchange="setCatalogAvailability(this.value)"><option value="all" ${filters.availability==='all'?'selected':''}>Toutes les disponibilités</option><option value="open" ${filters.availability==='open'?'selected':''}>Ouverts maintenant</option><option value="scheduled" ${filters.availability==='scheduled'?'selected':''}>Événements avec horaire</option></select><select onchange="setCatalogBudget(this.value)"><option value="all" ${!filters.budget||filters.budget==='all'?'selected':''}>Tous budgets</option><option value="0" ${filters.budget==='0'?'selected':''}>€ Économique</option><option value="1" ${filters.budget==='1'?'selected':''}>€€ Modéré</option><option value="2" ${filters.budget==='2'?'selected':''}>€€€ Confort</option><option value="3" ${filters.budget==='3'?'selected':''}>€€€€ Premium</option></select><button onclick="startCompose()">Date, groupe et budget</button></div><div class="refinement-lenses">${adaptiveLensDefinitions().filter(lens=>state.allItems.some(lens.test)).map(lens=>`<button class="${['signature','pepite'].includes(lens.id)?'lens-signature ':''}${(filters.lenses||[]).includes(lens.id)?'selected':''}" onclick="toggleAdaptiveLens('${lens.id}')">${lens.label}</button>`).join('')}</div></details></div><div class="catalog-summary"><strong>${items.length} idées disponibles</strong><span>Classées selon votre moment · jamais selon le montant payé par un partenaire</span><button class="map-toggle" onclick="toggleCatalogMapView()">${filters.mapView?'Voir la liste':'Voir la carte'}</button></div><div id="catalogMapView" class="catalog-map-view" ${filters.mapView?'':'hidden'}></div>${filters.family==='hotel'?abundantWidenPrompt('hotel'):''}${items.length&&!filters.mapView?`<div class="catalog-list">${shown.map((item,index)=>experience(item,index,'')).join('')}</div>`:!items.length?zeroResultRecovery({embedded:true}):''}${shown.length<items.length&&!filters.mapView?`<button class="catalog-more" onclick="showMoreCatalog()">Découvrir ${Math.min(60,items.length-shown.length)} idées de plus</button>`:''}</section>`,'discover');
+  if(filters.mapView)requestAnimationFrame(()=>renderCatalogMap(items))
   document.querySelector('.catalog-toolbar')?.insertAdjacentHTML('beforebegin',momentTruthPanel(items,'explorer'));
   clarifyExplorerUi();
 }
@@ -1830,6 +1888,33 @@ function setCatalogAvailability(value){state.catalogFilters.availability=value;s
 function setCatalogBudget(value){state.catalogFilters.budget=value;state.catalogFilters.limit=60;renderResults()}
 function applyCatalogSearch(){state.catalogFilters.query=document.querySelector('#catalogSearch')?.value.trim()||'';state.catalogFilters.limit=60;renderResults()}
 function showMoreCatalog(){state.catalogFilters.limit+=60;renderResults()}
+function toggleCatalogMapView(){
+  state.catalogFilters=state.catalogFilters||{};
+  state.catalogFilters.mapView=!state.catalogFilters.mapView;
+  renderResults();
+}
+let catalogLeafletMap=null;
+// Carte interactive — chargée uniquement si Leaflet est disponible (chargé via CDN dans
+// index.html). Si le script externe n'a pas pu se charger (réseau restreint, blocage), la carte
+// affiche honnêtement ce manque plutôt que d'échouer silencieusement ou de simuler des marqueurs.
+function renderCatalogMap(items){
+  const container=document.querySelector('#catalogMapView');if(!container)return;
+  if(typeof L==='undefined'){container.innerHTML='<div class="map-unavailable">La carte interactive n’a pas pu se charger. Vérifiez votre connexion, ou consultez la liste ci-dessus.</div>';return}
+  const located=items.filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lng));
+  container.innerHTML='';
+  if(!located.length){container.innerHTML='<div class="map-unavailable">Aucun lieu suffisamment localisé pour cette sélection.</div>';return}
+  if(catalogLeafletMap){catalogLeafletMap.remove();catalogLeafletMap=null}
+  catalogLeafletMap=L.map(container,{scrollWheelZoom:false}).setView([state.location.lat,state.location.lng],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(catalogLeafletMap);
+  const bounds=[];
+  located.forEach(item=>{
+    const marker=L.marker([item.lat,item.lng]).addTo(catalogLeafletMap);
+    marker.bindPopup(`<strong>${esc(item.name)}</strong><br>${esc(item.address||'')}<br><a href="#" onclick="closeCatalogMapPopup();openDetail('${item.id}');return false;">Voir la fiche</a>`);
+    bounds.push([item.lat,item.lng]);
+  });
+  if(bounds.length>1)catalogLeafletMap.fitBounds(bounds,{padding:[30,30]});
+}
+function closeCatalogMapPopup(){if(catalogLeafletMap)catalogLeafletMap.closePopup()}
 
 function clarifyProgramUi(){
   document.querySelectorAll('.essential-nav .nav-item').forEach(button=>button.classList.remove('active'));
@@ -1934,7 +2019,40 @@ function programDecisionPrompt(slot,index){
   if(energy==='high'&&state.programPreferences.energy==='ask'){
     return `<aside class="d-decision energy">${dMascotMark('decision')}<div class="d-decision-copy"><small>D veille au rythme, sans l’imposer</small><strong>Vous venez de bouger. Comment voulez-vous poursuivre ?</strong><p>Je peux maintenir l’élan sportif, créer un contraste ou vous laisser récupérer. Aucune option n’est choisie sans vous.</p></div><div class="d-decision-options"><button onclick="applyProgramDirection('energy','continue')">On continue sport +++</button><button onclick="applyProgramDirection('energy','contrast')">On change d’énergie</button><button onclick="applyProgramDirection('energy','recover')">On ralentit vraiment</button></div></aside>`;
   }
+  const split=familySplitOpportunity(index);
+  if(split&&state.programPreferences.split!=='declined'&&!state.programPreferences[`split_${index}`]){
+    return `<aside class="d-decision split">${dMascotMark('decision')}<div class="d-decision-copy"><small>D a repéré une occasion utile</small><strong>Et si chacun profitait à sa façon, avant de vous retrouver ?</strong><p>${esc(split.kids.name)} pour les enfants, ${esc(split.adults.name)} pour vous — au même moment, puis on réunit tout le monde ensuite.</p></div><div class="d-decision-options"><button onclick="applyFamilySplit(${index})">Séparer ce moment</button><button onclick="declineFamilySplit(${index})">Rester tous ensemble</button></div></aside>`;
+  }
   return'';
+}
+// Détecte une vraie occasion de split familial : le groupe compte au moins un enfant ET au moins
+// un adulte, et il existe réellement, dans le pool disponible, une activité adaptée aux enfants et
+// une activité adaptée aux adultes, compatibles avec le même créneau horaire — jamais inventé,
+// jamais proposé si l'une des deux options n'existe pas vraiment.
+function familySplitOpportunity(index){
+  const slot=state.program[index];if(!slot)return null;
+  const profiles=currentGroupProfiles();
+  const hasChild=profiles.some(person=>person.kind==='child'),hasAdult=profiles.some(person=>person.kind!=='child');
+  if(!hasChild||!hasAdult)return null;
+  const used=new Set(state.program.map(s=>s.item.id));
+  const label=slot.label;
+  const kidsCandidate=(state.allItems||[]).find(candidate=>!used.has(candidate.id)&&['outside','active'].includes(candidate.category)&&isTimeCompatible(candidate,label)&&/famille|enfant|jeux|plage|parc|poney|ferme/i.test(plainText(`${candidate.name||''}`)));
+  const adultsCandidate=(state.allItems||[]).find(candidate=>!used.has(candidate.id)&&candidate.id!==kidsCandidate?.id&&['slow','food'].includes(candidate.category)&&isTimeCompatible(candidate,label)&&/spa|massage|restaurant|degustation|bar|romantique/i.test(plainText(`${candidate.name||''}`)));
+  if(!kidsCandidate||!adultsCandidate)return null;
+  return {kids:kidsCandidate,adults:adultsCandidate};
+}
+function applyFamilySplit(index){
+  const split=familySplitOpportunity(index);if(!split)return;
+  const slot=state.program[index];
+  state.program[index]={...slot,item:split.kids,splitPartner:split.adults,splitLabel:slot.label};
+  state.programPreferences[`split_${index}`]='applied';
+  state.items=state.program.map(s=>s.item);
+  save();state.view==='surprise'?renderSurprise():renderResults();
+  showToast('Deux expériences en parallèle, puis vous vous retrouvez ensuite');
+}
+function declineFamilySplit(index){
+  state.programPreferences[`split_${index}`]='declined';
+  save();state.view==='surprise'?renderSurprise():renderResults();
 }
 function applyProgramDirection(kind,value){
   if(!['energy','dining','fatigue'].includes(kind))return;
@@ -2047,9 +2165,19 @@ function refineAnimateChoice(intent){
 function openDolciaAnimate(mode='animate'){
   document.querySelector('#dolciaAnimate')?.remove();
   const selected=mode==='coach'?'sport':suggestedAnimateProgram();
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal dolcia-animate" id="dolciaAnimate"><article data-role="${mode}"><button class="close" onclick="document.querySelector('#dolciaAnimate')?.remove()">×</button><header><span>D<i>✦</i></span><div><small>D · compagnon, coach et animateur</small><h2>D vous accueille avant de lancer quoi que ce soit</h2><p>Parlez-lui. Elle comprend l’énergie du groupe, choisit une vraie séance et reste avec vous du début à la fin.</p></div></header><section class="d-role-switch"><button class="${mode==='coach'?'selected':''}" onclick="openDolciaAnimate('coach')"><b>Coach sportif</b><span>Exercices concrets, variantes, rythme, jeu et encouragements</span></button><button class="${mode==='animate'?'selected':''}" onclick="openDolciaAnimate('animate')"><b>Animateur du club</b><span>Défis, équipes, suspense, rires et célébration</span></button></section><div class="animate-quick-questions"><span>D commence la discussion :</span><p class="d-launcher-line">« Bonjour ${esc(currentGroupProfiles().map(person=>person.name).filter(name=>name!=='Moi').slice(0,3).join(', ')||'tout le monde')} ! Aujourd’hui, je ne vous donne pas une fiche : je prends le micro. Vous avez envie de transpirer, de jouer ou de vous challenger ensemble ? »</p><div>${mode==='coach'?`<button onclick="refineAnimateChoice('move')">Du cardio fun</button><button onclick="previewDolciaAnimate('renforcement')">Un challenge tonique</button><button onclick="previewDolciaAnimate('olympiades_plage')">Des olympiades sportives</button><button onclick="refineAnimateChoice('water')">Bouger dans l’eau</button>`:`<button onclick="refineAnimateChoice('move')">On veut bouger</button><button onclick="refineAnimateChoice('calm')">On veut souffler</button><button onclick="refineAnimateChoice('laugh')">On veut rire ensemble</button><button onclick="refineAnimateChoice('family')">On a des enfants</button><button onclick="refineAnimateChoice('water')">On est près de l'eau</button><button onclick="refineAnimateChoice('together')">On veut juste se retrouver</button>`}</div></div><div class="animate-choices">${Object.entries(DOLCIA_ANIMATE_PROGRAMS).filter(([,program])=>mode==='coach'?program.coach||/Olympiades|aquatique/.test(program.title):!program.coach).map(([id,program])=>`<button class="${selected===id?'selected':''}" onclick="previewDolciaAnimate('${id}')"><small>${esc(program.tone)} · ${program.duration} min</small><strong>${esc(program.title)}</strong><span>${esc(program.place)}</span></button>`).join('')}</div><div id="animatePreview"></div><aside><b>Sécurité réelle</b><span>D adapte l’intensité à ce que vous lui dites, mais ne prétend pas voir votre corps. Arrêtez en cas de douleur ou malaise. Pour l’eau et les enfants : surveillance adulte active, constante et à portée de bras, et règles du lieu.</span></aside></article></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal dolcia-animate" id="dolciaAnimate"><article data-role="${mode}"><button class="close" onclick="document.querySelector('#dolciaAnimate')?.remove()">×</button><header><span>D<i>✦</i></span><div><small>D · compagnon, coach et animateur</small><h2>D vous accueille avant de lancer quoi que ce soit</h2><p>Parlez-lui. Elle comprend l’énergie du groupe, choisit une vraie séance et reste avec vous du début à la fin.</p></div></header><section class="d-role-switch"><button class="${mode==='coach'?'selected':''}" onclick="openDolciaAnimate('coach')"><b>Coach sportif</b><span>Exercices concrets, variantes, rythme, jeu et encouragements</span></button><button class="${mode==='animate'?'selected':''}" onclick="openDolciaAnimate('animate')"><b>Animateur du club</b><span>Défis, équipes, suspense, rires et célébration</span></button></section>${mode==='coach'?coachProgressionSummary():''}<div class="animate-quick-questions"><span>D commence la discussion :</span><p class="d-launcher-line">« Bonjour ${esc(currentGroupProfiles().map(person=>person.name).filter(name=>name!=='Moi').slice(0,3).join(', ')||'tout le monde')} ! Aujourd’hui, je ne vous donne pas une fiche : je prends le micro. Vous avez envie de transpirer, de jouer ou de vous challenger ensemble ? »</p><div>${mode==='coach'?`<button onclick="refineAnimateChoice('move')">Du cardio fun</button><button onclick="previewDolciaAnimate('renforcement')">Un challenge tonique</button><button onclick="previewDolciaAnimate('olympiades_plage')">Des olympiades sportives</button><button onclick="refineAnimateChoice('water')">Bouger dans l’eau</button>`:`<button onclick="refineAnimateChoice('move')">On veut bouger</button><button onclick="refineAnimateChoice('calm')">On veut souffler</button><button onclick="refineAnimateChoice('laugh')">On veut rire ensemble</button><button onclick="refineAnimateChoice('family')">On a des enfants</button><button onclick="refineAnimateChoice('water')">On est près de l'eau</button><button onclick="refineAnimateChoice('together')">On veut juste se retrouver</button>`}</div></div><div class="animate-choices">${Object.entries(DOLCIA_ANIMATE_PROGRAMS).filter(([,program])=>mode==='coach'?program.coach||/Olympiades|aquatique/.test(program.title):!program.coach).map(([id,program])=>`<button class="${selected===id?'selected':''}" onclick="previewDolciaAnimate('${id}')"><small>${esc(program.tone)} · ${program.duration} min</small><strong>${esc(program.title)}</strong><span>${esc(program.place)}</span></button>`).join('')}</div><div id="animatePreview"></div><aside><b>Sécurité réelle</b><span>D adapte l’intensité à ce que vous lui dites, mais ne prétend pas voir votre corps. Arrêtez en cas de douleur ou malaise. Pour l’eau et les enfants : surveillance adulte active, constante et à portée de bras, et règles du lieu.</span></aside></article></div>`);
   previewDolciaAnimate(selected)
   requestAnimationFrame(upgradeAnimateLauncher)
+}
+// Promesse du Product Book : "Le Coach sportif accompagne une pratique ET une progression."
+// Fondé uniquement sur state.animateHistory, déjà réellement sauvegardé à chaque séance —
+// jamais un score de forme inventé, jamais une tendance devinée sans assez de séances réelles.
+function coachProgressionSummary(){
+  const sportSessions=(state.animateHistory||[]).filter(record=>DOLCIA_ANIMATE_PROGRAMS[record.program]?.coach);
+  if(!sportSessions.length)return'';
+  const count=sportSessions.length,last=sportSessions[0],daysSinceLast=Math.floor((Date.now()-new Date(last.completedAt).getTime())/86400000);
+  const completedFully=sportSessions.filter(session=>session.completed).length;
+  return `<div class="coach-progression"><span class="kicker">Votre progression réelle</span><strong>${count} séance${count>1?'s':''} avec D</strong><small>Dernière séance ${daysSinceLast===0?'aujourd’hui':daysSinceLast===1?'hier':`il y a ${daysSinceLast} jours`} · ${completedFully} sur ${count} menée${completedFully>1?'s':''} jusqu’au bout</small></div>`;
 }
 function upgradeAnimateLauncher(){
   const article=document.querySelector('#dolciaAnimate > article');
@@ -2632,7 +2760,7 @@ async function openDetail(id){
   const actions=detailActions(item),quality=detailQuality(item,verified);
   const modal=document.querySelector('#modal');if(!modal)return;
   modal.setAttribute('onclick','if(event.target===this)closeDetail()');
-  modal.innerHTML=`<article class="detail">${detailQuickActions(item)}<div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${verified?'Information vérifiée':quality==='minimal'?'Fiche Dolcia · quelques informations à confirmer':'Fiche utile · informations partielles'}</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p>${item.officialSource?`<div class="source-proof"><b>Confirmé par ${esc(item.officialSource)}</b><span>Source officielle consultée${item.officialCheckedAt?' le '+new Date(item.officialCheckedAt).toLocaleDateString('fr-FR'):''}</span></div>`:''}${item.detailWarning?`<div class="detail-warning">${esc(item.detailWarning)} Vérifiez les informations décisives avant de réserver.</div>`:''}<div class="verified-facts">${facts}</div>${preExperiencePanel(item)}${hasHappened(item)?postExperiencePanel(item):''}<div class="detail-actions">${renderDetailActions(actions)}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article>`;
+  modal.innerHTML=`<article class="detail">${detailQuickActions(item)}<div class="detail-image" id="detailHero" style="background-image:url('${photos[0]}')"></div>${photos.length>1?`<div class="photo-strip">${photos.map((p,n)=>`<button class="photo-thumb ${n===0?'active':''}" style="background-image:url('${p}')" onclick="selectPhoto(this,'${p}')" aria-label="Photo ${n+1}"></button>`).join('')}</div>`:''}<div class="detail-body"><span class="kicker">${verified?'Information vérifiée':quality==='minimal'?'Fiche Dolcia · quelques informations à confirmer':'Fiche utile · informations partielles'}</span><h2>${esc(item.name)}</h2><p>${esc(item.summary||whyDetail(item))}</p>${item.officialSource?`<div class="source-proof"><b>Confirmé par ${esc(item.officialSource)}</b><span>Source officielle consultée${item.officialCheckedAt?' le '+new Date(item.officialCheckedAt).toLocaleDateString('fr-FR'):''}</span></div>`:item.contactOrigin?`<div class="source-proof"><b>${esc(item.contactOrigin)}</b><span>${item.contactVerifiedAt?'Vérifié le '+new Date(item.contactVerifiedAt).toLocaleDateString('fr-FR')+' à '+new Date(item.contactVerifiedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'Origine confirmée, date de vérification non disponible'}</span></div>`:''}${item.detailWarning?`<div class="detail-warning">${esc(item.detailWarning)} Vérifiez les informations décisives avant de réserver.</div>`:''}<div class="verified-facts">${facts}</div>${preExperiencePanel(item)}${hasHappened(item)?postExperiencePanel(item):''}<div class="detail-actions">${renderDetailActions(actions)}</div><small class="build-mark">Dolcia ${APP_BUILD}</small></div></article>`;
 }
 function preExperiencePanel(item){return `<div class="preference-panel emotion-panel"><span class="emotion-kicker">Avant de le vivre</span><strong>Est-ce que ce moment vous ressemble ?</strong><div class="preference-actions"><button class="${state.favorites.includes(item.id)?'selected':''}" onclick="rate('${item.id}','favorite')">Coup de cœur</button><button class="${state.feedback[item.id]==='like'?'selected':''}" onclick="rate('${item.id}','like')">Ça me donne envie</button><button class="${state.feedback[item.id]==='later'?'selected':''}" onclick="rate('${item.id}','later')">Pas maintenant</button><button class="${state.feedback[item.id]==='dislike'?'selected':''}" onclick="rate('${item.id}','dislike')">Pas pour moi</button></div><small>Ces choix restent privés et affinent uniquement votre concierge.</small></div>`}
 function hasHappened(item){const agendaItem=state.agenda.find(x=>x.id===item.id);return Boolean(agendaItem?.agendaDate&&new Date(agendaItem.agendaDate).getTime()<=Date.now())}
@@ -2655,12 +2783,56 @@ function showAddConfirmation(message='Ajouté à votre programme'){
   clearTimeout(addConfirmTimer);
   addConfirmTimer=setTimeout(()=>document.querySelector('#addConfirm')?.remove(),7000);
 }
-async function addAgenda(id,slotLabel=''){const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
+async function addAgenda(id,slotLabel=''){
+  const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;
+  if(i.source==='Google Places'&&i.placeId&&!i.detailsKnown){showToast('Dolcia vérifie le créneau avant de l’ajouter…');try{const response=await fetch(`/api/place-details?id=${encodeURIComponent(i.placeId)}`),details=await response.json();if(details.verified)Object.assign(i,{detailsKnown:true,openingPeriods:details.openingPeriods||[],hours:details.hours||[],phone:details.phone||null,website:details.website||null,booking:details.booking||details.website||i.booking,isOpen:details.openNow,officialSource:details.officialSource||null})}catch(_){}}
   const compatibility=momentCompatibility(i);
   if(compatibility==='incompatible')return showToast('Cette activité n’est pas compatible avec votre horaire');
   if(compatibility==='open-not-session'||(compatibility==='unknown'&&requiresPublishedSession(i)))return showToast('Impossible de l’ajouter sans séance réellement confirmée');
   if(compatibility==='unknown')return showToast('Dolcia doit encore confirmer l’horaire avant l’ajout');
-  if(!state.agenda.some(x=>x.id===id)){state.agenda.push({...i,agendaDate:agendaDateFor(i,slotLabel),agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});save();if(navigator.vibrate)navigator.vibrate(12);closeDetail();refreshNavBadge();showAddConfirmation(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda')}else{showToast('Cette activité est déjà dans votre agenda');closeDetail()}}
+  if(state.agenda.some(x=>x.id===id)){showToast('Cette activité est déjà dans votre agenda');return closeDetail()}
+  openAddToAgendaModal(id,slotLabel,i,compatibility);
+}
+function openAddToAgendaModal(id,slotLabel,item,compatibility){
+  /* Une activité à date réelle et confirmée (concert, événement daté) n'a rien à choisir : son
+     jour et son heure viennent de la source, jamais d'une préférence arbitraire. Seule sa durée
+     reste éventuellement ajustable. Une activité libre (restaurant, visite, balade) doit au
+     contraire laisser choisir le jour (si le séjour dure plusieurs jours), l'heure et la durée
+     avant de valider — jamais un ajout silencieux. */
+  const fixedDate=Boolean(item.date&&item.timeKnown!==false);
+  const stay=state.answers.duration==='stay'&&tripDays()>1;
+  const base=fixedDate?new Date(item.date):(()=>{const d=new Date(state.dateStart);const match=(slotLabel||'').match(/(\d{2}):(\d{2})/);if(match)d.setHours(Number(match[1]),Number(match[2]),0,0);else if(d<new Date())d.setHours(new Date().getHours()+1,0,0,0);return d})();
+  const days=stay?Array.from({length:tripDays()},(_,index)=>{const d=new Date(state.dateStart);d.setDate(d.getDate()+index);return d}):[base];
+  const defaultDayIndex=stay?Math.max(0,days.findIndex(d=>sameDay(d,base))):0;
+  document.querySelector('#addToAgendaModal')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal add-to-agenda-modal" id="addToAgendaModal"><article><button class="close" onclick="document.querySelector('#addToAgendaModal')?.remove()" aria-label="Fermer">×</button><span class="kicker">${fixedDate?'Horaire confirmé par la source':'Choisissez le moment'}</span><h2>${esc(item.name)}</h2>${fixedDate?`<p>${new Date(item.date).toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} · horaire fixé par l'organisateur, non modifiable.</p>`:`
+    ${stay?`<label>Jour du séjour<select id="agendaDayPick">${days.map((d,index)=>`<option value="${index}" ${index===defaultDayIndex?'selected':''}>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</option>`).join('')}</select></label>`:''}
+    <label>Heure<input type="time" id="agendaTimePick" value="${String(base.getHours()).padStart(2,'0')}:${String(base.getMinutes()).padStart(2,'0')}"></label>
+    <label>Durée prévue<select id="agendaDurationPick"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option><option value="180">3 h</option><option value="240">Demi-journée</option></select></label>
+    <small>Vous pourrez toujours déplacer cette activité ensuite depuis l'agenda.</small>`}
+    <button class="primary" onclick="confirmAddAgenda('${id}','${esc(slotLabel)}',${fixedDate},${defaultDayIndex},'${stay?days.map(d=>iso(d)).join(',') :iso(base)}')">Confirmer l'ajout</button>
+  </article></div>`);
+}
+function confirmAddAgenda(id,slotLabel,fixedDate,defaultDayIndex,daysCsv){
+  const i=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!i)return;
+  const compatibility=momentCompatibility(i);
+  let finalDate;
+  if(fixedDate==='true'||fixedDate===true){finalDate=new Date(i.date)}
+  else{
+    const days=daysCsv.split(',');
+    const dayPick=document.querySelector('#agendaDayPick');
+    const chosenDay=dayPick?days[Number(dayPick.value)]:days[0];
+    const time=document.querySelector('#agendaTimePick')?.value||'12:00';
+    const [h,m]=time.split(':').map(Number);
+    finalDate=new Date(chosenDay);finalDate.setHours(h,m,0,0);
+  }
+  const durationMinutes=Number(document.querySelector('#agendaDurationPick')?.value||60);
+  state.agenda.push({...i,agendaDate:finalDate.toISOString(),agendaDurationMinutes:durationMinutes,agendaSlot:slotLabel,addedAt:new Date().toISOString(),timeConfidence:compatibility});
+  save();if(navigator.vibrate)navigator.vibrate(12);
+  document.querySelector('#addToAgendaModal')?.remove();
+  closeDetail();refreshNavBadge();
+  showAddConfirmation(compatibility==='autonomous'?'Activité libre ajoutée · vérifiez les conditions':'Activité vérifiée et ajoutée à votre agenda');
+}
 function agendaDateFor(item,slotLabel=''){if(item.date)return item.date;const date=new Date(state.dateStart);const match=slotLabel.match(/(\d{2}):(\d{2})/);if(match)date.setHours(Number(match[1]),Number(match[2]),0,0);return date.toISOString()}
 function adoptSurprise(){state.program.forEach(slot=>{if(!state.agenda.some(item=>item.id===slot.item.id))state.agenda.push({...slot.item,agendaDate:agendaDateFor(slot.item,slot.label),agendaSlot:slot.label,addedAt:new Date().toISOString(),fromSurprise:true})});state.agenda.sort((a,b)=>new Date(a.agendaDate)-new Date(b.agendaDate));save();showToast('Votre programme est ajouté à l’agenda');renderAgenda()}
 function surprise(forceNew=false){if(!state.allItems.length){state.radius=Math.min(state.radius*1.6,60000);showToast('Dolcia compose votre programme…');return compose()}if(forceNew||state.view!=='surprise'){const pool=[...state.allItems].sort(()=>Math.random()-.5);state.program=buildProgram(pool);if(state.majorChoice)state.program=injectMajorMoment(state.program);state.items=state.program.map(slot=>slot.item)}renderSurprise();showToast(forceNew?'Un nouveau programme vient d’être composé':'Votre programme est prêt')}
@@ -2677,8 +2849,20 @@ function renderAgendaLegacy(){/* Conservé uniquement pour compatibilité des an
 function renderServices(){state.view='services';const services=[['animate','Animateur & coach','Une présence humaine qualifiée pour animer, guider ou encadrer un moment.'],['babysitting','Babysitting de confiance','Profils vérifiés, âges acceptés, disponibilités et contact d’urgence.'],['driver','Chauffeur & navette','Aller, retour, capacité, délai et prix total reliés à votre programme.'],['concierge','Concierge humain','Une demande spéciale prise en charge de bout en bout.'],['home','Ménage & intendance','Préparer, entretenir ou remettre en ordre votre hébergement.'],['booking','Réservations difficiles','Dolcia sollicite ses partenaires pour vous.']];app.innerHTML=shell(`<section class="services-view"><div class="services-hero"><span class="kicker">Le club sans murs</span><h2>Profitez.<br>On s’occupe du reste.</h2><p>Animation, mobilité, garde et conciergerie rejoignent le même programme uniquement lorsqu’un professionnel réellement disponible peut intervenir.</p><div><button class="primary" onclick="openDolciaAnimate()">Essayer Dolcia Anime</button><button class="secondary" onclick="renderAgenda()">Voir mon programme</button></div></div><div class="trust-banner"><strong>La confiance avant la vitesse.</strong><span>Identité, qualifications, assurance, avis, délai d’arrivée et prix total devront être visibles avant réservation. Aucun prestataire fictif ne sera proposé.</span></div><div class="service-grid">${services.map(service=>`<article class="service-card"><span class="service-status">Ouverture territoire par territoire</span><h3>${service[1]}</h3><p>${service[2]}</p><button onclick="serviceInterest('${service[0]}')">M’avertir à l’ouverture</button></article>`).join('')}</div></section>`,'services')}
 function serviceInterest(type){const interests=JSON.parse(localStorage.getItem('dolcia_service_interests')||'[]');if(!interests.includes(type))interests.push(type);localStorage.setItem('dolcia_service_interests',JSON.stringify(interests));showToast('Votre intérêt est enregistré. Aucun push ne sera envoyé sans votre accord.')}
 function agendaTravelConnector(from,to){
-  if(!Number.isFinite(from.lat)||!Number.isFinite(from.lng)||!Number.isFinite(to.lat)||!Number.isFinite(to.lng))return `<div class="agenda-connector"><i></i><span>Trajet à estimer sur place</span></div>`;
+  const fromStart=new Date(from.agendaDate||from.date),toStart=new Date(to.agendaDate||to.date);
+  const fromDuration=activityDurationPresentation(from).minutes||0;
+  const availableMinutes=Math.round((toStart-fromStart)/60000)-fromDuration;
+  if(!Number.isFinite(from.lat)||!Number.isFinite(from.lng)||!Number.isFinite(to.lat)||!Number.isFinite(to.lng)){
+    return `<div class="agenda-connector"><i></i><span>Trajet à estimer sur place</span></div>`;
+  }
   const km=distanceKm(from.lat,from.lng,to.lat,to.lng),walking=km<=1.2,minutes=Math.max(1,Math.round(walking?km*12:km*2.3));
+  // Vraie détection de faisabilité, pas seulement une estimation informative : si la durée de
+  // l'activité précédente plus le trajet dépasse le temps réellement disponible avant la
+  // suivante, c'est un conflit réel à signaler, jamais un enchaînement présenté comme normal.
+  if(Number.isFinite(availableMinutes)&&availableMinutes<minutes){
+    const missing=minutes-availableMinutes;
+    return `<div class="agenda-connector conflict"><i>⚠</i><span>${walking?'À pied':'En voiture'} · environ ${minutes} min · ${km.toFixed(1)} km — il manque environ ${missing} min pour enchaîner sereinement</span></div>`;
+  }
   return `<div class="agenda-connector"><i></i><span>${walking?'À pied':'En voiture'} · environ ${minutes} min · ${km.toFixed(1)} km · estimation</span></div>`;
 }
 function renderAgenda(){

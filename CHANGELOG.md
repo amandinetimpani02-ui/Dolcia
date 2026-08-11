@@ -877,3 +877,167 @@ type de programmation multi-dates qu'on a dû reconstruire à la main pour Le To
 - Le premier filtre contient désormais un agenda mensuel premium avec arrivée, départ, plage de séjour, jours, nuits et heures exactes.
 - Les cartes et fiches indiquent la durée ainsi que sa provenance : source confirmée, programme D ou estimation Dolcia.
 - 457 contrôles passent sans échec.
+
+## Correction de deux régressions fonctionnelles réelles, signalées directement — 1er août 2026
+
+**1. Identification du groupe rendue obligatoire sans échappatoire.** Choisir "En famille" ou
+"Entre amis" forçait systématiquement un écran de sélection des personnes présentes une par une,
+sans aucun raccourci. Corrigé : un bouton "Recherche rapide" permet de continuer avec seulement le
+contexte général (famille, amis...) sans identifier qui que ce soit — le moteur de recommandation
+utilise encore `context.who` pour adapter les catégories, mais aucun profil individuel n'est exigé.
+
+**2. Ajout à l'agenda instantané et silencieux, sans aucun choix.** `addAgenda` poussait
+directement l'activité dans l'agenda avec une date calculée en silence à partir du tout premier
+jour du séjour — aucune fenêtre, aucun moyen de choisir le jour (pour un séjour multi-jours),
+l'heure, ou la durée avant de valider. Corrigé : une fenêtre de confirmation s'ouvre désormais,
+avec un sélecteur de jour (si le séjour dure plusieurs jours), un champ heure, et une durée
+modifiables avant de valider. Une activité à date et heure réellement confirmées par la source
+(un concert, un événement daté) reste affichée comme non modifiable — jamais glissée dans un champ
+éditable qui laisserait croire qu'on peut changer l'heure d'un événement fixé par son organisateur.
+
+- 469 tests avant ce correctif, un test légitimement adapté à la nouvelle structure en deux étapes
+  (`addAgenda` ouvre désormais une fenêtre plutôt que d'ajouter directement), 6 nouveaux tests de
+  garde sur les deux corrections — 475 au total, tous verts.
+- Style minimal ajouté pour les deux nouveaux éléments d'interface, cohérent avec la palette
+  existante (`--lime`, `--muted`, `--line`) — aucun autre écran, animation, ou composant visuel
+  touché.
+
+## Deux problèmes réels de fiabilité, signalés directement, corrigés — 1er août 2026
+
+**1. Un commerce payant étiqueté comme gratuit.** "Club de plage - Caddy Sports Le Touquet" était
+marqué comme accès libre uniquement parce que son nom contient "plage" — aucune vérification
+n'excluait les clubs, écoles ou locations commerciales. Corrigé : la détection de gratuité exclut
+désormais explicitement club/location/école/cours/activités nautiques/sport, tout en conservant
+la vraie plage publique et les autres espaces réellement gratuits (testé avec 7 cas, y compris
+les cas limites qui doivent rester gratuits).
+
+**2. Le marché couvert du Touquet proposé un jour où il n'existe pas.** Vérifié par recherche
+réelle, sources concordantes (ville du Touquet, Petit Futé, guides locaux) : le marché n'ouvre que
+les lundi, jeudi et samedi — jamais les autres jours. Corrigé avec la même méthode que pour les
+festivals : un repère nommé et vérifié (`KNOWN_MARKET_DAYS`), jamais une règle générale inventée
+pour tous les marchés de France. Testé avec la vraie date d'aujourd'hui (mardi) : le marché
+redevient correctement incompatible.
+
+- 475 tests avant ce chantier, 4 nouveaux tests de garde — 479 au total, tous verts.
+
+## Séjour multi-jours enrichi et question logement ajoutée — signalé directement via capture d'écran — 1er août 2026
+
+**Problème confirmé exactement comme décrit** : "Composez mon séjour" sur 2 jours ne proposait que
+2 créneaux au total ("Jour 1 · Expérience phare", "Jour 2 · Expérience phare") — aucun déjeuner,
+aucun dîner visible dans la capture fournie, aucune structure horaire.
+
+**Corrigé** : chaque jour d'un séjour propose désormais 4 créneaux horodatés (09:30 début de
+journée, 12:30 déjeuner, 15:00 après-midi, 19:30 dîner ou soirée) au lieu de 2 sans horaire. La
+logique de budget repas (gastronomique/léger/économique/livraison), qui existait déjà mais ne
+pouvait jamais se déclencher faute de créneau déjeuner, s'applique désormais aussi au déjeuner —
+pas seulement au dîner.
+
+**Question manquante ajoutée** : aucune question ne demandait si la personne avait déjà un
+logement (résidence secondaire, location déjà prise) avant de chercher un hôtel. Un écran dédié
+("Avez-vous déjà un logement pour ce séjour ?") s'affiche désormais pour tout séjour de plusieurs
+jours, détecté automatiquement ou choisi explicitement — répondre "j'ai déjà où loger" retire
+proprement le créneau hébergement du programme, jamais un hôtel proposé quand même.
+
+- 479 tests avant ce chantier, 5 nouveaux tests de garde — 484 au total, tous verts.
+- Aucune option "pique-nique" dédiée n'a été ajoutée — la logique "compenser par un plaisir moins
+  cher" existante couvre le petit budget au déjeuner, mais une vraie suggestion pique-nique
+  (associer un commerce alimentaire à un espace pour le consommer) reste un chantier distinct, non
+  traité ici.
+
+## Première notification proactive fondée sur les goûts appris — promesse du Product Book — 1er août 2026
+
+Le Book promet : *"Dolcia pourra signaler qu'un événement correspondant à ses goûts commence
+bientôt."* Vérifié absent du code avant ce chantier — seul le PUSH commercial partenaire existait,
+jamais une anticipation personnelle fondée sur l'historique réel de la personne.
+
+**Implémenté, sans nouvel appel réseau significatif** : la fenêtre de récupération des événements
+ticketmaster du Home passe de "aujourd'hui seulement" à "aujourd'hui + 3 jours" — les mêmes
+données déjà chargées pour le pouls du jour servent aussi à cette détection. Un événement à venir
+(jamais aujourd'hui même, ce serait redondant avec le pouls du jour) est signalé uniquement si sa
+catégorie correspond à un goût réellement appris (`state.tasteProfile[category]>=3`) — un seuil
+volontairement élevé, jamais un simple like isolé qui donnerait une fausse impression de
+personnalisation.
+
+Testé concrètement avant livraison : un concert (catégorie apprise, score 4) remonte ; une
+dégustation (catégorie sous le seuil, score 1) reste invisible ; sans aucun historique, rien ne
+s'affiche jamais — jamais une anticipation fabriquée pour combler un vide.
+
+- 484 tests avant ce chantier, 4 nouveaux tests de garde — 488 au total, tous verts.
+- **Non fait, à dire clairement** : la musique signature Dolcia et les systèmes de
+  réservation/paiement/navettes restent des chantiers distincts, non commencés — cohérent avec la
+  roadmap du Book lui-même, qui les place après la consolidation du cœur du produit.
+
+## Split familial (enfants / adultes) puis réunion — deuxième promesse du Book — 1er août 2026
+
+Le Book promet : *"proposer une activité commune, puis momentanément deux expériences
+différentes — par exemple une activité pour les enfants pendant que les parents profitent d'un
+moment à deux — avant de réunir de nouveau tout le monde."* Vérifié absent avant ce chantier —
+zéro occurrence dans tout le code.
+
+**Implémenté avec la même prudence que le reste** : la détection exige qu'existent réellement,
+dans le pool déjà chargé, une activité adaptée aux enfants ET une activité adaptée aux adultes,
+compatibles avec le même créneau — jamais proposé si l'une des deux manque. Le groupe doit
+également compter un enfant et un adulte réels (`kind==='child'`), jamais deviné depuis un simple
+nombre de personnes. Présenté comme un vrai choix (« Séparer ce moment » / « Rester tous
+ensemble »), jamais automatique — refuser une fois est mémorisé par créneau pour ne pas reposer
+indéfiniment la même question.
+
+Testé concrètement avant livraison : un groupe sans enfant ne déclenche jamais rien ; un groupe
+avec enfants mais sans les deux candidats réels ne déclenche rien non plus.
+
+- 488 tests avant ce chantier, 4 nouveaux tests de garde — 492 au total, tous verts.
+- **Reste non commencé** : la carte interactive montrée dans les maquettes du Book (bouton "Voir
+  la carte") — chantier distinct nécessitant une bibliothèque de cartographie, non traité ici.
+
+## Détection réelle de conflit d'horaires dans l'agenda — priorité identifiée de longue date — 1er août 2026
+
+Promesse du Book, priorité 3 identifiée très tôt dans le développement puis jamais traitée après
+plusieurs détours (DATAtourisme, connecteurs, distance/pépites) : *"Un restaurant peut être
+excellent mais incompatible avec l'horaire d'un spectacle."*
+
+**Vérifié avant de coder** : `agendaTravelConnector` existait déjà et affichait un temps de trajet
+estimé entre deux activités consécutives — mais ne vérifiait jamais si ce trajet tenait
+réellement dans le temps disponible compte tenu de la durée de l'activité précédente.
+
+**Corrigé** : le temps réellement disponible (écart entre les deux horaires, moins la durée de
+l'activité précédente) est maintenant comparé au trajet estimé. Un enchaînement impossible est
+signalé visuellement comme un vrai conflit (bordure et texte distincts), jamais présenté comme un
+trajet normal.
+
+Testé avec le cas exact du Book (un déjeuner qui empiète sur l'horaire suivant) et un cas normal
+avec largement le temps nécessaire, pour confirmer qu'aucune fausse alerte ne se déclenche.
+
+- 492 tests avant ce chantier, 4 nouveaux tests de garde — 496 au total, tous verts.
+
+## Trois derniers chantiers codables du Product Book — 1er août 2026
+
+**1. Progression du coach entre plusieurs séances.** `state.animateHistory` existait déjà et
+sauvegardait chaque séance, mais n'était jamais relu pour le coach spécifiquement. Un résumé réel
+(nombre de séances, dernière séance, taux de complétion) s'affiche désormais à l'ouverture du mode
+Coach sportif — fondé exclusivement sur l'historique réel, jamais un score de forme inventé, et
+les jeux/animations n'y sont jamais mélangés.
+
+**2. Fraîcheur de vérification affichée à l'utilisateur.** Google Places avait déjà cet affichage
+(`officialSource`/`officialCheckedAt`) ; DATAtourisme avait la donnée équivalente
+(`contactOrigin`/`contactVerifiedAt`, ajoutée plus tôt cette session) mais ne l'affichait jamais.
+Corrigé avec le même motif visuel pour les deux sources.
+
+**3. Carte interactive.** Leaflet (bibliothèque open-source, tuiles OpenStreetMap, aucune clé
+API requise) chargée via CDN avec les empreintes d'intégrité vérifiées sur la documentation
+officielle. Un bouton bascule entre liste et carte dans Explorer. Seuls les lieux avec de vraies
+coordonnées reçoivent un marqueur. Si Leaflet ne se charge pas, un message honnête l'indique plutôt
+qu'un échec silencieux ou des marqueurs simulés.
+
+**Limite honnête à signaler** : je ne peux pas faire tourner un vrai navigateur depuis mon
+environnement de développement — la carte n'a donc pas pu être vérifiée visuellement, seulement sa
+structure de code, sa syntaxe et sa logique (marqueurs, bascule, repli en cas d'échec de
+chargement). Une vraie vérification visuelle sur un navigateur ou un téléphone réel reste
+nécessaire avant de considérer ce chantier pleinement terminé.
+
+**Ce qui reste volontairement non fait, comme annoncé** : musique signature Dolcia (nécessite un
+vrai travail créatif audio) et réservation/paiement/navettes (le Book lui-même exige des contrats
+et garanties avant toute implémentation — en fabriquer une version qui a l'air de fonctionner sans
+backend réel serait exactement le genre de chose inventée que ce projet interdit).
+
+- 496 tests avant ce chantier (après le conflit d'horaires), 9 nouveaux tests de garde répartis
+  sur les trois sujets — 505 au total, tous verts.

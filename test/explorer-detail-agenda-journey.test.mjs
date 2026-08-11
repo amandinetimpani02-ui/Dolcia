@@ -15,17 +15,22 @@ test('le focus revient sur la carte ou le bouton qui avait ouvert la fiche — d
 
 test('après l’ajout au programme, Explorer ou le mode surprise ne sont plus jamais reconstruits entièrement', () => {
   const start = app.indexOf("async function addAgenda(id,slotLabel=''){");
-  const nextFn = app.indexOf('\nfunction agendaDateFor', start);
-  const fn = app.slice(start, nextFn);
-  assert.doesNotMatch(fn, /renderResults\(\)|renderSurprise\(\)/, 'addAgenda ne doit plus rerendre la liste');
-  assert.match(fn, /closeDetail\(\);refreshNavBadge\(\);showAddConfirmation/);
+  const nextFn = app.indexOf('\nfunction openAddToAgendaModal', start);
+  const addAgendaFn = app.slice(start, nextFn);
+  assert.doesNotMatch(addAgendaFn, /renderResults\(\)|renderSurprise\(\)/, 'addAgenda ne doit plus rerendre la liste');
+  const confirmStart = app.indexOf('function confirmAddAgenda(');
+  const confirmNext = app.indexOf('\nfunction ', confirmStart + 1);
+  const confirmFn = app.slice(confirmStart, confirmNext);
+  assert.doesNotMatch(confirmFn, /renderResults\(\)|renderSurprise\(\)/, 'confirmAddAgenda ne doit pas non plus rerendre la liste');
+  assert.match(confirmFn, /closeDetail\(\);refreshNavBadge\(\);/);
+  assert.match(confirmFn, /showAddConfirmation/);
 });
 
 test('la confirmation propose deux choix explicites, jamais l’ouverture automatique de l’agenda', () => {
   assert.match(app, /function showAddConfirmation\(message='Ajouté à votre programme'\)\{/);
   assert.match(app, /Continuer à explorer<\/button><button class="primary" onclick="renderAgenda\(\)">Voir mon agenda/);
   const start = app.indexOf("async function addAgenda(id,slotLabel=''){");
-  const nextFn = app.indexOf('\nfunction agendaDateFor', start);
+  const nextFn = app.indexOf('\nfunction openAddToAgendaModal', start);
   const fn = app.slice(start, nextFn);
   assert.doesNotMatch(fn, /[^A-Za-z]renderAgenda\(\)/, 'addAgenda ne doit jamais ouvrir directement l’agenda (seulement via le bouton de la confirmation)');
 });
