@@ -43,6 +43,6 @@ test('momentCompatibility rejette le marché couvert du Touquet un jour où il n
   const fn = app.slice(start, next);
   assert.match(fn, /rule\.days\.includes\(new Date\(state\.dateStart\)\.getDay\(\)\)/);
   const compatStart = app.indexOf('function momentCompatibility(item){');
-  const compatSection = app.slice(compatStart, compatStart + 900);
+  const compatSection = app.slice(compatStart, compatStart + 1300);
   assert.match(compatSection, /marketToday===false\)return'incompatible'/);
 });

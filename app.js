@@ -873,7 +873,7 @@ function homeNavScrollReveal(){
   if(poster&&window.scrollY>poster.offsetHeight*.6)document.body.classList.add('home-nav-revealed');
   else document.body.classList.remove('home-nav-revealed');
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button></div><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div id="tasteAnticipation" hidden></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button><button class="home-path discovery" onclick="openLocalDiscoveryWithD()"><small>D vous fait visiter</small><strong>Une balade guidée avec D</strong><span>Une découverte gratuite, ici et maintenant, depuis un lieu réel déjà vérifié près de vous.</span></button></div><div class="living-brief home-search"><button class="d-home-trigger" onclick="openEclatDialogue(false,'compose')" aria-label="Parler à D">${dMascotMark('mini')}</button><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div id="tasteAnticipation" hidden></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div><button id="homeThemeToggle" class="home-theme-toggle" onclick="toggleStandaloneDolciaTheme()" aria-pressed="false">▶ Écouter la musique Dolcia</button></section>`);loadHomePulse();applyHomeNavPreview()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -1305,10 +1305,9 @@ function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if
 function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
 function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration|éclipse|eclipse|pluie d.étoiles|grandes marées|phénomène astronomique/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:item.kind||'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
 function injectVerifiedSunsetMoment(){const seconds=Number(state.weather?.sys?.sunset),sunset=seconds?new Date(seconds*1000):null;if(!sunset||Number.isNaN(sunset.getTime())||iso(sunset)!==iso(state.dateStart))return;const site=astronomyObservationCandidates().find(item=>item.freeAccess);if(!site)return;const cloud=Number(state.weather?.clouds?.all),visibility=Number.isFinite(cloud)?cloud<=35?'Ciel actuellement peu nuageux':'Couverture nuageuse à surveiller':'Conditions météo à vérifier';const item={id:`sunset-${iso(sunset)}-${site.id}`,name:`Coucher de soleil depuis ${site.name}`,source:'OpenWeather · lieu Google Places',category:'outside',experienceKind:'nature',address:site.address,nameSite:site.name,lat:site.lat,lng:site.lng,date:sunset.toISOString(),endDate:new Date(sunset.getTime()+45*60000).toISOString(),timeKnown:true,durationMinutes:45,durationKnown:true,freeAccess:true,price:0,photo:itemImage(site),photos:site.photos||[],rating:site.rating,reviews:site.reviews,quality:'documented',official:false,summary:`Coucher à ${sunset.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}. ${visibility}. ${site.name} est un accès libre réel proche ; la vue sur l’horizon, l’accès et les conditions au moment précis restent à confirmer.`,detailsKnown:true};state.allItems.unshift(item)}
-function injectLocalFreeMoments(){
-  if(state.answers.budget!=='free')return;
+function generateLocalDiscoveryWithD(){
   const anchors=(state.allItems||[]).filter(item=>item.freeAccess&&Number.isFinite(item.lat)&&Number.isFinite(item.lng)&&geoVisible(item)).sort((a,b)=>(a.distance??999)-(b.distance??999)||(b.rating||0)-(a.rating||0)).slice(0,3);
-  if(!anchors.length)return;
+  if(!anchors.length)return[];
   const couple=state.answers.who==='couple';
   const concepts=couple?[
     ['parenthese-complice','La parenthèse complice au grand air',45,'Une promenade à deux ponctuée de trois invitations de D : observer ensemble, raconter un souvenir et choisir une prochaine envie.'],
@@ -1320,9 +1319,30 @@ function injectLocalFreeMoments(){
     ['marche-curieuse','La marche curieuse',35,'Une promenade sans performance où D invite chacun à repérer, raconter et partager ce qui rend le lieu singulier.']
   ];
   const start=new Date(state.dateStart);
-  const generated=concepts.map((concept,index)=>{const anchor=anchors[index%anchors.length],date=new Date(start.getTime()+index*70*60000);return{id:`dolcia-local-free-${concept[0]}-${anchor.id}`,name:concept[1],source:'Programme Dolcia · lieu Google Places',category:'outside',experienceKind:'nature',address:anchor.address||state.location.name,lat:anchor.lat,lng:anchor.lng,date:date.toISOString(),endDate:new Date(date.getTime()+concept[2]*60000).toISOString(),timeKnown:true,durationMinutes:concept[2],durationKnown:true,freeAccess:true,freeAccessEvidence:anchor.freeAccessEvidence||'Espace naturel ou public documenté',price:0,photo:itemImage(anchor),photos:anchor.photos||[],rating:anchor.rating,reviews:anchor.reviews,placeId:anchor.placeId,quality:'documented',official:false,detailsKnown:true,autonomousLocalMoment:true,summary:`${concept[3]} Point de départ réel : ${anchor.name}. Accès au lieu documenté ; météo, règles locales et éventuels services payants restent à vérifier.`,geoEligibility:anchor.geoEligibility,distance:anchor.distance,ranking:{confidence:'documented',reasons:['lieu réel à proximité','accès libre documenté','adapté au groupe']}}});
+  return concepts.map((concept,index)=>{const anchor=anchors[index%anchors.length],date=new Date(start.getTime()+index*70*60000);return{id:`dolcia-local-free-${concept[0]}-${anchor.id}`,name:concept[1],source:'Programme Dolcia · lieu Google Places',category:'outside',experienceKind:'nature',address:anchor.address||state.location.name,lat:anchor.lat,lng:anchor.lng,date:date.toISOString(),endDate:new Date(date.getTime()+concept[2]*60000).toISOString(),timeKnown:true,durationMinutes:concept[2],durationKnown:true,freeAccess:true,freeAccessEvidence:anchor.freeAccessEvidence||'Espace naturel ou public documenté',price:0,photo:itemImage(anchor),photos:anchor.photos||[],rating:anchor.rating,reviews:anchor.reviews,placeId:anchor.placeId,quality:'documented',official:false,detailsKnown:true,autonomousLocalMoment:true,summary:`${concept[3]} Point de départ réel : ${anchor.name}. Accès au lieu documenté ; météo, règles locales et éventuels services payants restent à vérifier.`,geoEligibility:anchor.geoEligibility,distance:anchor.distance,ranking:{confidence:'documented',reasons:['lieu réel à proximité','accès libre documenté','adapté au groupe']}}});
+}
+function injectLocalFreeMoments(){
+  if(state.answers.budget!=='free')return;
+  const generated=generateLocalDiscoveryWithD();
+  if(!generated.length)return;
   const existing=new Set(state.allItems.map(item=>item.id));
   state.allItems.unshift(...generated.filter(item=>!existing.has(item.id)));
+}
+// Accès autonome, depuis le Home, sans dépendre du choix "budget gratuit" en amont — répond
+// directement au besoin signalé : trouver une visite/balade guidée par D sans devoir d'abord
+// composer tout un moment. Réutilise la même génération, jamais une nouvelle logique parallèle.
+function openLocalDiscoveryWithD(){
+  if(!state.allItems.length){showToast('Dites d’abord un mot à Dolcia pour qu’elle découvre ce qui existe vraiment près de vous');return openEclatDialogue(false,'compose')}
+  const generated=generateLocalDiscoveryWithD();
+  document.querySelector('#localDiscoveryModal')?.remove();
+  if(!generated.length){
+    document.body.insertAdjacentHTML('beforeend',`<div class="modal" id="localDiscoveryModal"><article class="local-discovery-modal"><button class="close" onclick="document.querySelector('#localDiscoveryModal')?.remove()">×</button>${dMascotMark('large')}<h2>Pas encore assez de lieux libres vérifiés ici</h2><p>Dolcia ne fabrique jamais un point de départ. Essayez Explorer pour élargir la zone, ou revenez après une recherche.</p></article></div>`);
+    return;
+  }
+  const existing=new Set(state.allItems.map(item=>item.id));
+  state.allItems.unshift(...generated.filter(item=>!existing.has(item.id)));
+  save();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal local-discovery-modal" id="localDiscoveryModal"><article><button class="close" onclick="document.querySelector('#localDiscoveryModal')?.remove()">×</button><header>${dMascotMark('large')}<div><small>D vous fait découvrir</small><strong>Une balade ou un moment guidé, ici et maintenant</strong></div></header><p>Trois idées réelles, construites depuis un lieu déjà vérifié près de vous — jamais un lieu inventé.</p><div class="local-discovery-list">${generated.map(item=>`<button onclick=\"document.querySelector('#localDiscoveryModal')?.remove();openDetail('${item.id}')\"><strong>${esc(item.name)}</strong><span>${esc(item.durationMinutes)} min · départ : ${esc(item.address)}</span></button>`).join('')}</div></article></div>`);
 }
 function astronomyObservationCandidates(){return(state.allItems||[]).filter(item=>item.address&&['outside','active'].includes(item.category)&&!/musée|cinéma|théâtre|indoor|couvert/i.test(item.name||'')&&(!item.geoEligibility||item.geoEligibility.premium_eligible!==false)).sort((a,b)=>(Number(b.rating)||0)-(Number(a.rating)||0)||(Number(a.distance)||99)-(Number(b.distance)||99)).slice(0,4)}
 function observationVenueList(){const candidates=astronomyObservationCandidates();if(!candidates.length)return`<div class="broadcast-empty"><b>Aucun site d’observation suffisamment documenté pour le moment.</b><span>Dolcia conserve l’éclipse, mais ne fabrique pas un point de vue. La météo, l’horizon et l’accès devront être vérifiés avant le départ.</span></div>`;return`<div class="broadcast-list observation-list">${candidates.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="to-confirm">Site réel · horizon, météo et accès à confirmer${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</span></div><div><a href="${detailMapUrl(venue)}" target="_blank" rel="noopener">Voir sur la carte</a><button onclick="openDetail('${venue.id}')">Voir la fiche</button></div></div>`).join('')}</div>`}
@@ -1613,6 +1633,11 @@ function knownMarketOpenToday(item){
 function momentCompatibility(item){
   const label=requestedMomentLabel();
   if(item.date){if(item.timeKnown===false)return'unknown';const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime())||!sameDay(eventDate,state.dateStart))return'incompatible';const delta=Math.abs(eventDate.getHours()*60+eventDate.getMinutes()-(new Date(state.dateStart).getHours()*60+new Date(state.dateStart).getMinutes()));return delta<=120?'confirmed':'incompatible'}
+  // Un programme Dolcia autonome (Anime) est entièrement piloté par D elle-même : il n'a pas
+  // besoin d'une vérification d'horaire externe pour être ajouté. Sans ce cas explicite, il
+  // tombait dans la branche Google Places ci-dessous et retournait 'unknown', bloquant
+  // silencieusement le bouton "Ajouter à mon agenda" — bug réel signalé directement.
+  if(item.autonomousProgram)return'autonomous';
   if(item.source!=='Google Places')return'unknown';
   const marketToday=knownMarketOpenToday(item);
   if(marketToday===false)return'incompatible';
@@ -2296,6 +2321,29 @@ function playDolciaTheme(){
   }catch{}
 }
 function stopDolciaTheme(){try{dolciaTheme.audio?.pause?.()}catch{}dolciaTheme.audio=null}
+// Écoute autonome de la musique Dolcia, indépendante du démarrage d'une session Anime — répond
+// directement au besoin signalé : pouvoir simplement l'écouter ou la mettre en pause, sans devoir
+// lancer toute une séance. Réutilise le même fichier réel, jamais un second fichier différent.
+function toggleStandaloneDolciaTheme(){
+  const button=document.querySelector('#homeThemeToggle');
+  if(dolciaTheme.audio&&!dolciaTheme.audio.paused){
+    dolciaTheme.audio.pause();
+    if(button){button.textContent='▶ Écouter la musique Dolcia';button.setAttribute('aria-pressed','false')}
+    return;
+  }
+  if(dolciaTheme.audio){
+    dolciaTheme.audio.play().catch(()=>showToast('Lecture impossible sur ce navigateur pour le moment'));
+  }else{
+    try{
+      dolciaTheme.audio=new Audio('/assets/audio/dolcia-theme.mp3');
+      dolciaTheme.audio.volume=animateThemeVolume();
+      dolciaTheme.audio.loop=true;
+      dolciaTheme.audio.onended=()=>{if(button){button.textContent='▶ Écouter la musique Dolcia';button.setAttribute('aria-pressed','false')}};
+      dolciaTheme.audio.play().catch(()=>showToast('Lecture impossible sur ce navigateur pour le moment'));
+    }catch{showToast('Lecture impossible sur ce navigateur pour le moment');return}
+  }
+  if(button){button.textContent='⏸ Mettre en pause';button.setAttribute('aria-pressed','true')}
+}
 // Équipes façon "Belambra Games" / tournois de club vacances : une vraie rivalité amicale, pas
 // juste un score collectif unique. Toujours deux équipes maximum (au-delà, ça dilue l'effet), et
 // la finale célèbre toujours les deux — jamais un classement qui dévalorise qui que ce soit,

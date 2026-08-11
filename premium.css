@@ -377,3 +377,26 @@
 .animate-premium-launcher .animate-choices button:hover{transform:translateY(-3px);border-color:#d9b96e}
 .animate-premium-launcher #animatePreview{margin:28px 34px}
 @media(max-width:800px){.home-paths{grid-template-columns:1fr}.home-path{min-height:126px}.animate-premium-launcher header{min-height:360px;padding:38px 22px 28px!important;align-items:flex-start!important;flex-direction:column}.animate-premium-launcher header .d-mascot{width:98px!important;height:98px!important;flex-basis:98px}.animate-premium-launcher .animate-quick-questions,.animate-premium-launcher #animatePreview{margin-left:18px;margin-right:18px}.animate-premium-launcher .animate-choices{padding:0 18px}}
+/* Cet écran arrive juste après le dialogue Eclat, qui a déjà posé toutes les questions
+   nécessaires — un héro plein écran avant les vraies idées oblige à défiler pour rien.
+   Réduit spécifiquement pour ce contexte (result-signature), sans toucher à l'écran d'accueil
+   d'Explorer avant toute qualification, qui garde sa taille pleine et son rôle d'invitation. */
+.explore-signature.result-signature{min-height:340px;padding-top:clamp(70px,8vw,100px);padding-bottom:36px}
+@media(max-width:900px){.explore-signature.result-signature{min-height:420px}}
+@media(max-width:620px){.explore-signature.result-signature{min-height:400px;padding:80px 18px 30px}}
+.d-home-trigger{padding:0;border:0;background:none;cursor:pointer;line-height:0}
+.d-home-trigger:hover .eclat-d{box-shadow:inset 0 0 0 1px rgba(255,255,255,.42),0 0 40px rgba(215,189,130,.55)}
+.home-path.discovery{border-color:rgba(215,189,130,.35)}
+.local-discovery-modal{width:min(560px,calc(100vw - 28px));padding:34px;border-radius:28px;background:#101213;border:1px solid rgba(215,189,130,.35);position:relative}
+.local-discovery-modal header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.local-discovery-modal header strong{display:block;font-family:var(--display);font-size:22px;font-weight:500}
+.local-discovery-modal header small{color:#d7bd82;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.local-discovery-modal>p{color:var(--muted);margin-bottom:18px}
+.local-discovery-list{display:grid;gap:10px}
+.local-discovery-list button{text-align:left;padding:16px;border-radius:16px;border:1px solid var(--line);background:#161819;color:var(--ink)}
+.local-discovery-list button:hover{border-color:#d7bd82}
+.local-discovery-list button strong{display:block;font-family:var(--display);font-size:17px;margin-bottom:4px}
+.local-discovery-list button span{color:var(--muted);font-size:12px}
+.home-theme-toggle{display:block;margin:14px auto 0;padding:12px 22px;border-radius:999px;border:1px solid rgba(215,189,130,.35);background:rgba(255,255,255,.03);color:var(--ink);font-size:13px}
+.home-theme-toggle:hover{border-color:#d7bd82;color:#d7bd82}
+.home-theme-toggle[aria-pressed="true"]{background:rgba(215,189,130,.15);border-color:#d7bd82;color:#d7bd82}

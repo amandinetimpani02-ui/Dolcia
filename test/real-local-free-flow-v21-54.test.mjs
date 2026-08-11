@@ -40,10 +40,11 @@ test('une plage publique réelle est reconnue comme accès libre, un parc d’at
 });
 
 test('le scénario exact couple + gratuit produit plusieurs expériences locales avec lieu, durée et horaire', () => {
+  const generatorSource = declaration('generateLocalDiscoveryWithD');
   const source = declaration('injectLocalFreeMoments');
   const anchor = { id: 'g-beach', name: 'Plage du Touquet', freeAccess: true, freeAccessEvidence: 'Espace public documenté', lat: 50.52, lng: 1.59, address: 'Le Touquet', distance: .4, photo: '/beach.jpg', photos: ['/beach.jpg'], geoEligibility: { status: 'core', premium_eligible: true } };
   const state = { answers: { budget: 'free', who: 'couple' }, allItems: [anchor], dateStart: new Date('2026-08-12T14:00:00+02:00'), location: { name: 'Le Touquet-Paris-Plage' } };
-  Function('state', 'geoVisible', 'itemImage', `${source}; injectLocalFreeMoments()`)(state, () => true, item => item.photo);
+  Function('state', 'geoVisible', 'itemImage', `${generatorSource}\n${source}\ninjectLocalFreeMoments()`)(state, () => true, item => item.photo);
   const moments = state.allItems.filter(item => item.autonomousLocalMoment);
   assert.equal(moments.length, 3);
   assert.deepEqual(moments.map(item => item.durationMinutes), [45, 60, 35]);

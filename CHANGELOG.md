@@ -1068,3 +1068,98 @@ donc Dolcia ne le devine jamais.
 
 - 505 tests avant ce chantier, 8 nouveaux tests de garde répartis sur les trois sujets — 513 au
   total, tous verts.
+
+## Héro de l'écran de résultats réduit — signalé par capture d'écran — 1er août 2026
+
+Signalé directement : après le dialogue Eclat (qui a déjà posé toutes les questions — date,
+groupe, durée, envie, budget), l'écran de résultats affichait encore un héro occupant tout
+l'écran (620px desktop, jusqu'à 760px mobile) avant la moindre idée réelle — obligeant à défiler
+pour voir "14 idées compatibles" et le contenu utile en dessous.
+
+**Corrigé, précisément ciblé** : seul `.explore-signature.result-signature` — utilisé
+exclusivement sur cet écran précis, vérifié avant de toucher au CSS — voit sa hauteur réduite
+(340px desktop, 400px mobile). L'écran d'accueil général d'Explorer (avant toute qualification),
+qui garde un rôle d'invitation différent, n'est pas concerné par ce changement.
+
+**Limite honnête à signaler à nouveau** : je ne peux pas voir le rendu réel dans un navigateur
+depuis mon environnement. Ce correctif est structurellement correct et ciblé au bon sélecteur,
+mais une vraie vérification visuelle sur téléphone reste nécessaire pour confirmer que
+l'équilibre (image, texte, espacement) reste beau à cette nouvelle hauteur, pas seulement plus
+court.
+
+- 513 tests avant ce chantier, 2 nouveaux tests structurels — 515 au total, tous verts.
+
+## Blocage réel du bouton "Ajouter à mon agenda" pour les programmes Dolcia Anime — bug critique corrigé — 1er août 2026
+
+Signalé directement, avec capture d'écran à l'appui : cliquer sur "Ajouter à mon agenda" pour un
+programme Dolcia Anime autonome ("Le Touquet en défis avec D") ne faisait absolument rien.
+
+**Cause exacte trouvée** : `momentCompatibility()` ne reconnaissait que deux cas — un événement
+daté, ou un lieu Google Places. Un programme Dolcia autonome (`source: 'Programme Dolcia'`, sans
+date, entièrement piloté par D elle-même) tombait directement sur `'unknown'`. `addAgenda()`
+abandonnait alors silencieusement avec un simple toast ("Dolcia doit encore confirmer l'horaire
+avant l'ajout") — facilement manqué, laissant l'impression que le bouton ne répond à rien.
+
+**Corrigé** : les programmes autonomes (`item.autonomousProgram`, déjà utilisé ailleurs dans le
+code pour `isTimeCompatible`) sont désormais reconnus comme compatibles avant même la vérification
+Google Places — cohérent avec le fait qu'ils n'ont jamais eu besoin de vérification d'horaire
+externe.
+
+Testé concrètement avec le cas exact signalé avant de conclure à la correction.
+
+- 515 tests avant ce chantier, 2 nouveaux tests de garde — 517 au total, tous verts.
+
+## D introuvable sur le Home — badge décoratif rendu enfin cliquable — 1er août 2026
+
+Signalé directement : "où est D ??? Impossible de dialoguer avec lui." Vérifié précisément dans
+le code — D existe et fonctionne correctement partout ailleurs (dialogue Eclat, coach, animation,
+décisions de programme), mais sur l'écran d'accueil, il n'était qu'un badge décoratif "D✦" sans
+aucun gestionnaire de clic. Seul le champ de texte adjacent (au focus) ouvrait le dialogue —
+toucher directement le badge D, le geste le plus naturel, ne faisait rien.
+
+**Corrigé** : le badge devient un vrai bouton, et utilise désormais le personnage animé complet
+(`dMascotMark`) déjà utilisé partout ailleurs dans l'application, plutôt qu'un badge minimal
+propre au Home — pour que D soit visuellement reconnaissable comme le même personnage, dès le
+premier écran.
+
+- 517 tests avant ce chantier, 2 nouveaux tests de garde — 519 au total, tous verts.
+
+## Découverte guidée par D rendue autonome — "on ne me le propose pas" — 1er août 2026
+
+Signalé directement. Deux points vérifiés séparément :
+
+**La séance de sport avec D existe déjà** et reste accessible depuis le Home ("Mon
+coach-animateur") — confirmé dans le code, aucun changement nécessaire ici.
+
+**La visite/balade guidée par D, en revanche, n'existait qu'indirectement.** La seule expérience
+de ce type (« L'exploration locale avec D », trois concepts réels ancrés sur un vrai lieu proche)
+n'apparaissait que si la personne avait déjà choisi le budget « gratuit » au fil de la composition
+— jamais comme option autonome et visible, contrairement au coach sportif qui a son propre bouton.
+
+**Corrigé** : la génération est extraite dans `generateLocalDiscoveryWithD()`, réutilisable
+indépendamment du budget. Un nouveau bouton "D vous fait visiter" apparaît sur le Home, avec la
+même visibilité que "Mon coach-animateur". `injectLocalFreeMoments()` (utilisé pendant la
+composition classique) réutilise désormais la même fonction plutôt que de dupliquer la logique.
+
+Testé concrètement avant livraison : la génération produit bien les trois expériences réelles
+sans avoir choisi "gratuit" au préalable. Si aucun lieu réel n'est encore vérifié à proximité,
+Dolcia le dit honnêtement plutôt que d'inventer un point de départ.
+
+- 519 tests avant ce chantier, 4 nouveaux tests de garde — 523 au total, tous verts.
+
+## Musique Dolcia enfin écoutable de façon autonome — 1er août 2026
+
+Signalé directement : "même la musique Dolcia je ne peux pas la mettre pour l'écouter ou mettre
+pause, rien !"
+
+**Vérifié avant toute chose** : le fichier audio existe réellement
+(`assets/audio/dolcia-theme.mp3`, 1,98 Mo) — ce n'était donc pas un fichier fantôme. Le vrai
+problème : `playDolciaTheme()` ne se déclenchait qu'au démarrage d'une session Anime complète,
+sans aucun moyen de simplement l'écouter ou la mettre en pause en dehors de ce contexte.
+
+**Corrigé** : un bouton "Écouter la musique Dolcia" apparaît désormais sur le Home, indépendant du
+démarrage d'une session — jouer, mettre en pause, avec un message honnête si la lecture échoue
+(navigateur, permissions), jamais un échec silencieux. Réutilise le même fichier réel, jamais un
+second fichier différent.
+
+- 523 tests avant ce chantier, 4 nouveaux tests de garde — 527 au total, tous verts.
