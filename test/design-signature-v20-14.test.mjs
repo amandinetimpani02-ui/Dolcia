@@ -5,8 +5,8 @@ import fs from 'node:fs';
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../vision-premium.css',import.meta.url),'utf8');
 
-test('la signature atelier reste présente dans v21.52',()=>{
-  assert.match(app,/21\.52\.0-api-results-restored/);
+test('la signature atelier reste présente dans v21.54',()=>{
+  assert.match(app,/21\.54\.0-real-local-free/);
   assert.match(css,/Dolcia v20\.14 — Signature Atelier/);
 });
 

@@ -5,8 +5,8 @@ import fs from 'node:fs';
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../vision-premium.css',import.meta.url),'utf8');
 
-test('v21.52 conserve la question décisive',()=>{
-  assert.match(app,/21\.52\.0-api-results-restored/);
+test('v21.54 conserve la question décisive',()=>{
+  assert.match(app,/21\.54\.0-real-local-free/);
 });
 
 test('D ne pose qu une seule précision par moment',()=>{

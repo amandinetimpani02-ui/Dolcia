@@ -18,8 +18,10 @@ test('retirer les filtres avancés les retire vraiment puis recalcule l’écran
 
 test('amis rire gratuit reçoit une proposition locale animée par D', () => {
   assert.match(app, /function injectDolciaAutonomousChoices\(\)/);
-  assert.match(app, /item\.id='dolcia-animate-social-catalog'/);
-  assert.match(app, /item\.name='Le Touquet en défis avec D'/);
+  assert.match(app, /const programId=state\.answers\.who==='couple'\?'rdv_complice'/);
+  assert.match(app, /socialLaugh\?'social'/);
+  assert.match(app, /item\.id=`dolcia-animate-\$\{programId\}-catalog`/);
+  assert.match(app, /if\(programId==='social'\)item\.name='Le Touquet en défis avec D'/);
   assert.match(app, /free:true,\s*price:0/);
   assert.match(app, /item\.distance=0/);
   assert.match(app, /status:'core'/);

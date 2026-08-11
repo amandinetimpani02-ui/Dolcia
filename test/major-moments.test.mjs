@@ -19,6 +19,6 @@ assert.match(app,/Des sites réels proches, jamais une visibilité garantie/);
 assert.match(app,/function injectVerifiedSunsetMoment\(\)/);
 assert.match(app,/vue sur l’horizon, l’accès et les conditions au moment précis restent à confirmer/);
 assert.match(app,/days=30&lat=/);
-  assert.match(app,/21\.52\.0-api-results-restored/);
+  assert.match(app,/21\.54\.0-real-local-free/);
 
 console.log('major moments: ok');

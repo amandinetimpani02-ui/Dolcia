@@ -659,3 +659,102 @@ button:focus-visible{outline:2px solid #f1d897;outline-offset:3px}
   .d-question-impact{grid-template-columns:34px 1fr;padding:11px 12px}
   .d-question-impact>i{width:34px;height:34px}
 }
+/* v21.53 — le calendrier de visite doit toujours pouvoir défiler et être validé.
+   Le body est volontairement verrouillé par la mécanique des modales : c'est donc la modale
+   elle-même qui porte le scroll, jamais un contenu plus haut que l'écran sous overflow:hidden. */
+.eclat-dialogue{
+  align-items:flex-start!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.eclat-dialogue>article{
+  align-content:start!important;
+  min-height:100dvh!important;
+  height:max-content!important;
+}
+.eclat-dialogue #eclatQuestion{
+  align-self:start!important;
+  width:100%;
+  padding-bottom:96px;
+}
+.eclat-dialogue .exact-calendar>button{
+  position:sticky;
+  z-index:8;
+  bottom:16px;
+  box-shadow:0 18px 52px rgba(0,0,0,.68),0 0 0 1px rgba(255,255,255,.1);
+}
+@media(max-width:900px){
+  .eclat-dialogue>article{justify-content:flex-start!important}
+  .eclat-dialogue #eclatQuestion{padding-bottom:84px}
+}
+
+/* v21.53 — Home : une hiérarchie éditoriale, jamais trois tuiles de même poids. */
+.home-level3{
+  width:min(1180px,calc(100% - 40px));
+  max-width:none!important;
+  margin:0 auto;
+  padding:72px 0 150px;
+  gap:22px;
+}
+.home-level3 .home-paths{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.home-level3 .home-path{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-end!important;
+  min-width:0;
+  min-height:230px;
+  padding:30px;
+  border-radius:30px;
+}
+.home-level3 .home-path.primary{
+  grid-column:1/-1;
+  min-height:390px;
+  padding:clamp(34px,5vw,64px);
+  color:#fffaf0;
+  border-color:rgba(235,207,141,.42);
+  background:
+    linear-gradient(90deg,rgba(5,7,7,.9) 0%,rgba(5,7,7,.62) 54%,rgba(5,7,7,.18) 100%),
+    url('/assets/hero-le-touquet.png') center 57%/cover no-repeat;
+  box-shadow:0 34px 100px rgba(0,0,0,.42);
+}
+.home-level3 .home-path small,
+.home-level3 .home-path strong,
+.home-level3 .home-path span{display:block!important;width:auto!important;max-width:none!important}
+.home-level3 .home-path small{margin:0 0 16px;color:#e8c97f;font-size:10px;letter-spacing:.18em}
+.home-level3 .home-path strong{max-width:17ch!important;margin:0;font:500 clamp(34px,5vw,68px)/.94 var(--display);letter-spacing:-.035em}
+.home-level3 .home-path span{max-width:62ch!important;margin-top:20px;color:rgba(255,255,255,.72);font-size:14px;line-height:1.58}
+.home-level3 .home-path:not(.primary) strong{max-width:15ch!important;font-size:clamp(32px,3.5vw,48px)}
+.home-level3 .home-path:not(.primary) span{max-width:45ch!important;margin-top:15px}
+.home-level3 .home-search{margin:4px 0;padding:18px 22px;border-radius:25px}
+.home-level3 .home-events{min-height:0;padding:30px;border-radius:30px}
+.home-level3 .home-events>div:first-child{display:grid;grid-template-columns:1fr auto;gap:4px 24px;align-items:end}
+.home-level3 .home-events>div:first-child span{grid-column:1}
+.home-level3 .home-events>div:first-child strong{grid-column:1;font-size:clamp(30px,4vw,48px)}
+.home-level3 .home-events>div:first-child small{grid-column:2;grid-row:1/3;max-width:300px;color:#999187;line-height:1.5}
+.home-level3 .pulse-event-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.home-level3 .pulse-empty{grid-column:1/-1;display:grid;grid-template-columns:minmax(220px,.7fr) 1.3fr;gap:8px 30px;min-height:0;padding:24px;border:1px solid rgba(235,207,141,.2);border-radius:22px;background:linear-gradient(120deg,rgba(235,207,141,.07),rgba(255,255,255,.02))}
+.home-level3 .pulse-empty span{grid-column:1;color:#d9bd77;font-size:9px;letter-spacing:.14em;text-transform:uppercase}
+.home-level3 .pulse-empty strong{grid-column:1;font:500 27px/1.08 var(--display)}
+.home-level3 .pulse-empty p{grid-column:2;grid-row:1/3;align-self:center;margin:0;color:#aaa297;line-height:1.55}
+@media(max-width:760px){
+  .home-level3{width:calc(100% - 28px);padding:42px 0 125px}
+  .home-level3 .home-paths{grid-template-columns:1fr}
+  .home-level3 .home-path.primary{grid-column:1;min-height:420px;padding:30px 24px}
+  .home-level3 .home-path strong{font-size:43px}
+  .home-level3 .home-events>div:first-child{display:block}
+  .home-level3 .home-events>div:first-child small{display:block;margin-top:7px}
+  .home-level3 .pulse-event-list{display:flex;overflow-x:auto}
+  .home-level3 .pulse-event-list>button{flex:0 0 82%}
+  .home-level3 .pulse-empty{display:block;min-width:100%}
+  .home-level3 .pulse-empty strong,.home-level3 .pulse-empty p{display:block;margin-top:10px}
+}

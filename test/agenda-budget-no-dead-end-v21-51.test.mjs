@@ -22,8 +22,15 @@ test('un couple avec un petit budget voit les gratuits locaux avant tout assoupl
   assert.match(app, /Le rendez-vous complice avec D/);
 });
 
+test('le gratuit ne tombe jamais dans le vide : un programme autonome adapté existe pour chaque groupe', () => {
+  assert.match(app, /state\.answers\.who==='couple'\?'rdv_complice'/);
+  assert.match(app, /state\.answers\.who==='family'\?'family'/);
+  assert.match(app, /if\(item\.autonomousProgram\)return true/);
+  assert.match(app, /if\(item\.freeAccess&&!requiresPublishedSession\(item\)\)return true/);
+});
+
 test('les anciens contextes sans date complète sont invalidés une fois après mise à jour', () => {
-  assert.match(app, /MOMENT_SCHEMA_VERSION='21\.52-date-time-required'/);
+  assert.match(app, /MOMENT_SCHEMA_VERSION='21\.54-real-local-free'/);
   assert.match(app, /localStorage\.getItem\('dolcia_moment_schema_v1'\)===MOMENT_SCHEMA_VERSION/);
   assert.match(app, /localStorage\.setItem\('dolcia_moment_schema_v1',MOMENT_SCHEMA_VERSION\)/);
 });

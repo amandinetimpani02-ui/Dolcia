@@ -1,5 +1,5 @@
 const app = document.querySelector('#app');
-const APP_BUILD = '21.52.0-api-results-restored';
+const APP_BUILD = '21.54.0-real-local-free';
 // Clé PUBLIQUE VAPID : par construction non secrète (comme une clé publishable Stripe), doit
 // correspondre exactement à VAPID_PUBLIC_KEY côté serveur (Vercel). La clé privée, elle, ne
 // vit jamais ici.
@@ -85,7 +85,7 @@ state.passWallet=JSON.parse(localStorage.getItem('dolcia_pass_wallet_v1')||'{"st
 state.animateHistory=JSON.parse(localStorage.getItem('dolcia_animate_history_v1')||'[]');
 state.companionMemory=JSON.parse(localStorage.getItem('dolcia_companion_memory_v1')||'{"interactions":0,"lastChoice":"","rituals":[],"tone":"warm"}');
 state.programPreferences=JSON.parse(localStorage.getItem('dolcia_program_preferences_v1')||'{"energy":"ask","dining":"ask","fatigue":"unknown"}');
-const MOMENT_SCHEMA_VERSION='21.52-date-time-required';
+const MOMENT_SCHEMA_VERSION='21.54-real-local-free';
 state.momentQualified=localStorage.getItem('dolcia_moment_qualified_v1')==='1'&&localStorage.getItem('dolcia_moment_schema_v1')===MOMENT_SCHEMA_VERSION;
 if(!state.momentQualified)localStorage.removeItem('dolcia_moment_qualified_v1');
 state.eclatIntent='compose';
@@ -209,6 +209,7 @@ function dRelationshipLine(){
 }
 
 function shell(content, active='discover'){
+  document.body.classList.toggle('dolcia-home',state.view==='home');
   document.body.classList.remove('home-nav-hidden-always','home-nav-hidden-until-scroll','home-nav-revealed');
   window.removeEventListener('scroll',homeNavScrollReveal);
   const profile=JSON.parse(localStorage.getItem('dolcia_profile_v1')||'null'),initials=(profile?.name||'Vous').trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase();
@@ -872,7 +873,7 @@ function homeNavScrollReveal(){
   if(poster&&window.scrollY>poster.offsetHeight*.6)document.body.classList.add('home-nav-revealed');
   else document.body.classList.remove('home-nav-revealed');
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>Dolcia s’occupe de tout</small><strong>Créer mon moment</strong><span>Un programme complet, directement dans votre agenda · tout régénérer ou changer une seule étape</span></button><button class="home-path" onclick="beginExplore()"><small>Je garde la main</small><strong>Choisir parmi mes idées</strong><span>Des propositions déjà filtrées selon la date, le groupe, l’envie, la durée et le budget</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D vous parle, vous motive et s’adapte</small><strong>Mon coach-animateur</strong><span>Une vraie séance sportive fun ou une animation de club, conduite en direct par D</span></button></div><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Ou dites-le simplement à Dolcia</label><input id="homeSearch" placeholder="Avec les enfants, face à la mer, sans trop marcher…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div class="pulse-events" id="livePulse"><div><span>À vivre aujourd’hui</span><strong>Les événements vérifiés</strong></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button></div><div class="living-brief home-search"><span class="eclat-mini">D<i>✦</i></span><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div></section>`);loadHomePulse();applyHomeNavPreview()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -1246,6 +1247,7 @@ async function compose(explorerOnly=false){
     await enrichPlaceAvailability(deduped);
     state.allItems=(await rankItemsServer(deduped).catch(()=>scoreItems(deduped))).filter(geoVisible);
     injectVerifiedSunsetMoment();
+    injectLocalFreeMoments();
     injectDolciaAutonomousChoices();
     state.program=buildProgram(state.allItems);
     if(state.majorChoice)state.program=injectMajorMoment(state.program);
@@ -1267,6 +1269,25 @@ function markLoaded(key,text){const el=document.querySelector(`#load-${key}`);if
 function updateLivePreview(){const el=document.querySelector('#live-preview');if(!el)return;el.innerHTML=dedupe(state.items).slice(0,3).map(i=>`<span>${esc(i.name)}</span>`).join('')}
 function detectMajorMoments(items,seed=[]){const day=iso(state.dateStart),patterns=/coupe du monde|demi.?finale|finale|fête nationale|feu d.artifice|bal populaire|festival|carnaval|braderie|concert exceptionnel|cérémonie|défilé|inauguration|éclipse|eclipse|pluie d.étoiles|grandes marées|phénomène astronomique/i;const local=dedupe(items).filter(item=>item.date&&iso(new Date(item.date))===day&&item.official&&patterns.test(item.name||'')).map(item=>({...item,title:item.name,kind:item.kind||'local',score:80+(item.booking?5:0)}));return [...new Map([...seed,...local].map(item=>[`${(item.title||item.name||'').toLowerCase()}:${item.date}`,item])).values()].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,4)}
 function injectVerifiedSunsetMoment(){const seconds=Number(state.weather?.sys?.sunset),sunset=seconds?new Date(seconds*1000):null;if(!sunset||Number.isNaN(sunset.getTime())||iso(sunset)!==iso(state.dateStart))return;const site=astronomyObservationCandidates().find(item=>item.freeAccess);if(!site)return;const cloud=Number(state.weather?.clouds?.all),visibility=Number.isFinite(cloud)?cloud<=35?'Ciel actuellement peu nuageux':'Couverture nuageuse à surveiller':'Conditions météo à vérifier';const item={id:`sunset-${iso(sunset)}-${site.id}`,name:`Coucher de soleil depuis ${site.name}`,source:'OpenWeather · lieu Google Places',category:'outside',experienceKind:'nature',address:site.address,nameSite:site.name,lat:site.lat,lng:site.lng,date:sunset.toISOString(),endDate:new Date(sunset.getTime()+45*60000).toISOString(),timeKnown:true,durationMinutes:45,durationKnown:true,freeAccess:true,price:0,photo:itemImage(site),photos:site.photos||[],rating:site.rating,reviews:site.reviews,quality:'documented',official:false,summary:`Coucher à ${sunset.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}. ${visibility}. ${site.name} est un accès libre réel proche ; la vue sur l’horizon, l’accès et les conditions au moment précis restent à confirmer.`,detailsKnown:true};state.allItems.unshift(item)}
+function injectLocalFreeMoments(){
+  if(state.answers.budget!=='free')return;
+  const anchors=(state.allItems||[]).filter(item=>item.freeAccess&&Number.isFinite(item.lat)&&Number.isFinite(item.lng)&&geoVisible(item)).sort((a,b)=>(a.distance??999)-(b.distance??999)||(b.rating||0)-(a.rating||0)).slice(0,3);
+  if(!anchors.length)return;
+  const couple=state.answers.who==='couple';
+  const concepts=couple?[
+    ['parenthese-complice','La parenthèse complice au grand air',45,'Une promenade à deux ponctuée de trois invitations de D : observer ensemble, raconter un souvenir et choisir une prochaine envie.'],
+    ['defi-photo-duo','Le défi photo à deux',60,'Une exploration légère guidée par D : cinq détails à repérer, trois photos à composer et un souvenir commun à garder.'],
+    ['marche-sans-horloge','La marche sans horloge',35,'Un moment doux sans performance : D donne le départ, propose deux respirations et vous laisse vraiment profiter du lieu ensemble.']
+  ]:[
+    ['exploration-locale','L’exploration locale avec D',45,'Une balade autonome guidée par D, avec observation, petits défis adaptés au groupe et conclusion collective.'],
+    ['defi-photo','Le défi photo du lieu',50,'Une expérience gratuite et légère : D lance les thèmes, rythme les prises de vue et réunit le groupe pour la finale.'],
+    ['marche-curieuse','La marche curieuse',35,'Une promenade sans performance où D invite chacun à repérer, raconter et partager ce qui rend le lieu singulier.']
+  ];
+  const start=new Date(state.dateStart);
+  const generated=concepts.map((concept,index)=>{const anchor=anchors[index%anchors.length],date=new Date(start.getTime()+index*70*60000);return{id:`dolcia-local-free-${concept[0]}-${anchor.id}`,name:concept[1],source:'Programme Dolcia · lieu Google Places',category:'outside',experienceKind:'nature',address:anchor.address||state.location.name,lat:anchor.lat,lng:anchor.lng,date:date.toISOString(),endDate:new Date(date.getTime()+concept[2]*60000).toISOString(),timeKnown:true,durationMinutes:concept[2],durationKnown:true,freeAccess:true,freeAccessEvidence:anchor.freeAccessEvidence||'Espace naturel ou public documenté',price:0,photo:itemImage(anchor),photos:anchor.photos||[],rating:anchor.rating,reviews:anchor.reviews,placeId:anchor.placeId,quality:'documented',official:false,detailsKnown:true,autonomousLocalMoment:true,summary:`${concept[3]} Point de départ réel : ${anchor.name}. Accès au lieu documenté ; météo, règles locales et éventuels services payants restent à vérifier.`,geoEligibility:anchor.geoEligibility,distance:anchor.distance,ranking:{confidence:'documented',reasons:['lieu réel à proximité','accès libre documenté','adapté au groupe']}}});
+  const existing=new Set(state.allItems.map(item=>item.id));
+  state.allItems.unshift(...generated.filter(item=>!existing.has(item.id)));
+}
 function astronomyObservationCandidates(){return(state.allItems||[]).filter(item=>item.address&&['outside','active'].includes(item.category)&&!/musée|cinéma|théâtre|indoor|couvert/i.test(item.name||'')&&(!item.geoEligibility||item.geoEligibility.premium_eligible!==false)).sort((a,b)=>(Number(b.rating)||0)-(Number(a.rating)||0)||(Number(a.distance)||99)-(Number(b.distance)||99)).slice(0,4)}
 function observationVenueList(){const candidates=astronomyObservationCandidates();if(!candidates.length)return`<div class="broadcast-empty"><b>Aucun site d’observation suffisamment documenté pour le moment.</b><span>Dolcia conserve l’éclipse, mais ne fabrique pas un point de vue. La météo, l’horizon et l’accès devront être vérifiés avant le départ.</span></div>`;return`<div class="broadcast-list observation-list">${candidates.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="to-confirm">Site réel · horizon, météo et accès à confirmer${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}</span></div><div><a href="${detailMapUrl(venue)}" target="_blank" rel="noopener">Voir sur la carte</a><button onclick="openDetail('${venue.id}')">Voir la fiche</button></div></div>`).join('')}</div>`}
 function majorMomentPrompt(){const moment=state.majorMoments[0];if(!moment)return'';const chosen=state.majorChoice===moment.id,copy=majorMomentAction(moment),showVenues=chosen&&moment.broadcastable===true,venues=showVenues?(state.broadcastVenues.length?`<div class="broadcast-list">${state.broadcastVenues.map(venue=>`<div class="broadcast-place"><div><b>${esc(venue.name)}</b><span class="${venue.confirmation==='confirmed'?'confirmed':'to-confirm'}">${venue.confirmation==='confirmed'?'Diffusion confirmée':'Diffusion à confirmer'}${venue.distance!=null?` · ${venue.distance.toFixed(1)} km`:''}${venue.rating?` · Google ${venue.rating}/5`:''}</span></div><div>${venue.phone?`<a href="tel:${esc(venue.phone)}">Appeler</a>`:''}${venue.sourceUrl?`<a href="${esc(venue.sourceUrl)}" target="_blank" rel="noopener">Voir le lieu</a>`:''}</div></div>`).join('')}</div>`:'<div class="broadcast-empty"><b>Aucun lieu confirmé dans la destination.</b><span>Dolcia ne transforme pas un établissement probable en diffusion certaine.</span></div>'):chosen&&moment.kind==='astronomy'?observationVenueList():'';return `<section class="major-moment"><span class="kicker">${esc(copy.eyebrow)}</span><div><h2>${esc(moment.title||moment.name)}</h2><p>${esc(majorMomentTiming(moment))}. ${esc(copy.description)}</p>${moment.safetyNote?`<p class="major-safety">${esc(moment.safetyNote)}</p>`:''}</div><div class="major-actions"><button class="primary" onclick="chooseMajorMoment('${esc(moment.id)}')">${chosen&&moment.kind==='astronomy'?'Actualiser les sites':chosen&&moment.broadcastable?'Actualiser les lieux':esc(copy.button)}</button><button class="secondary" onclick="dismissMajorMoment('${esc(moment.id)}')">Pas cette fois</button></div>${venues}${moment.sourceUrl?`<a class="major-source" href="${esc(moment.sourceUrl)}" target="_blank" rel="noopener">Vérifié par ${esc(moment.source||'la source officielle')}</a>`:''}</section>`}
@@ -1294,6 +1315,20 @@ function queriesForVibes(){
     'casino cabaret club soirée'
   ];
   const selected=(state.answers.vibes||[]).flatMap(v=>selectedMap[v]||[]);
+  // Le mode gratuit a sa propre stratégie de couverture. Il ne suffit pas de lancer les mêmes
+  // recherches puis de supprimer les lieux payants : les plages publiques, promenades, sentiers,
+  // panoramas et jardins sont précisément les expériences que les catalogues commerciaux
+  // décrivent le moins bien. Ces résultats passent ensuite par les mêmes contrôles géographiques.
+  if(state.answers.budget==='free')selected.unshift(
+    'plage publique accès libre',
+    'promenade front de mer digue',
+    'sentier randonnée balade pédestre',
+    'parc public jardin public square',
+    'point de vue panorama belvédère',
+    'forêt domaniale réserve naturelle',
+    'patrimoine extérieur monument promenade',
+    'marché braderie brocante événement gratuit'
+  );
   const temperature=state.weather?.main?.temp;
   if(temperature>=25)selected.unshift('base nautique location','char à voile','wing foil kite surf','surf paddle kayak','centre aquatique piscine');
   if(['day','stay','afternoon_evening'].includes(state.answers.duration))selected.push('concert spectacle soirée casino bar');
@@ -1301,7 +1336,7 @@ function queriesForVibes(){
   if(state.answers.who==='family'&&state.answers.familyRhythm==='balanced')selected.unshift('atelier enfants encadré club enfants','spa massage parents proche activité enfants','activité parents enfants même lieu');
   return [...new Set([...selected,...broad])];
 }
-function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),types=p.types||[],placeText=`${p.name||''} ${types.join(' ')}`.toLowerCase(),business=/restaurant|cafe|bar|lodging|campground|store|office|spa|school|travel_agency|tourist_information/.test(placeText),naturalType=types.some(type=>['beach','park','natural_feature','hiking_area','national_park'].includes(type)),naturalName=/^(plage|beach|parc|jardin|promenade|sentier)(\b|\s)/i.test(String(p.name||'').trim()),freeAccess=!business&&(naturalType||naturalName),experienceKind=/aquarium/.test(placeText)?'aquarium':/parc.*attraction|theme.?park|labyrinthe|labyparc|bagatelle/.test(placeText)?'theme_park':/foil|kitesurf|surf|paddle|kayak|voile|catamaran|nautique|aquatique/.test(placeText)?'water':/reserve naturelle|plage|promenade|sentier|hiking|natural_feature/.test(placeText)?'nature':/restaurant|cafe|food/.test(placeText)?'food':category(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),experienceKind,address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null,types}})}
+function normalizePlaces(items){return items.map((p,i)=>{const photos=(p.photos||[]).map(x=>`/api/photo?ref=${encodeURIComponent(x.photo_reference)}&maxwidth=1200`),types=p.types||[],placeText=`${p.name||''} ${types.join(' ')}`.toLowerCase(),business=/restaurant|cafe|bar|lodging|campground|store|office|spa|school|travel_agency|tourist_information|amusement_park|theme_park/.test(placeText),naturalType=types.some(type=>['beach','park','natural_feature','hiking_area','national_park'].includes(type)),publicName=/\b(plage|beach|parc public|jardin public|square|promenade|digue|front de mer|sentier|for[eê]t|belv[eé]d[eè]re|point de vue|panorama|r[eé]serve naturelle)\b/i.test(String(p.name||'').trim()),freeAccess=!business&&(naturalType||publicName),experienceKind=/aquarium/.test(placeText)?'aquarium':/parc.*attraction|theme.?park|labyrinthe|labyparc|bagatelle/.test(placeText)?'theme_park':/foil|kitesurf|surf|paddle|kayak|voile|catamaran|nautique|aquatique/.test(placeText)?'water':/reserve naturelle|plage|promenade|sentier|hiking|natural_feature|point de vue|panorama|for[eê]t/.test(placeText)?'nature':/restaurant|cafe|food/.test(placeText)?'food':category(placeText);return {id:'g-'+(p.place_id||i),placeId:p.place_id,name:p.name,source:'Google Places',category:category(placeText),experienceKind,address:p.formatted_address||p.vicinity||'',lat:p.geometry?.location?.lat,lng:p.geometry?.location?.lng,rating:p.rating,reviews:p.user_ratings_total,price:p.price_level,freeAccess,freeAccessEvidence:freeAccess?'Lieu naturel ou espace public documenté par Google Places':null,isOpen:p.opening_hours?.open_now,businessStatus:p.business_status,photo:photos[0]||null,photos,booking:null,types}})}
 async function enrichPlaceAvailability(items){
   const evening=['evening','afternoon_evening'].includes(state.answers.duration),priority=item=>(item.retrievalScope==='signature'?45:0)+(evening&&['food','night','culture','slow','outside'].includes(item.category)?30:0);
   const candidates=items.filter(item=>item.source==='Google Places'&&item.placeId).sort((a,b)=>priority(b)-priority(a)||(b.rating||0)-(a.rating||0)||(b.reviews||0)-(a.reviews||0)).slice(0,60);
@@ -1542,7 +1577,7 @@ function isOpenForSlot(item,label){
   const date=new Date(state.dateStart),day=date.getDay(),start=day*1440+Number(match[1])*60+Number(match[2]),end=start+75;
   return item.openingPeriods.some(period=>{if(!period.open)return false;const open=period.open.day*1440+Number(String(period.open.time||'0000').slice(0,2))*60+Number(String(period.open.time||'0000').slice(2,4));if(!period.close)return true;let close=period.close.day*1440+Number(String(period.close.time||'0000').slice(0,2))*60+Number(String(period.close.time||'0000').slice(2,4));if(close<=open)close+=7*1440;let target=start;if(target<open&&target+7*1440>=open)target+=7*1440;return target>=open&&target+75<=close});
 }
-function isTimeCompatible(item,label){const match=(label||'').match(/(\d{2}):(\d{2})/)||requestedMomentLabel().match(/(\d{2}):(\d{2})/);if(!match)return false;if(item.source==='Google Places'){if(requiresPublishedSession(item))return false;return isOpenForSlot(item,label)}if(!item.date)return false;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
+function isTimeCompatible(item,label){if(item.autonomousProgram)return true;if(item.freeAccess&&!requiresPublishedSession(item))return true;const match=(label||'').match(/(\d{2}):(\d{2})/)||requestedMomentLabel().match(/(\d{2}):(\d{2})/);if(!match)return false;if(item.source==='Google Places'){if(requiresPublishedSession(item))return false;return isOpenForSlot(item,label)}if(!item.date)return false;if(item.timeKnown===false)return false;const eventDate=new Date(item.date);if(Number.isNaN(eventDate.getTime()))return false;const slotMinutes=Number(match[1])*60+Number(match[2]),eventMinutes=eventDate.getHours()*60+eventDate.getMinutes();return Math.abs(eventMinutes-slotMinutes)<=90}
 
 function programTemplates(){
   const nights=Math.max(1,tripDays()-1);
@@ -2059,11 +2094,12 @@ function dolciaAnimateItem(id){
 function injectDolciaAutonomousChoices(){
   const strictFree=state.answers.budget==='free';
   const socialLaugh=state.answers.who==='friends'&&((state.answers.vibes||[]).includes('play')||/rire|fou rire|rigoler|s.amuser|amis/.test(plainText(state.answers.momentSentence||'')));
-  if(!strictFree||!socialLaugh)return;
-  const item=dolciaAnimateItem('social');
-  item.id='dolcia-animate-social-catalog';
-  item.name='Le Touquet en défis avec D';
-  item.address='Au Touquet · départ à choisir avec votre groupe';
+  if(!strictFree)return;
+  const programId=state.answers.who==='couple'?'rdv_complice':state.answers.who==='family'?'family':socialLaugh?'social':state.answers.who==='friends'?'defi_deux':'calm';
+  const item=dolciaAnimateItem(programId);
+  item.id=`dolcia-animate-${programId}-catalog`;
+  if(programId==='social')item.name='Le Touquet en défis avec D';
+  item.address=state.answers.who==='couple'?'Plage, promenade ou endroit calme de votre choix au Touquet':'Au Touquet · départ à choisir avec votre groupe';
   item.summary='Une animation complète par D : accueil, rythme, relances, adaptation et conclusion · gratuit · sans réservation';
   item.distance=0;
   item.isOpen=true;

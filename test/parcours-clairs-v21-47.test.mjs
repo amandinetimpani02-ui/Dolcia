@@ -15,11 +15,11 @@ test('les deux parcours partagent les questions mais pas la destination',()=>{
 test('Mes idées ne montre jamais un catalogue sans contexte',()=>{
   assert.match(app,/state\.momentQualified=localStorage\.getItem\('dolcia_moment_qualified_v1'\)==='1'/);
   assert.match(app,/function beginExplore\(\)\{if\(!state\.momentQualified\)return openEclatDialogue\(false,'explore'\)/);
-  assert.match(app,/Des propositions déjà filtrées selon la date, le groupe, l’envie, la durée et le budget/);
+  assert.match(app,/Des fiches riches, sourcées et déjà accordées à votre moment/);
 });
 
 test('Créer mon moment produit un programme modifiable et adoptable en entier',()=>{
-  assert.match(app,/Un programme complet, directement dans votre agenda/);
+  assert.match(app,/elle compose un programme que vous pouvez modifier étape par étape/);
   assert.match(app,/Ajouter tout à mon agenda/);
   assert.match(app,/Régénérer tout le programme/);
   assert.match(app,/Changer cette activité/);

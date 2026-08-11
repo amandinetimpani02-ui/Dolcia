@@ -23,7 +23,7 @@ test('version B : la barre reste absente sur le premier écran, puis apparaît a
 });
 
 test('le moteur et les parcours restent strictement identiques dans les deux versions — seul shell()/home() gèrent l’affichage de la barre, rien d’autre ne change', () => {
-  assert.match(app, /function shell\(content, active='discover'\)\{\n\s*document\.body\.classList\.remove\('home-nav-hidden-always','home-nav-hidden-until-scroll','home-nav-revealed'\);/);
+  assert.match(app, /function shell\(content, active='discover'\)\{[\s\S]{0,220}document\.body\.classList\.remove\('home-nav-hidden-always','home-nav-hidden-until-scroll','home-nav-revealed'\);/);
 });
 
 test('les classes de preview ne persistent jamais en quittant le Home vers un autre écran', () => {

@@ -28,5 +28,5 @@ test('renderResults ne peut pas exposer un faux catalogue vide', () => {
 test('Explorer reste en mode choix manuel après chargement', () => {
   assert.match(app, /explorerOnly\?renderResults\(\):renderSurprise\(\)/);
   assert.match(app, /rankItemsServer\(deduped\)\.catch\(\(\)=>scoreItems\(deduped\)\)/);
-  assert.match(app, /const APP_BUILD = '21\.52\.0-api-results-restored'/);
+  assert.match(app, /const APP_BUILD = '21\.54\.0-real-local-free'/);
 });
