@@ -1041,3 +1041,30 @@ backend réel serait exactement le genre de chose inventée que ce projet interd
 
 - 496 tests avant ce chantier (après le conflit d'horaires), 9 nouveaux tests de garde répartis
   sur les trois sujets — 505 au total, tous verts.
+
+## Deux bugs de catégorisation par collision de sous-chaîne, et structuration par moment de la journée — signalés par capture d'écran — 1er août 2026
+
+**Bug confirmé et corrigé** : "Aire de jeux espace Canche" apparaissait sous le filtre "Bien-être"
+en contexte "en amoureux". Cause exacte trouvée : le mot français "espace" contient littéralement
+la sous-chaîne "spa", et la règle de catégorisation n'avait aucune limite de mot
+(`/spa|beauty|yoga|bien/`). Corrigé avec des limites de mot (`\bspa\b`, `\bart\b`, `\bbar\b`,
+`\bbien\b`) — trois autres collisions réelles trouvées et corrigées au passage : "artisan",
+"départ", "quartier" (via "art"), "barbecue", "embarquement", "barrière" (via "bar"), "combien"
+(via "bien").
+
+**Deuxième bug confirmé et corrigé** : "je veux un parc d'attractions, je ne trouve absolument
+rien" — un parc d'attractions contient le mot "parc" et tombait donc automatiquement dans
+"Nature & mer" à cause de la même règle générique, jamais dans "Fun & famille" où on penserait
+naturellement à chercher. Une vérification spécifique (parc d'attractions, aquatique, animalier,
+accrobranche, karting, etc.) est désormais faite avant la règle générique nature.
+
+**Structuration par moment de la journée, nouvelle option** : répond directement à "je veux une
+activité le matin, un déjeuner à proximité, une activité l'après-midi, un dîner le soir — je suis
+perdu dans les méandres de l'appli." Un nouveau tri "Par moment de la journée" regroupe les
+résultats en sections (Le matin, Pour manger, L'après-midi, Le soir), chaque activité n'apparaissant
+qu'une seule fois. Les restaurants restent volontairement dans leur propre section neutre — rien
+dans les données ne permet de savoir si un restaurant donné est plutôt un lieu de midi ou de soir,
+donc Dolcia ne le devine jamais.
+
+- 505 tests avant ce chantier, 8 nouveaux tests de garde répartis sur les trois sujets — 513 au
+  total, tous verts.
