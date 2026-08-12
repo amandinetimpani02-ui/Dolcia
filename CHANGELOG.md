@@ -1270,3 +1270,90 @@ Une vraie duplication de règle CSS trouvée et supprimée au passage (`.home-pa
 définie deux fois par erreur lors d'une session précédente).
 
 - 544 tests avant ce chantier, 5 nouveaux tests de garde — 549 au total, tous verts.
+
+## Nettoyage de contamination croisée entre deux sessions différentes — 1er août 2026
+
+Signalé directement : soupçon qu'une narration ("l'application plante partout") aurait pu se
+construire sur des informations erronées. Vérification menée, pas supposée.
+
+**Trouvé et confirmé** : cinq fichiers étrangers à cette base de code, mélangés dans un zip à un
+moment donné (fins de ligne Windows CRLF, chemins `C:/Users/vince/...` dans l'historique de
+l'autre session) — `CHANGELOG_SESSION.md`, `PLAN_MONETISATION.md`, `PLAN_COMPTES_RELIES.md`,
+`pro.js`, `server/food-intelligence.js`. Aucun n'était référencé par le vrai `app.js` : orphelins,
+jamais branchés.
+
+**Plus grave, trouvé en nettoyant** : quatre fichiers de test (`test/food-intelligence.test.mjs`,
+`test/partner-attribution.test.mjs`, `test/partner-business.test.mjs`,
+`test/partner-campaigns-bridge.test.mjs`) testaient eux-mêmes ces fichiers étrangers — comptés
+dans le total de tests annoncé sans jamais vérifier une seule ligne de la vraie application.
+
+**Tout supprimé.** Le vrai chiffre, honnête : 534 tests, tous vérifiant réellement le code de
+cette application, zéro fichier orphelin restant.
+
+## Six déclencheurs identiques réduits à un seul — signalé très directement — 1er août 2026
+
+Signalé sans détour : *"quatre boutons, voire cinq sur l'accueil qui t'amènent à la même chose,
+c'est du bordel."* Vérifié en exécutant le vrai code, pas en estimant : **c'était en réalité six**
+déclencheurs distincts (bouton principal, badge D, champ de recherche, bouton voix dans le bloc de
+recherche, "Mes idées" et "Créer mon moment" dans la barre de navigation) menant tous, avant toute
+qualification, exactement au même endroit : `openEclatDialogue(false,'compose')`.
+
+**Corrigé radicalement, pas retouché en surface** : avant toute qualification, seul le bouton
+principal ("Créons un moment qui n'appartient qu'à vous") apparaît sur le Home. Le bloc de
+recherche entier et "Choisir parmi mes idées" sont retirés — ils ne faisaient strictement rien de
+différent du bouton principal à ce stade. Une fois un premier moment déjà qualifié, ces deux
+éléments réapparaissent, devenus alors de vraies actions distinctes (relancer une nouvelle envie
+sans tout recommencer ; parcourir librement plutôt que faire composer par D) — le texte du champ
+de recherche change aussi ("Une nouvelle envie ? Parlez-en à D") pour refléter honnêtement ce
+nouveau rôle.
+
+Vérifié en exécutant réellement `home()` dans les deux états, pas en relisant le code : 1 seul
+déclencheur avant qualification, 4 après — jamais 6 dans le même écran comme avant.
+
+- 534 tests avant ce chantier, 5 nouveaux tests de garde — 539 au total, tous verts.
+
+## Bug majeur corrigé : une catégorie entière d'activités disparaissait de toute recommandation — 1er août 2026
+
+Signalé directement, avec un scénario réel : *"j'habite Le Touquet, beau temps, je sors avec ma
+fille de 9 ans, j'ai pas d'idée et Dolcia n'en trouve pas non plus... pourquoi ça ne me propose
+pas le tennis ?"*
+
+**Cause trouvée, confirmée par test réel** : `recommendationEligibleNow()` n'acceptait que les
+statuts `'confirmed'` et `'autonomous'`. Mais toute activité "à séance" — tennis, paddle, kayak,
+golf, cinéma, escape game, bowling, spa, massage, et bien d'autres — ne peut **jamais** atteindre
+`'confirmed'` : Google Places ne fournit aucune donnée de disponibilité de créneau en temps réel
+pour ces catégories. Conséquence réelle : une catégorie entière d'activités pertinentes et
+réelles était exclue de toute recommandation, partout, sans exception, depuis le début.
+
+**Corrigé en deux temps, cohérents entre eux** :
+1. `recommendationEligibleNow()` accepte désormais aussi `'open-not-session'` et `'unknown'` —
+   ces activités redeviennent recommandables, avec l'incertitude honnêtement affichée via `why()`
+   (déjà en place : *"Séance ou réservation à confirmer"*).
+2. `addAgenda()` ne bloque plus leur ajout à l'agenda — un rappel honnête ("réservation à
+   confirmer directement auprès de l'établissement") remplace l'ancien blocage complet, pour
+   éviter de proposer une activité qu'on ne pourrait ensuite jamais ajouter.
+
+Une vraie incompatibilité d'horaire (mauvais jour, créneau confirmé différent) continue d'exclure
+l'activité — seul le blocage injustifié des activités "à vérifier" a été retiré.
+
+- 539 tests avant ce chantier, 5 nouveaux tests de garde — 544 au total, tous verts.
+
+## Avertissement marée pour les activités nautiques en mer — signalé directement — 1er août 2026
+
+Signalé directement, avec une vraie mise en garde de fond : *"on ne peut pas faire de paddle sur
+la mer... attention aux horaires, ça dépend des marées, surtout dans le Nord, contrairement au
+sud."* Vérifié avant toute chose : **aucune donnée de marée réelle n'existe dans ce projet.**
+
+**La bonne réponse n'était pas d'inventer une table de marées** (ce que ce projet interdit
+partout ailleurs) **ni de rester silencieuse** — mais de le dire honnêtement, au bon endroit,
+avant que quelqu'un ne se retrouve bloqué à marée basse avec un paddle.
+
+`requiresTideAwareness()` reconnaît le paddle, le kayak, le catamaran, la voile, le kitesurf, le
+wing-foil, l'e-foil et le char à voile (qui a le besoin opposé — une plage découverte, pas de
+l'eau — raison de plus de ne jamais deviner) — jamais une piscine ou un lac, qui ne sont pas
+concernés. `why()` signale désormais précisément *"Dépend des marées · vérifiez l'horaire réel
+auprès du club avant de vous engager"*, testé avant le message générique pour donner la vraie
+raison plutôt qu'un texte vague. Le même avertissement apparaît aussi, bien visible, dans la fiche
+détaillée, pas seulement en petit texte.
+
+- 544 tests avant ce chantier, 5 nouveaux tests de garde — 549 au total, tous verts.

@@ -16,7 +16,7 @@ test('la fraîcheur de vérification DATAtourisme (contactOrigin/contactVerified
 
 test('une fiche sans aucune des deux preuves de fraîcheur ne montre jamais ce bloc, jamais une date inventée', () => {
   const start = app.indexOf('${item.officialSource?`<div class="source-proof">');
-  const end = app.indexOf('}${item.detailWarning', start);
+  const end = app.indexOf('}${(item.detailWarning', start);
   const section = app.slice(start, end);
   assert.match(section, /:''$/, 'doit se terminer par un repli en chaîne vide, jamais une date inventée');
 });
