@@ -1163,3 +1163,110 @@ démarrage d'une session — jouer, mettre en pause, avec un message honnête si
 second fichier différent.
 
 - 523 tests avant ce chantier, 4 nouveaux tests de garde — 527 au total, tous verts.
+
+## Le catalogue maître Dolcia — déduplication entre sources — 1er août 2026
+
+Répond directement au plan de repositionnement "conciergerie club sans murs" : *"si Bagatelle
+existe déjà dans les données Dolcia et apparaît également chez Viator, l'utilisateur ne doit pas
+voir deux fiches Bagatelle."*
+
+**`server/catalog-master.js` créé** : détecte si deux items de sources différentes désignent le
+même lieu réel en combinant deux critères, jamais un seul — similarité de nom (mesure de
+confinement, pas Jaccard pur : "Parc Bagatelle" et "Parc d'attractions Bagatelle" doivent
+matcher) ET proximité géographique réelle (120 mètres). Fusionne champ par champ selon la
+politique de fusion déjà écrite (§20 : partenaire vérifié > office de tourisme > DATAtourisme >
+Viator > Booking.com > Google Places), sans jamais perdre un champ absent chez la source
+prioritaire mais présent chez une source secondaire.
+
+**Un vrai défaut de conception trouvé et corrigé en cours de route** : la première version
+utilisait une similarité de Jaccard pure, trop stricte — elle ratait le cas réel "Parc Bagatelle"
+vs "Parc d'attractions Bagatelle" (un mot descriptif en plus faisait chuter le score sous le
+seuil). Remplacée par une mesure de confinement (intersection / plus petit ensemble), qui
+reconnaît correctement qu'un nom plus détaillé décrit le même lieu qu'un nom plus court, sans
+fusionner à tort deux lieux qui ne partagent qu'un mot générique proche géographiquement (testé et
+vérifié explicitement).
+
+**Intégré dans le vrai flux client** : `app.js` applique désormais cette logique en une deuxième
+passe, juste après la déduplication exacte déjà existante (qui ne rapproche que des noms
+strictement identiques) — jamais en remplacement. Prêt à fonctionner sans changement le jour où
+Viator ou Booking seront réellement connectés ; fonctionne déjà aujourd'hui entre Google Places et
+DATAtourisme, les deux sources actuellement actives.
+
+Vérifié avec le vrai code extrait d'`app.js`, pas une simulation isolée, avant de conclure.
+
+- 527 tests avant ce chantier, 9 nouveaux tests de garde répartis sur le module serveur et son
+  intégration client — 536 au total, tous verts.
+
+## Le budget vivant par catégorie — deuxième brique du plan "club sans murs" — 1er août 2026
+
+Répond directement au plan de repositionnement : *"Dolcia affiche un graphique très simple
+montrant : payé / réservé / prévu / restant"*, réparti par catégorie (hébergement, restaurants,
+activités, transport, animations), avec confirmation réelle après coup.
+
+**Construit sur le système existant, pas à côté** : `estimateItemCost()` et `state.budgetPlan`
+existaient déjà. Ajoutés : `budgetCategory()` (classe chaque activité dans la bonne catégorie),
+`budgetItemState()` (payé/réservé/prévu — un montant confirmé prime toujours sur l'estimation),
+`computeLivingBudget()` (agrège par catégorie), et `confirmRealSpend()` (le passage à "payé" ne se
+fait jamais automatiquement, uniquement via une confirmation explicite de la personne après le
+moment vécu).
+
+**Testé avec l'exemple exact du plan avant toute déclaration** : un restaurant estimé à 140 € puis
+confirmé à 220 € produit bien un écart de 80 € — le message généré reprend mot pour mot *"Vous
+avez dépassé de 80 € votre budget restaurants…"*. Un écart de 5 € ou moins ne déclenche jamais de
+message, pour éviter une fausse alerte sur un simple arrondi.
+
+Un bouton "Confirmer le montant réel" apparaît sur chaque activité payante de l'agenda ; le
+panneau de budget vivant (payé/réservé/prévu par catégorie, plus le reste disponible) s'affiche en
+haut de l'écran Agenda.
+
+- 536 tests avant ce chantier, 8 nouveaux tests de garde — 544 au total, tous verts.
+
+## Refonte du budget vivant — un vrai porte-monnaie, pas une confirmation bureaucratique — 1er août 2026
+
+Retour direct après la première version : *"c'est pas terrible, tu peux mieux faire avec un clic
+qu'on fait à chaque fois qu'on a payé pour voir ce qu'il reste dans le porte-monnaie."* La première
+version confirmait un montant réel par activité planifiée de l'agenda — trop lié à une activité
+précise, pas assez au geste réel qu'on fait en vacances (payer un café, un souvenir, un imprévu,
+sans vouloir chercher l'activité correspondante).
+
+**Refait entièrement dans cet esprit** :
+- Un bouton flottant "J'ai payé" (`wallet-fab`), vivant dans `shell()` — donc visible sur **tous**
+  les écrans de l'application, pas seulement l'agenda.
+- Le geste : un montant, une catégorie en un tap (optionnelle), "Enregistrer" — rien d'autre,
+  jamais besoin de retrouver une activité précise.
+- `state.walletLedger` — un vrai registre de dépenses, indépendant de l'agenda, persisté à part.
+- Après confirmation, un retour immédiat et net (`showWalletRemaining`) — un grand affichage du
+  montant restant, pas un petit toast qu'on peut manquer, disparaît seul après 2,6 secondes.
+
+**L'ancien système par activité entièrement retiré**, pas laissé en doublon : `confirmRealSpend`,
+`openConfirmSpendPrompt` et le bouton correspondant dans les cartes d'agenda ont disparu, remplacés
+par cette seule logique.
+
+Testé avec une vraie séquence de vacances avant de conclure : trois paiements successifs (45 €,
+20 €, 60 €) sur un budget de 500 € donnent bien 455 € → 435 € → 375 €, mis à jour à chaque geste.
+
+- 544 tests avant ce chantier (4 tests de l'ancien système remplacés, 8 nouveaux sur le
+  porte-monnaie) — 544 au total, tous verts.
+
+## Vraie hiérarchie de taille sur le Home — hiérarchiser plutôt que cacher — 1er août 2026
+
+Suite directe de l'échange sur "un minimum de boutons" : décision explicite de **hiérarchiser
+plutôt que masquer** — cacher coach/balade/musique derrière un sous-menu aurait recréé les
+problèmes de découvrabilité déjà corrigés cette même session ("D introuvable", "visite guidée
+cachée", "musique injoignable").
+
+**Vrai problème trouvé en vérifiant, pas supposé** : sur mobile — la façon la plus probable
+d'utiliser l'application — la grille des quatre boutons du Home passait à une seule colonne où
+**les quatre avaient exactement la même hauteur (126px)**. "Créons un moment" ne se distinguait
+que par sa couleur dorée, jamais par sa taille — aucune vraie hiérarchie.
+
+**Corrigé** : le bouton principal est désormais structurellement séparé des trois secondaires
+(`home-paths-secondary`), avec une hauteur nettement supérieure (190px contre 64-88px) — une
+hiérarchie de taille réelle, persistante sur mobile, pas seulement une nuance de couleur. Les
+trois secondaires restent tous visibles et cliquables, seulement plus compacts (texte descriptif
+retiré, gardé uniquement sur le principal).
+
+Une vraie duplication de règle CSS trouvée et supprimée au passage (`.home-path.primary`
+définie deux fois par erreur lors d'une session précédente).
+
+- 544 tests avant ce chantier, 5 nouveaux tests de garde — 549 au total, tous verts.

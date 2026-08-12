@@ -61,6 +61,7 @@ const state = {
   tasteProfile:JSON.parse(localStorage.getItem('dolcia_taste_profile_v2')||'{}')
 };
 state.budgetPlan=JSON.parse(localStorage.getItem('dolcia_budget_plan_v1')||'{"amount":null,"margin":0,"includesStay":true,"includesMeals":true,"includesTransport":false}');
+state.walletLedger=JSON.parse(localStorage.getItem('dolcia_wallet_ledger_v1')||'[]');
 state.groupParticipants=JSON.parse(localStorage.getItem('dolcia_group_participants_v1')||'[{"id":"me","name":"Moi","role":"organizer","kind":"account"}]');
 state.circleProfiles=JSON.parse(localStorage.getItem('dolcia_circle_profiles_v1')||'[]');
 state.temporaryGroups=JSON.parse(localStorage.getItem('dolcia_temporary_groups_v1')||'[]');
@@ -187,7 +188,7 @@ new MutationObserver(mutations=>{
 const fmt = d => d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
 const iso = d => {const date=new Date(d);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`};
 const sameDay = (a,b) => a&&b&&a.toDateString()===b.toDateString();
-const save = () => {localStorage.setItem('dolcia_agenda_v2',JSON.stringify(state.agenda));localStorage.setItem('dolcia_favorites_v2',JSON.stringify(state.favorites));localStorage.setItem('dolcia_feedback_v2',JSON.stringify(state.feedback));localStorage.setItem('dolcia_feedback_context_v1',JSON.stringify(state.feedbackContext));localStorage.setItem('dolcia_experience_feelings_v1',JSON.stringify(state.experienceFeelings));localStorage.setItem('dolcia_experience_tags_v1',JSON.stringify(state.experienceTags));localStorage.setItem('dolcia_experience_memories_v1',JSON.stringify(state.experienceMemories));localStorage.setItem('dolcia_taste_profile_v2',JSON.stringify(state.tasteProfile));localStorage.setItem('dolcia_group_participants_v1',JSON.stringify(state.groupParticipants));localStorage.setItem('dolcia_circle_profiles_v1',JSON.stringify(state.circleProfiles));localStorage.setItem('dolcia_temporary_groups_v1',JSON.stringify(state.temporaryGroups));localStorage.setItem('dolcia_owner_sensitivity_v1',JSON.stringify(state.ownerSensitivity));localStorage.setItem('dolcia_agenda_proposals_v1',JSON.stringify(state.agendaProposals));localStorage.setItem('dolcia_budget_plan_v1',JSON.stringify(state.budgetPlan));localStorage.setItem('dolcia_reservations_v1',JSON.stringify(state.reservations));localStorage.setItem('dolcia_pass_wallet_v1',JSON.stringify(state.passWallet));localStorage.setItem('dolcia_animate_history_v1',JSON.stringify(state.animateHistory));localStorage.setItem('dolcia_companion_memory_v1',JSON.stringify(state.companionMemory));localStorage.setItem('dolcia_program_preferences_v1',JSON.stringify(state.programPreferences))};
+const save = () => {localStorage.setItem('dolcia_agenda_v2',JSON.stringify(state.agenda));localStorage.setItem('dolcia_favorites_v2',JSON.stringify(state.favorites));localStorage.setItem('dolcia_feedback_v2',JSON.stringify(state.feedback));localStorage.setItem('dolcia_feedback_context_v1',JSON.stringify(state.feedbackContext));localStorage.setItem('dolcia_experience_feelings_v1',JSON.stringify(state.experienceFeelings));localStorage.setItem('dolcia_experience_tags_v1',JSON.stringify(state.experienceTags));localStorage.setItem('dolcia_experience_memories_v1',JSON.stringify(state.experienceMemories));localStorage.setItem('dolcia_taste_profile_v2',JSON.stringify(state.tasteProfile));localStorage.setItem('dolcia_group_participants_v1',JSON.stringify(state.groupParticipants));localStorage.setItem('dolcia_circle_profiles_v1',JSON.stringify(state.circleProfiles));localStorage.setItem('dolcia_temporary_groups_v1',JSON.stringify(state.temporaryGroups));localStorage.setItem('dolcia_owner_sensitivity_v1',JSON.stringify(state.ownerSensitivity));localStorage.setItem('dolcia_agenda_proposals_v1',JSON.stringify(state.agendaProposals));localStorage.setItem('dolcia_budget_plan_v1',JSON.stringify(state.budgetPlan));localStorage.setItem('dolcia_wallet_ledger_v1',JSON.stringify(state.walletLedger));localStorage.setItem('dolcia_reservations_v1',JSON.stringify(state.reservations));localStorage.setItem('dolcia_pass_wallet_v1',JSON.stringify(state.passWallet));localStorage.setItem('dolcia_animate_history_v1',JSON.stringify(state.animateHistory));localStorage.setItem('dolcia_companion_memory_v1',JSON.stringify(state.companionMemory));localStorage.setItem('dolcia_program_preferences_v1',JSON.stringify(state.programPreferences))};
 
 function dMascotMark(className=''){
   return `<span class="eclat-d d-companion ${className} is-${state.dVisualMood||'idle'}" role="img" aria-label="D, votre compagnon Dolcia"><b>D</b><i class="d-star">✦</i><span class="d-face" aria-hidden="true"><i></i><i></i><em></em></span><span class="d-body" aria-hidden="true"><i class="d-arm left"></i><i class="d-arm right"></i><i class="d-foot left"></i><i class="d-foot right"></i></span></span>`;
@@ -213,7 +214,7 @@ function shell(content, active='discover'){
   document.body.classList.remove('home-nav-hidden-always','home-nav-hidden-until-scroll','home-nav-revealed');
   window.removeEventListener('scroll',homeNavScrollReveal);
   const profile=JSON.parse(localStorage.getItem('dolcia_profile_v1')||'null'),initials=(profile?.name||'Vous').trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('').toUpperCase();
-  return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="openAccount()" aria-label="${profile?'Ouvrir le profil de '+esc(profile.name):'Créer mon profil Dolcia'}">${esc(initials)}</button></div></header>${content}${nav(active)}</main>`;
+  return `<main class="app"><header class="topbar"><button class="brand" onclick="home()">dolc<i>ia</i></button><div class="top-actions"><button class="location" onclick="useLocation()">${esc(state.location.name)}</button><button class="avatar" onclick="openAccount()" aria-label="${profile?'Ouvrir le profil de '+esc(profile.name):'Créer mon profil Dolcia'}">${esc(initials)}</button></div></header>${content}${state.budgetPlan.amount!=null?`<button class="wallet-fab" onclick="openWalletQuickPay()" aria-label="J’ai payé quelque chose"><span>💳</span><small>J’ai payé</small></button>`:''}${nav(active)}</main>`;
 }
 function nav(active){return `<nav class="bottom-nav essential-nav" aria-label="Navigation principale"><button class="nav-item ${active==='discover'?'active':''}" onclick="beginExplore()"><span>⌁</span>Mes idées</button><button class="nav-item signature ${active==='compose'?'active':''}" onclick="openComposition()"><b>D<i>✦</i></b><span>Créer mon moment</span></button><button class="nav-item ${active==='agenda'?'active':''}" onclick="renderAgenda()"><span>▤</span>Agenda${state.agenda.length?` · ${state.agenda.length}`:''}</button><button class="nav-item ${active==='services'?'active':''}" onclick="openMeHub()"><span>◯</span>Moi</button></nav>`}
 function openMyMoment(){openComposition()}
@@ -873,7 +874,7 @@ function homeNavScrollReveal(){
   if(poster&&window.scrollY>poster.offsetHeight*.6)document.body.classList.add('home-nav-revealed');
   else document.body.classList.remove('home-nav-revealed');
 }
-function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong><span>Des fiches riches, sourcées et déjà accordées à votre moment.</span></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong><span>Sport fun, musique, défis et animation conduite en direct avec votre groupe.</span></button><button class="home-path discovery" onclick="openLocalDiscoveryWithD()"><small>D vous fait visiter</small><strong>Une balade guidée avec D</strong><span>Une découverte gratuite, ici et maintenant, depuis un lieu réel déjà vérifié près de vous.</span></button></div><div class="living-brief home-search"><button class="d-home-trigger" onclick="openEclatDialogue(false,'compose')" aria-label="Parler à D">${dMascotMark('mini')}</button><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div id="tasteAnticipation" hidden></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div><button id="homeThemeToggle" class="home-theme-toggle" onclick="toggleStandaloneDolciaTheme()" aria-pressed="false">▶ Écouter la musique Dolcia</button></section>`);loadHomePulse();applyHomeNavPreview()}
+function home(){state.view='home';app.innerHTML=shell(`<section class="home-poster" id="homePoster">${homePosterInner(null)}</section><section class="home-level3"><div class="home-paths"><button class="home-path primary" onclick="openEclatDialogue(false,'compose')"><small>La signature Dolcia</small><strong>Créons un moment qui n’appartient qu’à vous.</strong><span>D commence par les bonnes questions : dates et heures exactes, personnes présentes, envie réelle et budget total. Puis elle compose un programme que vous pouvez modifier étape par étape.</span></button><div class="home-paths-secondary"><button class="home-path ideas" onclick="beginExplore()"><small>Explorer librement</small><strong>Choisir parmi mes idées</strong></button><button class="home-path animate" onclick="openDolciaAnimate('coach')"><small>D prend le micro</small><strong>Mon coach-animateur</strong></button><button class="home-path discovery" onclick="openLocalDiscoveryWithD()"><small>D vous fait visiter</small><strong>Une balade guidée avec D</strong></button></div></div><div class="living-brief home-search"><button class="d-home-trigger" onclick="openEclatDialogue(false,'compose')" aria-label="Parler à D">${dMascotMark('mini')}</button><div><label for="homeSearch">Parlez naturellement à D</label><input id="homeSearch" placeholder="Nous venons vendredi soir, à deux, avec 60 €…" onfocus="openEclatDialogue(false,'compose')" readonly></div><button class="voice-live" onclick="openEclatDialogue(true,'compose')" aria-label="Parler à Dolcia">◉</button></div><div id="tasteAnticipation" hidden></div><div class="pulse-events home-events" id="livePulse"><div><span>Le réel, aujourd’hui</span><strong>Les rendez-vous vérifiés</strong><small>Uniquement les événements datés et suffisamment documentés.</small></div><div id="pulseEventList" class="pulse-event-list"><p>Dolcia consulte les agendas officiels…</p></div></div><button id="homeThemeToggle" class="home-theme-toggle" onclick="toggleStandaloneDolciaTheme()" aria-pressed="false">▶ Écouter la musique Dolcia</button></section>`);loadHomePulse();applyHomeNavPreview()}
 function startLocalDiscovery(){state.answers.momentSentence='Je vis ou je reviens souvent ici. Montrez-moi une expérience crédible que je n’aurais pas pensé à chercher.';state.answers.duration=state.answers.duration||'2h';state.answers.vibes=[];state.localDiscovery=true;save();showToast('Dolcia cherche une surprise locale prouvable, jamais inventée');compose()}
 function retiredMountHomeConcierge(){return}
 function openEclatBrief(voice){openEclatDialogue(voice)}
@@ -1279,7 +1280,7 @@ async function compose(explorerOnly=false){
     const placeJobs=placeQueries.map(entry=>get(entry.url).then(d=>{const found=normalizePlaces(d.results||[]).map(item=>({...item,retrievalScope:entry.scope,retrievalReason:entry.reason,retrievalMaxKm:entry.radius/1000,explicitRegionalScenario:entry.explicitRegionalScenario===true})).filter(retrievalBoundaryAccepts);placesFound+=found.length;state.items.push(...found);markLoaded('places',`${placesFound} trouvés${retrievalPlan.some(item=>item.scope==='signature')?' · exception régionale demandée':''}`);updateLivePreview()}).catch(()=>null));
     await Promise.allSettled([weatherJob,eventJob,officialJob,ticketmasterJob,partnerJob,nationalJob,majorJob,broadcastJob,...placeJobs]);
     state.majorMoments=detectMajorMoments(state.items,state.majorMoments);
-    const deduped=dedupe(state.items);
+    const deduped=buildMasterCatalog(dedupe(state.items));
     await enrichPlaceAvailability(deduped);
     state.allItems=(await rankItemsServer(deduped).catch(()=>scoreItems(deduped))).filter(geoVisible);
     injectVerifiedSunsetMoment();
@@ -1413,10 +1414,108 @@ function isLodgingText(text=''){
 }
 function category(text=''){const t=plainText(text);if(isLodgingText(t))return'hotel';if(/feu d.artifice|bal populaire|concert|spectacle|soiree/.test(t))return'night';if(/restaurant|cafe|food|gastr/.test(t))return'food';if(/museum|musee|\bart\b|cinema|theater|theatre|culture|expo|visite|patrimoine|hotel de ville|mairie/.test(t))return'culture';if(/\bspa\b|beauty|yoga|\bbien\b/.test(t))return'slow';if(/\bbar\b|night|music/.test(t))return'night';if(/parc d.attraction|parc aquatique|parc animalier|parc a themes|accrobranche|karting|laser game|escape game|bowling|trampoline|mini.?golf|luna.?park/.test(t))return'active';if(/park|parc|nature|plage|garden|foret/.test(t))return'outside';return'active'}
 function dedupe(items){const seen=new Map();return items.filter(x=>{const name=(x.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();const date=x.date?iso(new Date(x.date)):'';const k=`${name}:${date}`;if(!name)return false;const previous=seen.get(k);if(previous){previous.sources=[...new Set([...(previous.sources||[previous.source]),x.source].filter(Boolean))];return false}x.sources=[x.source].filter(Boolean);seen.set(k,x);return true})}
+// Le catalogue maître — deuxième passe, après la déduplication exacte ci-dessus. Celle-ci ne
+// rapproche que des noms strictement identiques ; celle-ci rapproche aussi "Parc Bagatelle" et
+// "Parc d'attractions Bagatelle" quand ils désignent le même lieu réel, proche géographiquement.
+// Même algorithme que server/catalog-master.js (confinement de mots + proximité en mètres) — sans
+// dépendance d'import puisque app.js n'est pas un module, mais prêt à fusionner Viator/Booking le
+// jour de leur intégration sans changer la logique, seulement la liste SOURCE_PRIORITY.
+const MASTER_CATALOG_SOURCE_PRIORITY=['Partenaire vérifié','Office de tourisme','DATAtourisme','Viator','Booking.com','Google Places'];
+function masterCatalogNormalizeName(name=''){return String(name).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(le|la|les|l|du|de|des|un|une)\b/g,'').replace(/\s+/g,' ').trim()}
+function masterCatalogNameSimilarity(a,b){const wordsA=new Set(masterCatalogNormalizeName(a).split(' ').filter(Boolean)),wordsB=new Set(masterCatalogNormalizeName(b).split(' ').filter(Boolean));if(!wordsA.size||!wordsB.size)return 0;const intersection=[...wordsA].filter(w=>wordsB.has(w)).length;return intersection/Math.min(wordsA.size,wordsB.size)}
+function masterCatalogSourceRank(source=''){const index=MASTER_CATALOG_SOURCE_PRIORITY.findIndex(known=>source.includes(known));return index===-1?MASTER_CATALOG_SOURCE_PRIORITY.length:index}
+function mergeMasterCatalogGroup(group){const sorted=[...group].sort((a,b)=>masterCatalogSourceRank(a.source)-masterCatalogSourceRank(b.source));const merged={...sorted[0]};const fields=['phone','email','website','address','rating','reviews','photos','photo','hoursText','priceText','free','ageRange','bookingUrl','description'];for(const field of fields){if(merged[field]!=null&&merged[field]!=='')continue;for(const candidate of sorted.slice(1)){if(candidate[field]!=null&&candidate[field]!==''){merged[field]=candidate[field];break}}}const withBooking=sorted.find(item=>item.bookingUrl);if(withBooking)merged.bookingUrl=withBooking.bookingUrl;merged.mergedFrom=sorted.map(item=>({id:item.id,source:item.source}));return merged}
+function buildMasterCatalog(items){
+  const withCoords=items.filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lng));
+  const withoutCoords=items.filter(item=>!(Number.isFinite(item.lat)&&Number.isFinite(item.lng)));
+  const used=new Array(withCoords.length).fill(false),groups=[];
+  for(let i=0;i<withCoords.length;i+=1){
+    if(used[i])continue;
+    const group=[withCoords[i]];used[i]=true;
+    for(let j=i+1;j<withCoords.length;j+=1){
+      if(used[j])continue;
+      const sameName=masterCatalogNameSimilarity(withCoords[i].name,withCoords[j].name)>=0.82;
+      const closeEnough=distanceKm(withCoords[i].lat,withCoords[i].lng,withCoords[j].lat,withCoords[j].lng)*1000<=120;
+      if(sameName&&closeEnough){group.push(withCoords[j]);used[j]=true}
+    }
+    groups.push(group);
+  }
+  return [...groups.map(group=>group.length>1?mergeMasterCatalogGroup(group):group[0]),...withoutCoords];
+}
 function qualityGate(item){if(!item?.name)return false;if(item.category==='hotel'&&!isLodgingText(`${item.name||''} ${item.address||''}`))return false;if(item.source==='Google Places')return Boolean(item.placeId&&item.address&&item.lat!=null&&item.lng!=null&&item.businessStatus!=='CLOSED_PERMANENTLY');if(item.date){const date=new Date(item.date);if(Number.isNaN(date.getTime()))return false;return Boolean(item.source&&(item.address||item.booking||item.official))}return Boolean(item.address&&item.source)}
 function qualityLevel(item){if(item.source==='Google Places'&&item.address&&item.placeId&&item.photos?.length)return'verified';if(item.official&&item.date&&item.address&&item.booking)return'verified';if(item.official&&item.date&&(item.address||item.booking))return'official-partial';return'documented'}
 function itemImage(i){return i.photo||IMAGES[i.category]||IMAGES.fallback}
 function distanceKm(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,q=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))}
+// Catalogue maître Dolcia — reconnaît qu'un même lieu réel peut arriver par plusieurs sources
+// (données Dolcia propres, Google Places, demain Viator ou Booking) et le fusionne en une seule
+// fiche, jamais deux. Distinct de dedupe() ci-dessus : dedupe() compare un titre et une date
+// exacts (bon pour un événement daté) ; le catalogue maître compare une position géographique et
+// une ressemblance de nom (bon pour un lieu permanent, où deux sources n'utilisent presque
+// jamais exactement le même intitulé).
+
+const CATALOG_STOPWORDS = new Set(['le','la','les','l','de','du','des','un','une','et','a','au','aux','d','en']);
+
+function catalogNameTokens(name=''){
+  return plainText(name).replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(token=>token.length>1&&!CATALOG_STOPWORDS.has(token));
+}
+
+// Deux noms sont jugés comme désignant le même lieu s'ils partagent au moins un mot significatif
+// en commun (hors mots vides) — jamais une correspondance exacte exigée, puisque "Bagatelle" et
+// "Parc d'Attractions Bagatelle" ne partagent qu'un seul mot, mais c'est le mot qui compte.
+function catalogNameMatch(nameA='',nameB=''){
+  const tokensA=new Set(catalogNameTokens(nameA)),tokensB=catalogNameTokens(nameB);
+  if(!tokensA.size||!tokensB.length)return false;
+  return tokensB.some(token=>tokensA.has(token));
+}
+
+// Seuil de proximité volontairement resserré (120 m) : au-delà, deux lieux différents pourraient
+// partager un mot dans leur nom par coïncidence (deux restaurants "Le Phare" dans des villes
+// différentes, par exemple) — la géographie doit rester le filtre principal, le nom la confirmation.
+const CATALOG_MATCH_RADIUS_KM = 0.12;
+
+function findCatalogMatch(candidate,existingItems){
+  if(!Number.isFinite(candidate.lat)||!Number.isFinite(candidate.lng))return null;
+  return existingItems.find(item=>{
+    if(!Number.isFinite(item.lat)||!Number.isFinite(item.lng))return false;
+    if(distanceKm(candidate.lat,candidate.lng,item.lat,item.lng)>CATALOG_MATCH_RADIUS_KM)return false;
+    return catalogNameMatch(candidate.name,item.name);
+  })||null;
+}
+
+// Fusionne deux fiches du même lieu réel, jamais en écrasant une donnée déjà vérifiée par une
+// donnée moins sûre. Suit la même politique de fusion que le reste du projet (§20) : chaque champ
+// garde sa meilleure valeur disponible, jamais la plus récemment arrivée par défaut.
+const CATALOG_QUALITY_RANK = { verified: 3, documented: 2, unverified: 1 };
+function mergeCatalogEntries(existing,incoming){
+  const existingRank = CATALOG_QUALITY_RANK[existing.quality] || 0;
+  const incomingRank = CATALOG_QUALITY_RANK[incoming.quality] || 0;
+  const primary = incomingRank > existingRank ? incoming : existing;
+  const secondary = incomingRank > existingRank ? existing : incoming;
+  const merged = { ...secondary, ...Object.fromEntries(Object.entries(primary).filter(([,value])=>value!=null&&value!=='')) };
+  merged.sources = [...new Set([...(existing.sources||[existing.source]),...(incoming.sources||[incoming.source])].filter(Boolean))];
+  merged.photos = [...new Set([...(existing.photos||[]),...(incoming.photos||[])])];
+  merged.bookingUrl = incoming.bookingUrl || existing.bookingUrl || null;
+  merged.rating = Math.max(existing.rating||0, incoming.rating||0) || existing.rating || incoming.rating || null;
+  merged.reviews = Math.max(existing.reviews||0, incoming.reviews||0) || existing.reviews || incoming.reviews || null;
+  return merged;
+}
+
+// Point d'entrée : ajoute un lot d'items au catalogue existant, en fusionnant chaque doublon réel
+// détecté plutôt que de laisser deux fiches du même lieu coexister.
+function mergeIntoMasterCatalog(existingItems,incomingItems){
+  const catalog=[...existingItems];
+  for(const incoming of incomingItems){
+    const matchIndex=catalog.findIndex(existing=>{
+      if(!Number.isFinite(incoming.lat)||!Number.isFinite(incoming.lng))return false;
+      if(!Number.isFinite(existing.lat)||!Number.isFinite(existing.lng))return false;
+      if(distanceKm(incoming.lat,incoming.lng,existing.lat,existing.lng)>CATALOG_MATCH_RADIUS_KM)return false;
+      return catalogNameMatch(incoming.name,existing.name);
+    });
+    if(matchIndex===-1){catalog.push(incoming);continue}
+    catalog[matchIndex]=mergeCatalogEntries(catalog[matchIndex],incoming);
+  }
+  return catalog;
+}
 function retrievalBoundaryAccepts(item){if(!Number.isFinite(item.lat)||!Number.isFinite(item.lng))return false;const distance=distanceKm(state.location.lat,state.location.lng,item.lat,item.lng),maximum=Math.min(item.retrievalMaxKm||state.radius/1000,item.retrievalScope==='signature'?60:25);item.distance=distance;return distance<=maximum}
 // Un restaurant, un hôtel ou une sortie nocturne existe déjà en abondance dans la ville : le vrai
 // critère n'est PAS la distance, c'est la commune. Cucq est à 2km du Touquet mais reste une autre
@@ -1486,6 +1585,82 @@ async function rankItemsServer(items){
 }
 function currentGroupSize(){const active=state.groupParticipants.filter(person=>person.selected!==false);if(active.length>1)return active.length;return state.answers.who==='family'?Math.max(3,1+(state.answers.childrenAges||[]).length):state.answers.who==='couple'?2:['friends','colleagues'].includes(state.answers.who)?4:1}
 function estimateItemCost(item){if(item.free||item.price===0||item.freeAccess)return{total:0,known:true,label:'Gratuit confirmé'};const explicit=String(item.priceLabel||'').match(/(\d+(?:[,.]\d{1,2})?)\s*€/);if(explicit){const unit=Number(explicit[1].replace(',','.'));return{total:Math.round(unit*currentGroupSize()),known:true,label:`${unit.toLocaleString('fr-FR')} € par personne`}}const levels={0:0,1:15,2:35,3:70,4:120};if(item.price!=null){const unit=levels[Math.min(4,Number(item.price))]??35;return{total:Math.round(unit*currentGroupSize()),known:false,label:'Estimation Dolcia'}}return{total:0,known:false,label:'Tarif à confirmer'} }
+// Le porte-monnaie Dolcia — un geste rapide, n'importe quand, n'importe où dans l'application,
+// pour dire "je viens de payer X" et voir instantanément ce qu'il reste. Pensé pour un usage réel
+// en vacances : on ne va jamais chercher l'activité précise dans l'agenda pour confirmer un
+// montant — on veut juste enregistrer une dépense et voir le porte-monnaie se mettre à jour, tout
+// de suite, de façon satisfaisante. state.walletLedger vit à côté de l'agenda, jamais à sa place —
+// une dépense n'a pas besoin d'être liée à une activité planifiée pour compter dans le budget
+// réel (un café improvisé, un souvenir, un imprévu).
+function budgetCategory(item){
+  if(item.category==='hotel')return'hebergement';
+  if(item.category==='food')return'restaurants';
+  if(/uber|taxi|transport|navette|train|car\b/i.test(`${item.name||''} ${item.category||''}`))return'transport';
+  if(item.autonomousProgram||item.category==='night')return'animations';
+  return'activites';
+}
+const BUDGET_CATEGORY_LABELS={hebergement:'Hébergement',restaurants:'Restaurants',activites:'Activités',transport:'Transport',animations:'Animations & services'};
+function budgetItemState(item){
+  if(Number.isFinite(item.paidAmount))return'paid';
+  if(item.reservationConfirmed)return'reserved';
+  return'planned';
+}
+function computeLivingBudget(){
+  const categories={};
+  for(const key of Object.keys(BUDGET_CATEGORY_LABELS))categories[key]={paid:0,reserved:0,planned:0};
+  for(const item of state.agenda){
+    const category=budgetCategory(item),itemState=budgetItemState(item);
+    const amount=itemState==='paid'?item.paidAmount:estimateItemCost(item).total;
+    categories[category][itemState]+=amount||0;
+  }
+  for(const entry of state.walletLedger||[]){
+    categories[entry.category]=categories[entry.category]||{paid:0,reserved:0,planned:0};
+    categories[entry.category].paid+=entry.amount;
+  }
+  const totalPlan=state.budgetPlan.amount;
+  const totalSpent=Object.values(categories).reduce((sum,c)=>sum+c.paid+c.reserved+c.planned,0);
+  return{categories,totalPlan,totalSpent,remaining:totalPlan==null?null:totalPlan-totalSpent};
+}
+function openWalletQuickPay(){
+  document.querySelector('#walletQuickPay')?.remove();
+  const budget=computeLivingBudget();
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal wallet-quickpay" id="walletQuickPay"><article><button class="close" onclick="document.querySelector('#walletQuickPay')?.remove()">×</button><span class="kicker">Je viens de payer</span><input id="walletAmount" type="number" inputmode="decimal" min="0" step="1" placeholder="0" autofocus><div class="wallet-categories">${Object.entries(BUDGET_CATEGORY_LABELS).map(([key,label])=>`<button class="wallet-cat" data-cat="${key}" onclick="selectWalletCategory('${key}')">${esc(label)}</button>`).join('')}</div><small class="wallet-remaining-preview">Il vous reste actuellement <b>${budget.remaining==null?'—':Math.round(budget.remaining)+' €'}</b></small><button class="primary" onclick="confirmWalletQuickPay()">Enregistrer</button></article></div>`);
+}
+function selectWalletCategory(key){
+  document.querySelectorAll('.wallet-cat').forEach(button=>button.classList.toggle('selected',button.dataset.cat===key));
+}
+function confirmWalletQuickPay(){
+  const amount=Number(document.querySelector('#walletAmount')?.value);
+  if(!Number.isFinite(amount)||amount<=0)return showToast('Indiquez un montant réel');
+  const selected=document.querySelector('.wallet-cat.selected');
+  const category=selected?selected.dataset.cat:'activites';
+  state.walletLedger=state.walletLedger||[];
+  state.walletLedger.push({amount,category,at:new Date().toISOString()});
+  save();
+  document.querySelector('#walletQuickPay')?.remove();
+  showWalletRemaining();
+}
+// Le retour immédiat et satisfaisant — pas un petit toast qu'on peut manquer, un vrai grand
+// affichage du montant restant, celui-là même que la personne est venue chercher en cliquant.
+function showWalletRemaining(){
+  const budget=computeLivingBudget();
+  document.querySelector('#walletRemainingReveal')?.remove();
+  const over=budget.remaining!=null&&budget.remaining<0;
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal wallet-remaining-reveal ${over?'over':''}" id="walletRemainingReveal" onclick="this.remove()"><article><span class="kicker">${over?'Budget dépassé':'Il vous reste'}</span><strong>${budget.remaining==null?'—':Math.abs(Math.round(budget.remaining)).toLocaleString('fr-FR')+' €'}</strong><small>sur ${budget.totalPlan?.toLocaleString('fr-FR')} € prévus pour tout le monde</small></article></div>`);
+  setTimeout(()=>document.querySelector('#walletRemainingReveal')?.remove(),2600);
+  refreshBudgetPanel();
+}
+function refreshBudgetPanel(){const container=document.querySelector('#livingBudgetPanel');if(container)container.outerHTML=renderLivingBudgetPanel()}
+function renderLivingBudgetPanel(){
+  const budget=computeLivingBudget();
+  if(budget.totalPlan==null)return'<div id="livingBudgetPanel"></div>';
+  const rows=Object.entries(budget.categories).filter(([,c])=>c.paid+c.reserved+c.planned>0).map(([key,c])=>{
+    const total=c.paid+c.reserved+c.planned;
+    return `<div class="budget-row"><span>${esc(BUDGET_CATEGORY_LABELS[key])}</span><div class="budget-bar"><i class="paid" style="width:${total?c.paid/total*100:0}%"></i><i class="reserved" style="width:${total?c.reserved/total*100:0}%"></i><i class="planned" style="width:${total?c.planned/total*100:0}%"></i></div><strong>${Math.round(total)} €</strong></div>`;
+  }).join('');
+  const remaining=budget.remaining;
+  return `<div id="livingBudgetPanel" class="living-budget-panel"><header><span>Budget vivant</span><strong>${budget.totalPlan.toLocaleString('fr-FR')} €</strong></header>${rows}<footer class="${remaining<0?'over':''}"><span>${remaining<0?'Dépassement':'Disponible'}</span><strong>${Math.abs(Math.round(remaining))} €</strong></footer><div class="budget-legend"><span><i class="paid"></i>Payé</span><span><i class="reserved"></i>Réservé</span><span><i class="planned"></i>Prévu</span></div></div>`;
+}
 function itemBudgetBand(item){if(item.budgetBand)return item.budgetBand;const estimate=estimateItemCost(item),amount=state.budgetPlan.amount;if(estimate.known&&estimate.total===0)return'free';if(!estimate.known||amount==null)return'unknown';const ratio=estimate.total/Math.max(1,amount);return ratio<=.12?'light':ratio<=.3?'balanced':ratio<=.55?'signature':'exceptional'}
 function budgetBandLabel(item){return({free:'Libre ou gratuit',light:'Plaisir léger',balanced:'Équilibre choisi',signature:'Moment signature',exceptional:'Exception assumée',unknown:'Prix à confirmer'})[itemBudgetBand(item)]}
 function programEmotion(item,index,total){const kind=experienceKind(item);if(index===0)return'L’élan';if(index===total-1)return'Le souvenir';if(kind==='food')return'La respiration';if(kind==='wellness')return'Le relâchement';if(kind==='event'||item.official)return'Le temps fort';if(item.discoveryPick||item.distanceMerit==='proven_rarity')return'L’inattendu maîtrisé';return'La découverte'}
@@ -2951,7 +3126,8 @@ function renderAgenda(){
       return card+(next?agendaTravelConnector(item,next):'');
     }).join('');
     return header+dayCards;
-  }).join('');app.innerHTML=shell(`<section class="agenda-view agenda-deluxe"><div class="agenda-title"><div><span class="kicker">Votre temps, orchestré</span><h2>Mon programme.</h2><p>Modifiez directement la date et l’heure de chaque moment.</p></div><button class="primary" onclick="openComposition()">${state.program.length?'Revoir mon programme composé':'Compose-moi mon programme'}</button></div>${sharedAgendaPanel()}<div id="flashOfferZone" class="flash-offer-zone"><div class="offer-loading">Dolcia vérifie les opportunités réelles autour de votre programme…</div></div>${cards||`<div class="empty-state"><h3>Votre programme commence ici.</h3><p>Dolcia construira un véritable agenda, heure par heure.</p><button class="primary" onclick="startCompose()">Compose-moi mon programme</button></div>`}</section>`,'agenda');setTimeout(loadFlashOffers,0)}
+  }).join('');app.innerHTML=shell(`<section class="agenda-view agenda-deluxe"><div class="agenda-title"><div><span class="kicker">Votre temps, orchestré</span><h2>Mon programme.</h2><p>Modifiez directement la date et l’heure de chaque moment.</p></div><button class="primary" onclick="openComposition()">${state.program.length?'Revoir mon programme composé':'Compose-moi mon programme'}</button></div>${renderLivingBudgetPanel()}${sharedAgendaPanel()}<div id="flashOfferZone" class="flash-offer-zone"><div class="offer-loading">Dolcia vérifie les opportunités réelles autour de votre programme…</div></div>${cards||`<div class="empty-state"><h3>Votre programme commence ici.</h3><p>Dolcia construira un véritable agenda, heure par heure.</p><button class="primary" onclick="startCompose()">Compose-moi mon programme</button></div>`}</section>`,'agenda');setTimeout(loadFlashOffers,0)}
+
 
 function reserveWithDolcia(id,slotLabel=''){
   const item=state.allItems.find(x=>x.id===id)||state.items.find(x=>x.id===id)||state.agenda.find(x=>x.id===id);if(!item)return;

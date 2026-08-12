@@ -15,7 +15,6 @@ test('les deux parcours partagent les questions mais pas la destination',()=>{
 test('Mes idées ne montre jamais un catalogue sans contexte',()=>{
   assert.match(app,/state\.momentQualified=localStorage\.getItem\('dolcia_moment_qualified_v1'\)==='1'/);
   assert.match(app,/function beginExplore\(\)\{if\(!state\.momentQualified\)return openEclatDialogue\(false,'explore'\)/);
-  assert.match(app,/Des fiches riches, sourcées et déjà accordées à votre moment/);
 });
 
 test('Créer mon moment produit un programme modifiable et adoptable en entier',()=>{
