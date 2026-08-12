@@ -1357,3 +1357,66 @@ raison plutôt qu'un texte vague. Le même avertissement apparaît aussi, bien v
 détaillée, pas seulement en petit texte.
 
 - 544 tests avant ce chantier, 5 nouveaux tests de garde — 549 au total, tous verts.
+
+## Un vrai lien vers les marées, pas juste un avertissement — 1er août 2026 (suite)
+
+Question directe : *"tu n'as pas accès aux marées ?"* Recherche menée avant de répondre.
+**Vérifié** : une vraie API officielle existe (SHOM), mais nécessite l'achat d'une clé
+d'abonnement — une démarche commerciale réelle, pas quelque chose à intégrer sans son accord. En
+revanche, un vrai site public gratuit existe (maree.info, données SHOM), avec une page confirmée
+pour Le Touquet (port n°8) — et un chiffre concret vérifié pour le 1er août 2026 : 8,97 m à marée
+haute contre 1,43 m à marée basse, un marnage de presque 7,5 mètres, qui confirme entièrement
+l'inquiétude soulevée.
+
+**Ajouté** : l'avertissement marée pointe désormais vers un vrai lien cliquable
+(`tideScheduleLink()`) — l'identifiant réel du Touquet pour les autres villes, la page d'accueil
+du site en repli honnête plutôt qu'une URL de recherche inventée et non vérifiée (une première
+version tentait un paramètre `?q=` jamais confirmé — corrigée avant livraison).
+
+- 549 tests avant ce complément, 1 test adapté et 1 nouveau — 550 au total, tous verts.
+
+## Deux défauts visuels confirmés par capture d'écran, corrigés — 1er août 2026
+
+Signalé sans détour, avec deux captures d'écran à l'appui : *"regarde comme c'est moche, tu crois
+vraiment que c'est premium ?"* Deux vrais défauts trouvés, pas des questions de goût.
+
+**1. Texte coupé sur les boutons secondaires du Home.** La grille réservait toujours 3 colonnes
+fixes (`1fr 1fr 1fr`), même quand seulement 2 boutons sont visibles (avant qualification, "Mes
+idées" reste caché) — chaque bouton restant plus étroit que nécessaire, avec un `overflow:hidden`
+hérité qui coupait "Mon coach-animateur" en "Mon coach-animate". Corrigé avec une grille qui
+s'adapte réellement au nombre de boutons présents (`auto-fit`), et le texte peut désormais revenir
+à la ligne plutôt que d'être tronqué.
+
+**2. La carte de prévisualisation Anime ("Cardio Club avec D") en beige clair au milieu d'une page
+sombre.** Trouvé un fond codé en dur (`#f3ead7`) et des étapes en blanc quasi opaque
+(`rgba(255,255,255,.46)`) — un composant resté sur un ancien thème clair, jamais mis à jour depuis
+l'établissement de l'esthétique sombre dorée partout ailleurs dans l'application. Converti vers la
+même palette (fond sombre en dégradé, texte crème, accents dorés) que le reste de Dolcia.
+
+- 550 tests avant ce chantier, 4 nouveaux tests de garde — 554 au total, tous verts.
+
+## Voix monotone, entrée confuse dans l'animation, et raccourci de sécurité — 1er août 2026
+
+Signalé directement, avec deux captures d'écran : *"elle parle tellement monotone qu'on a plus
+envie de se pendre que de jouer... trop compliqué de comprendre comment entrer dans l'animation...
+une fois sur place on ne peut plus faire demi-tour."* Trois sujets différents, traités séparément.
+
+**1. La voix monotone — cause la plus probable trouvée, pas corrigible par le code seul.**
+`server/voice-synthesis.js` relaie une vraie voix neuronale (ElevenLabs), avec de vrais réglages
+d'émotion par humeur (chaleureuse, joyeuse, calme, encourageante). Mais si les variables
+d'environnement `ELEVENLABS_API_KEY` ou `ELEVENLABS_VOICE_ID` ne sont pas positionnées sur Vercel,
+le serveur renvoie une erreur 503 et l'application **retombe silencieusement** sur la synthèse
+vocale native du navigateur — exactement le genre de voix robotique et monotone décrite. Le
+fichier lui-même le documente en commentaire depuis le début : *"la synthèse native du navigateur
+sonne robotique quel que soit le texte écrit."* **Action nécessaire côté Vercel, pas du code** :
+vérifier que ces deux variables sont bien renseignées dans les paramètres du projet.
+
+**2. Entrée confuse dans l'animation.** Le bouton disait "Parler à D avant la séance" — vague, ne
+disant ni ce qu'il fait ni que c'est rapide. Corrigé en "▶ 3 questions rapides, puis on commence".
+
+**3. Raccourci de sécurité, pour ne jamais rester bloqué une fois sur place.** Un nouveau bouton
+discret "Commencer tout de suite, sans les questions" permet de sauter directement à la séance
+pour un programme coach, sans passer par les trois questions de personnalisation — utile pour
+quelqu'un déjà sur place, impatient de commencer avec son enfant.
+
+- 554 tests avant ce chantier, 3 nouveaux tests de garde — 557 au total, tous verts.

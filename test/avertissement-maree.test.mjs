@@ -43,9 +43,10 @@ test('la vérification marée est faite avant le message générique "à vérifi
   assert.ok(tideIndex < genericIndex, 'la vérification marée doit être testée avant le message générique');
 });
 
-test('le bloc visible de la fiche détaillée affiche aussi l’avertissement marée, pas seulement une petite ligne facile à manquer', () => {
+test('le bloc visible de la fiche détaillée affiche aussi l’avertissement marée, avec un vrai lien vérifié — pas seulement une petite ligne facile à manquer', () => {
   assert.match(app, /requiresTideAwareness\(item\)\)\?`<div class="detail-warning">/);
-  assert.match(app, /Dolcia ne connaît pas les tables de marées/);
+  assert.match(app, /tideScheduleLink\(\)/);
+  assert.match(app, /Voir les vraies marées du jour/);
 });
 
 test('un avertissement déjà présent pour une autre raison (detailWarning) n’est jamais écrasé par l’avertissement marée — les deux peuvent coexister', () => {
@@ -53,4 +54,11 @@ test('un avertissement déjà présent pour une autre raison (detailWarning) n�
   const end = app.indexOf('</div>`:\'\'}', start);
   const section = app.slice(start, end);
   assert.match(section, /\$\{item\.detailWarning\?esc\(item\.detailWarning\)/);
+});
+
+test('tideScheduleLink() renvoie le vrai lien vérifié pour Le Touquet (maree.info/8, confirmé par recherche directe), et un repli honnête (page d’accueil, jamais une URL de recherche inventée) pour toute autre ville', () => {
+  const code = extract('tideScheduleLink');
+  const fn = new Function('state', `${code}; return tideScheduleLink();`);
+  assert.equal(fn({ location: { name: 'Le Touquet-Paris-Plage' } }), 'https://maree.info/8');
+  assert.equal(fn({ location: { name: 'Chartres' } }), 'https://maree.info/');
 });
