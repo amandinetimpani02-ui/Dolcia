@@ -19,7 +19,7 @@ test('l’avancement automatique respecte les horaires réels du programme, jama
 });
 
 test('l’avancement automatique s’arrête proprement à la pause et à la fin, jamais laissé tourner en arrière-plan', () => {
-  assert.match(app, /function pauseDolciaAnimate\(\)\{stopDolciaTheme\(\);stopLiveConversation\(\);stopAnimatePulse\(\);window\.clearTimeout\(animateNudgeTimer\);window\.clearTimeout\(animateAutoAdvanceTimer\)/);
+  assert.match(app, /function pauseDolciaAnimate\(\)\{stopDolciaTheme\(\);stopLiveConversation\(\);stopAnimatePulse\(\);clearAnimateStepTimer\(\);window\.clearTimeout\(animateNudgeTimer\);window\.clearTimeout\(animateAutoAdvanceTimer\)/);
   assert.match(app, /function finishDolciaAnimate\(\)\{[\s\S]{0,120}window\.clearTimeout\(animateAutoAdvanceTimer\)/);
 });
 

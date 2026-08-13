@@ -446,3 +446,7 @@
 .detail-warning{margin:14px 0;padding:14px 18px;border-radius:14px;background:rgba(224,114,90,.1);border:1px solid rgba(224,114,90,.35);color:#e0a48f;font-size:13px;line-height:1.5}
 .animate-start-now button.ghost{background:transparent;border:1px solid rgba(255,255,255,.18);color:#a5936a;font-size:12px}
 .animate-start-now button.ghost:hover{border-color:#d7bd82;color:#d7bd82}
+.animate-timer-wrap{display:flex;justify-content:center;margin:18px 0}
+.animate-timer-ring{--timer-percent:100%;position:relative;width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(#d7bd82 var(--timer-percent),rgba(255,255,255,.08) var(--timer-percent));transition:background .9s linear}
+.animate-timer-ring::before{content:'';position:absolute;inset:8px;border-radius:50%;background:#0b0c0d}
+.animate-timer-ring span{position:relative;z-index:1;font-family:var(--display);font-size:26px;font-weight:600;color:#f8f2e7}

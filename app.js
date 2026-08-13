@@ -2768,6 +2768,47 @@ function stopAnimatePulse(){
   animatePulse.ctx=null;
   document.querySelector('.animate-pulse-toggle')?.classList.remove('active');
 }
+// Calcule la vraie durée de l'étape en cours, à partir des horodatages déjà présents dans le
+// programme (jamais une durée devinée) : la différence entre le début de cette étape et le début
+// de la suivante, ou le temps restant jusqu'à la fin annoncée du programme pour la dernière étape.
+// Format vérifié en confrontant au texte réel des étapes : le nombre après les deux-points
+// représente des MINUTES écoulées depuis le début (jamais des secondes) — une étape comme
+// l'échauffement décrit elle-même une action de vingt secondes, ce qui ne pourrait jamais tenir
+// dans un repère "00:06" s'il représentait 6 secondes. Confirmé par la durée totale du programme.
+function parseStepTimestamp(label){const match=String(label||'').match(/(\d+):(\d+)/);return match?Number(match[2])*60:0}
+function currentStepDurationSeconds(session){
+  const steps=session.item.steps,index=session.index;
+  const start=parseStepTimestamp(steps[index]?.[0]);
+  const isLast=index>=steps.length-1;
+  const end=isLast?(session.item.duration||0)*60:parseStepTimestamp(steps[index+1]?.[0]);
+  const duration=end-start;
+  return duration>0?duration:null;
+}
+let animateStepTimerInterval=null;
+function clearAnimateStepTimer(){if(animateStepTimerInterval){window.clearInterval(animateStepTimerInterval);animateStepTimerInterval=null}}
+// Minuteur réellement animé — pas un simple horodatage statique. S'arrête et repart proprement à
+// chaque changement d'étape, mise en pause, ou fin de session, pour ne jamais laisser tourner un
+// minuteur sur un élément qui n'existe plus.
+function startAnimateStepTimer(session){
+  clearAnimateStepTimer();
+  const totalSeconds=currentStepDurationSeconds(session);
+  const ring=document.querySelector('#animateStepTimer');
+  if(!totalSeconds||!ring){if(ring)ring.closest('.animate-timer-wrap')?.remove();return}
+  let remaining=totalSeconds;
+  const render=()=>{
+    const minutes=Math.floor(remaining/60),seconds=remaining%60;
+    const label=document.querySelector('#animateStepTimerLabel');
+    if(label)label.textContent=`${minutes}:${String(seconds).padStart(2,'0')}`;
+    const percent=Math.max(0,Math.min(100,(remaining/totalSeconds)*100));
+    ring.style.setProperty('--timer-percent',`${percent}%`);
+  };
+  render();
+  animateStepTimerInterval=window.setInterval(()=>{
+    remaining=Math.max(0,remaining-1);
+    render();
+    if(remaining<=0)clearAnimateStepTimer();
+  },1000);
+}
 function renderDolciaAnimateLive(options={}){
   const session=state.activeAnimate;if(!session)return;
   document.querySelector('#animateLive')?.remove();
@@ -2781,7 +2822,7 @@ function renderDolciaAnimateLive(options={}){
     ${session.item.phased&&step[2]?.phase?`<div class="animate-phase-badge phase-${step[2].phase}">${esc(animatePhaseLabel(step[2].phase))}</div>`:''}
     <div class="animate-session-meta"><span>Mission ${session.index+1}/${session.item.steps.length}</span><span>Capitaine · ${esc(animateCaptain(session))}</span><span>${progress}% vécu</span><span>${session.streak||0} série</span></div>
     <h2>${esc(session.item.name)}</h2>
-    <div class="animate-live-step"><time>${esc(step[0])}</time><p>${esc(animateStepText(session))}</p></div>
+    <div class="animate-live-step"><div class="animate-timer-wrap"><div id="animateStepTimer" class="animate-timer-ring" style="--timer-percent:100%"><span id="animateStepTimerLabel">${step[0]}</span></div></div><p>${esc(animateStepText(session))}</p></div>
     <div class="animate-response"><small>Comment vit le groupe ?</small><div>
       <button onclick="reactDolciaAnimate('great')">Ça prend ✦</button>
       <button onclick="reactDolciaAnimate('laugh')">On a ri</button>
@@ -2799,6 +2840,7 @@ function renderDolciaAnimateLive(options={}){
   </article></div>`);
   setDVisualState(['sport','party','water'].includes(energyTheme.id)?'dancing':'encouraging');
   if(options.speak!==false)speakAnimateStep();
+  startAnimateStepTimer(session);
   scheduleAnimateAutoAdvance(session);
   scheduleAnimateNudge()
 }
@@ -2827,6 +2869,34 @@ const ANIMATOR_BEHAVIORS={
     ()=>'Prêts ? Voici la réponse…',
     ()=>'On y est presque… roulement de tambour…',
     ()=>'accroche-toi, ça arrive…'
+  ],
+  // Signal réel : la personne vient de cliquer une réaction pendant une séance en direct. Sans ces
+  // lignes, D changeait d'expression en silence — un bouton qui ne répond jamais n'est pas une
+  // discussion. Plusieurs variantes par réaction pour ne jamais répéter mot pour mot la même phrase.
+  reagir_great:[
+    ()=>'OUI ! Voilà ce que je voulais entendre ! On garde CETTE énergie, allez !',
+    ()=>'Ça, c\'est du lourd ! On monte encore, je le sens !',
+    ()=>'Magnifique ! Cette énergie-là, on ne la lâche plus jusqu\'à la fin !'
+  ],
+  reagir_laugh:[
+    ()=>'J\'ADORE ! Le rire, c\'est la meilleure énergie qui existe, on continue comme ça !',
+    ()=>'Ah voilà l\'ambiance qu\'on voulait ! On garde ce sourire jusqu\'au bout !',
+    ()=>'Ça c\'est le Club Dolcia dans toute sa splendeur ! On enchaîne, pleins gaz !'
+  ],
+  reagir_calmer:[
+    ()=>'Reçu, capitaine ! On souffle une seconde, et on repart aussi fort dès que tu es prêt.',
+    ()=>'Pas de souci, on redescend un peu — l\'important c\'est qu\'on avance ensemble.',
+    ()=>'Ok, pause respiration, et on remet le feu juste après !'
+  ],
+  reagir_livelier:[
+    ()=>'ENCORE PLUS ?! Tu es sûr ? Alors accroche-toi, ça va chauffer !',
+    ()=>'J\'ADORE cette demande ! On passe la vitesse supérieure, tout de suite !',
+    ()=>'Voilà ce que j\'aime entendre ! On monte le curseur à fond !'
+  ],
+  reagir_skip:[
+    ()=>'Aucun souci, on saute et on file vers la suite, ça va être encore mieux !',
+    ()=>'Reçu ! On tourne la page tout de suite, prochaine étape !',
+    ()=>'On enchaîne sans perdre une seconde, allez !'
   ]
 };
 function pickAnimatorLine(behavior,...args){
@@ -2907,7 +2977,14 @@ function reactDolciaAnimate(reaction){
   if(reaction==='calmer')session.elan+=5;
   if(reaction==='skip'){session.streak=0}
   const visual=reaction==='laugh'||reaction==='great'?'delighted':reaction==='calmer'?'calm':reaction==='livelier'?'encouraging':'thinking';
-  setDVisualState(visual);save();renderDolciaAnimateLive()
+  setDVisualState(visual);
+  const behaviorKey=`reagir_${reaction}`;
+  if(ANIMATOR_BEHAVIORS[behaviorKey]){
+    const line=pickAnimatorLine(behaviorKey);
+    session.messages.push({role:'assistant',content:line});
+    playPremiumVoice(line);
+  }
+  save();renderDolciaAnimateLive({speak:false})
 }
 // Après une session, proposer une vraie suite plutôt que de s'arrêter net — mais jamais inventer un
 // chiffre (calories, distance parcourue...) que Dolcia ne peut pas connaître réellement. On ne
@@ -2962,7 +3039,7 @@ function finishDolciaAnimate(){
   const teamsClosing=session.teams?`<p class="animate-teams-closing">${pickAnimatorLine('feliciter_sans_gagnant',`<b>${esc(session.teams.a.name)}</b>`,`<b>${esc(session.teams.b.name)}</b>`)}</p>`:'';
   document.body.insertAdjacentHTML('beforeend',`<div class="modal animate-finale" id="animateFinale"><article>${dMascotMark('large')}<small>Moment accompli</small><h2>Votre groupe a créé<br>son propre souvenir.</h2><div><b>${record.elan}</b><span>points d’Élan collectif · ${record.laughs} éclat${record.laughs>1?'s':''} de rire</span></div>${teamsClosing}<p>J’ai retenu votre rythme, vos refus et vos clins d’œil — jamais pour vous noter, seulement pour mieux vous retrouver la prochaine fois.</p>${followUpHtml}<button class="primary" onclick="document.querySelector('#animateFinale')?.remove();renderAgenda()">Retrouver ce moment</button></article></div>`)
 }
-function pauseDolciaAnimate(){stopDolciaTheme();stopLiveConversation();stopAnimatePulse();window.clearTimeout(animateNudgeTimer);window.clearTimeout(animateAutoAdvanceTimer);setDVisualState('idle');if('speechSynthesis'in window)window.speechSynthesis.cancel();document.querySelector('#animateLive')?.remove();if(state.activeAnimate){state.activeAnimate.status='paused';save();showToast('Votre session est en pause. D garde votre progression.')}}
+function pauseDolciaAnimate(){stopDolciaTheme();stopLiveConversation();stopAnimatePulse();clearAnimateStepTimer();window.clearTimeout(animateNudgeTimer);window.clearTimeout(animateAutoAdvanceTimer);setDVisualState('idle');if('speechSynthesis'in window)window.speechSynthesis.cancel();document.querySelector('#animateLive')?.remove();if(state.activeAnimate){state.activeAnimate.status='paused';save();showToast('Votre session est en pause. D garde votre progression.')}}
 function stopDolciaAnimate(){pauseDolciaAnimate()}
 
 function detailMapUrl(item){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name,item.address||state.location?.name].filter(Boolean).join(' '))}`}

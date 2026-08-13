@@ -1420,3 +1420,76 @@ pour un programme coach, sans passer par les trois questions de personnalisation
 quelqu'un déjà sur place, impatient de commencer avec son enfant.
 
 - 554 tests avant ce chantier, 3 nouveaux tests de garde — 557 au total, tous verts.
+
+## D restait muette après chaque réaction — corrigé, c'était le cœur du problème — 1er août 2026
+
+Signalé directement, sans détour : *"ça n'a rien à voir avec un vrai animateur sympa et humain
+avec qui on peut discuter."* Vérifié précisément, ligne par ligne, dans `reactDolciaAnimate()` —
+et c'était exactement ça.
+
+**Cause trouvée** : cliquer une réaction en direct ("On a ri", "Plus calme", "Pas pour nous"...)
+changeait bien l'expression visuelle de D et incrémentait des compteurs internes réels (élan,
+série, rires) — mais ne produisait jamais aucun mot, aucune voix, en retour. Un bouton qui ne
+répond jamais n'est pas une discussion, quelle que soit la qualité de la voix elle-même.
+
+**Corrigé** : cinq nouvelles catégories de comportements (`reagir_great`, `reagir_laugh`,
+`reagir_calmer`, `reagir_livelier`, `reagir_skip`), chacune avec plusieurs vraies variantes,
+branchées dans `reactDolciaAnimate()` — D parle désormais réellement après chaque clic, avec
+`playPremiumVoice()`, jamais deux fois (le rendu de session ne re-parle plus l'étape en cours à ce
+moment précis).
+
+**Une vraie erreur trouvée et corrigée en écrivant ces nouvelles lignes** : deux d'entre elles
+vouvoyaient par erreur ("pour vous", "Vous en voulez plus") — contraire à la règle déjà établie
+que Dolcia Anime tutoie toujours. Corrigées avant livraison, testé explicitement pour que ça ne se
+reproduise plus.
+
+Le cas de sécurité (douleur) reste traité exactement comme avant, en priorité, avant ce nouveau
+mécanisme.
+
+- 557 tests avant ce chantier, 5 nouveaux tests de garde — 562 au total, tous verts.
+
+## Un vrai minuteur animé remplace l'horodatage statique — 1er août 2026
+
+Signalé directement : *"même ça n'a rien à voir avec l'appli Apple Fitness ou une appli
+d'ambiance, dans, animation sportive !!! c'est un tableau complètement nul avec du texte."*
+
+**Ce qui est honnête à dire tout de suite** : produire une vraie vidéo avec un vrai coach, comme
+Apple Fitness, n'est pas quelque chose que je peux faire — aucune capacité de production vidéo.
+Mais un vrai défaut d'interface, corrigible, existait bel et bien : même en affichant une seule
+étape à la fois (déjà le cas), l'écran ne montrait qu'un horodatage figé ("00:06") et un paragraphe
+de texte — aucun élément visuel représentant le temps qui passe.
+
+**Corrigé avec un vrai minuteur animé**, calculé depuis les horodatages déjà présents dans chaque
+programme — jamais une durée inventée. Une découverte importante en construisant ce calcul : le
+nombre après les deux-points représente des **minutes**, pas des secondes (vérifié en confrontant
+au texte réel des étapes — un horodatage "00:06" interprété comme 6 secondes rendrait impossible
+l'échauffement décrit, qui dure lui-même vingt secondes). Testé avec les six vraies étapes du
+programme Cardio Club : 6+6+8+7+5+3 = 35 minutes, exactement la durée annoncée.
+
+Un anneau conique se remplit visuellement à chaque seconde, avec le temps restant affiché au
+centre — remplace l'ancien texte statique. Démarre après l'insertion réelle dans la page, s'arrête
+proprement à la mise en pause pour ne jamais tourner sur un élément qui n'existe plus.
+
+- 562 tests avant ce chantier, 5 nouveaux tests de garde — 567 au total, tous verts.
+
+## Vérification ELEVENLABS_VOICE_ID absente, et énergie des réactions amplifiée — 1er août 2026
+
+**Vérifié à partir d'une capture d'écran des variables Vercel réelles** : `ELEVENLABS_API_KEY`
+est bien présente (27 juillet), mais **`ELEVENLABS_VOICE_ID` n'apparaît nulle part** dans la liste
+des 11 variables du projet. Le code (`server/voice-synthesis.js`) exige les deux ensemble — sans
+le second, la voix premium reste inactive même avec la clé présente, et l'application retombe
+toujours sur la synthèse robotique du navigateur. **Action nécessaire côté Vercel** : ajouter
+`ELEVENLABS_VOICE_ID` (l'identifiant d'une voix choisie sur elevenlabs.io), pas quelque chose que
+je peux faire depuis ici.
+
+**Énergie des réactions amplifiée**, sur demande explicite ("un animateur plein d'adrénaline à
+2000 %") : les cinq réponses ajoutées plus tôt (`reagir_great`, `reagir_laugh`, `reagir_calmer`,
+`reagir_livelier`, `reagir_skip`) sont réécrites avec un vrai ton de club, beaucoup plus vivant
+("OUI ! Voilà ce que je voulais entendre !", "ENCORE PLUS ?! Tu es sûr ? Alors accroche-toi, ça va
+chauffer !") plutôt que poli et plat.
+
+**Deux vouvoiements glissés par erreur pendant la réécriture, trouvés et corrigés avant
+livraison** — le test de garde déjà en place les a immédiatement signalés, confirmant son utilité.
+
+- 562 tests avant ce chantier, tests existants adaptés au nouveau contenu — 567 au total, tous
+  verts.
